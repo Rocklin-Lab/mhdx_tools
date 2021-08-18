@@ -66,6 +66,6 @@ setup(
         "Gabriel Rocklin Lab": "www.rocklinlab.org",
     },
 
-    packages = ["core", "preprocessing", "pipeline"]
+    packages = ["hdx_limit", "hdx_limit.core", "hdx_limit.preprocessing", "hdx_limit.pipeline"]
 
 )
