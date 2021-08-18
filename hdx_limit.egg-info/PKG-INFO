@@ -1,0 +1,25 @@
+Metadata-Version: 2.1
+Name: hdx-limit
+Version: 0.2.0
+Summary: Tools for analysis of LC-IMS-MS data represented as 3D tensors.
+Home-page: https://github.com/Rocklin-Lab/hdx_limit
+Author: Robert Wes Ludwig, Sugyan Dixit, Állan Ferrari, Gabriel Rocklin
+Author-email: robert.wes.ludwig@gmail.com, suggie@northwestern.edu, ajrferrari@northwestern.edu, grocklin@gmail.com
+License: UNKNOWN
+Project-URL: Source, https://github.com/Rocklin-Lab/hdx_limit
+Project-URL: Gabriel Rocklin Lab, www.rocklinlab.org
+Description: # HDX_LIMIT
+        
+Keywords: scientific-computing,mass spectrometry,liquid chromatography,ion mobility separation,hydrogen exchange,deuterium,HDX
+Platform: UNKNOWN
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Topic :: Software Development :: Build Tools
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3 :: Only
+Requires-Python: >=3.6, <4
+Description-Content-Type: text/markdown
