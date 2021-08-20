@@ -294,7 +294,7 @@ class TensorGenerator:
 
         self.tensor = io.limit_read(self.filename)
         self.name = filename.split("/")[-2] # Expects format: path/to/{rt-group-name}/{rt-group-name}_{charge}_{file.mzML.gz}.cpickle.zlib.
-        self.charge = int([item[6:] for item in tensor_input_path.split("/")[-1].split("_") if "charge" in item][0]) # Finds by keyword and strip text.
+        self.charge = int([item[6:] for item in filename.split("/")[-1].split("_") if "charge" in item][0]) # Finds by keyword and strip text.
         self.lib_idx = self.library_info.loc[(library_info["name"]==self.name) & (library_info["charge"]==self.charge)].index
         self.max_peak_center = len(self.library_info.loc[
             self.library_info["name"] == self.name]["sequence"].values[0])
