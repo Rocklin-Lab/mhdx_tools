@@ -40,9 +40,9 @@ import molmass
 import numpy as np
 import pandas as pd
 from scipy.stats import gmean, norm, linregress
-from HDX_LIMIT import io, datatypes
+from hdx_limit import io, datatypes
 from numpy import linspace, cumsum, searchsorted
-from HDX_LIMIT.plot_factor_data import plot_factor_data_from_data_dict, plot_factor_data_from_data_tensor
+from hdx_limit.plot_factor_data import plot_factor_data_from_data_dict, plot_factor_data_from_data_tensor
 
 from bokeh.plotting import figure
 from bokeh.palettes import Spectral6
