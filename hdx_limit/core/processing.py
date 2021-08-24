@@ -31,6 +31,7 @@ Todo:
    http://google.github.io/styleguide/pyguide.html
 
 """
+import ipdb
 import os
 import sys
 import psutil
@@ -658,6 +659,7 @@ class PathOptimizer:
 
         # Append final (0, 0) to be called by charge_idxs which are not in the charge group for a single loop iteration
         dot_products.append((0, 0))
+        ipdb.set_trace()
         charges = list(set(np.concatenate([ic.charge_states for ic in undeuts
                                           ])))
         out = dict.fromkeys(charges)

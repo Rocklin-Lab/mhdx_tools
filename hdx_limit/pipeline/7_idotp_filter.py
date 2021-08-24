@@ -47,7 +47,7 @@ def main(library_info_path,
          library_info_out_path=None,
          plot_out_path=None,
          return_flag=False,
-         idotp_cutoff=0.95):
+         idotp_cutoff=0.99):
     """Reads all library_info index idotp_check.csv files and returns or saves a list of indices with idotp >= idotp_cutoff.
 
     Args:
@@ -64,7 +64,7 @@ def main(library_info_path,
 
     """
     library_info = pd.read_json(library_info_path)
-    sorted_inputs = sorted(all_idotp_csv_inputs, key=lambda fn: int(fn.split("_")[-3]))
+    sorted_inputs = sorted(all_idotp_csv_inputs, key=lambda fn: int([item[6:] for item in fn.split("/")[-1].split("_") if "charge" in item][0]))
     print("Length of inputs: "+str(len(sorted_inputs)))
 
     out_dict = {}
@@ -159,7 +159,7 @@ if __name__ == "__main__":
             "-c",
             "--idotp_cutoff",
             type=float,
-            default=0.95,
+            default=0.99,
             help=
             "lower limit on dot-product between theoretical integrated m/z of POI and int. m/z of observed signal in question. Float in range [0,1], default 0.95 "
         )
