@@ -400,20 +400,17 @@ class PathOptimizer:
         """
 
         # Set score weights
-        self.int_mz_std_rmse_weight = 1
         self.baseline_peak_error_weight = 100
-        self.delta_mz_rate_backward_weight = 1.65  # was 2
-        self.delta_mz_rate_forward_weight = 1.65  # was 2
-        self.int_mz_rot_fit_weight = 5
-        self.dt_ground_fit_weight = 25
-        self.rt_ground_fit_weight = 5
-        self.rt_ground_rmse_weight = 10
-        self.dt_ground_rmse_weight = 10
-        self.auc_ground_rmse_weight = 20
-        self.rmses_sum_weight = 1 
-        self.maxint_sum_weight = 1
-        self.int_mz_FWHM_rmse_weight = 1
-        self.nearest_neighbor_penalty_weight = 1
+        self.delta_mz_rate_backward_weight = 0.165
+        self.delta_mz_rate_forward_weight = 0.162
+        self.dt_ground_rmse_weight = 7.721
+        self.dt_ground_fit_weight = 13.277
+        self.rt_ground_fit_weight = 1.304
+        self.rt_ground_rmse_weight = 3.859
+        self.auc_ground_rmse_weight = 5.045
+        self.rmses_sum_weight = 0.242
+        self.int_mz_FWHM_rmse_weight = 0.072
+        self.nearest_neighbor_penalty_weight = 0.151
 
         self.name = name
         self.all_tp_clusters = all_tp_clusters
@@ -1081,8 +1078,6 @@ class PathOptimizer:
 
             """
             return {
-                "int_mz_std_rmse":
-                    self.int_mz_std_rmse(series) * self.int_mz_std_rmse_weight,
                 "delta_mz_rate_backward":
                     self.delta_mz_rate(series)[0] * self.delta_mz_rate_backward_weight,
                 "delta_mz_rate_afterward":
@@ -1568,11 +1563,9 @@ class PathOptimizer:
     # Eventually put defaults here as else statements
     def set_score_weights(
         self,
-        int_mz_std_rmse_weight=None,
         baseline_peak_error_weight=None,
         delta_mz_rate_backward_weight=None,
         delta_mz_rate_forward_weight=None,
-        int_mz_rot_fit_weight=None,
         dt_ground_fit_weight=None,
         rt_ground_rmse_weight=None,
         dt_ground_rmse_weight=None,
@@ -1592,16 +1585,12 @@ class PathOptimizer:
 
         """
 
-        if int_mz_std_rmse_weight != None:
-            self.int_mz_std_rmse_weight = int_mz_std_rmse_weight
         if baseline_peak_error_weight != None:
             self.baseline_peak_error_weight = baseline_peak_error_weight
         if delta_mz_rate_backward_weight != None:
             self.delta_mz_rate_backward_weight = delta_mz_rate_backward_weight
         if delta_mz_rate_forward_weight != None:
             self.delta_mz_rate_forward_weight = delta_mz_rate_forward_weight
-        if int_mz_rot_fit_weight != None:
-            self.int_mz_rot_fit_weight = int_mz_rot_fit_weight
         if rt_ground_fit_weight != None:
             self.rt_ground_fit_weight = rt_ground_fit_weight
         if dt_ground_fit_weight != None:
@@ -1614,8 +1603,6 @@ class PathOptimizer:
             self.auc_ground_rmse_weight = auc_ground_rmse_weight
         if rmses_sum_weight != None:
             self.rmses_sum_weight = rmses_sum_weight
-        if maxint_sum_weight != None:
-            self.maxint_sum_weight = maxint_sum_weight
         if int_mz_FWHM_rmse_weight != None:
             self.int_mz_FWHM_rmse_weight  = int_mz_FWHM_rmse_weight
         if nearest_neighbor_penalty_weight != None:
@@ -1631,41 +1618,31 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        coeffs = [1.0, 0.10008302970275278, 0.09845279850378537, 0.772117631651534,
-                  0.5310720751993441, 0.26070374293926435, 0.38586818508608206, 0.2522380132144197,
-                  0.24236622286514023, 0.07221833422901867, 0.15051371151603132]
-
         return sum([
-            coeffs[0] * self.baseline_peak_error_weight * self.baseline_peak_error(ics),
-            coeffs[1] * self.delta_mz_rate_backward_weight * self.delta_mz_rate(ics)[0],
-            coeffs[2] * self.delta_mz_rate_forward_weight * self.delta_mz_rate(ics)[1],
-            coeffs[3] * self.dt_ground_rmse_weight * self.dt_ground_rmse(ics),
-            coeffs[4] * self.dt_ground_fit_weight * self.dt_ground_fit(ics),
-            coeffs[5] * self.rt_ground_fit_weight * self.rt_ground_fit(ics),
-            coeffs[6] * self.rt_ground_rmse_weight * self.rt_ground_rmse(ics),
-            coeffs[7] * self.auc_ground_rmse_weight * self.auc_ground_rmse(ics),
-            coeffs[8] * self.rmses_sum_weight * self.rmses_sum(ics),
-            coeffs[9] * self.int_mz_FWHM_rmse_weight * self.int_mz_FWHM_rmse(ics),
-            coeffs[10] * self.nearest_neighbor_penalty_weight * self.nearest_neighbor_penalty(ics)
+            self.baseline_peak_error_weight * self.baseline_peak_error(ics),
+            self.delta_mz_rate_backward_weight * self.delta_mz_rate(ics)[0],
+            self.delta_mz_rate_forward_weight * self.delta_mz_rate(ics)[1],
+            self.dt_ground_rmse_weight * self.dt_ground_rmse(ics),
+            self.dt_ground_fit_weight * self.dt_ground_fit(ics),
+            self.rt_ground_fit_weight * self.rt_ground_fit(ics),
+            self.rt_ground_rmse_weight * self.rt_ground_rmse(ics),
+            self.auc_ground_rmse_weight * self.auc_ground_rmse(ics),
+            self.rmses_sum_weight * self.rmses_sum(ics),
+            self.int_mz_FWHM_rmse_weight * self.int_mz_FWHM_rmse(ics),
+            self.nearest_neighbor_penalty_weight * self.nearest_neighbor_penalty(ics)
         ])
 
     def combo_score_mono(self, ics):
-        coeffs = [1.0, 0.10008302970275278, 0.09845279850378537, 0.772117631651534,
-                  0.5310720751993441, 0.26070374293926435, 0.38586818508608206, 0.2522380132144197,
-                  0.24236622286514023, 0.07221833422901867, 0.15051371151603132]
 
         return sum([
-            coeffs[0] * self.baseline_peak_error_weight * self.baseline_peak_error(ics),
-            #coeffs[1] * self.delta_mz_rate_backward_weight * self.delta_mz_rate(ics)[0],
-            #coeffs[2] * self.delta_mz_rate_forward_weight * self.delta_mz_rate(ics)[1],
-            coeffs[3] * self.dt_ground_rmse_weight * self.dt_ground_rmse(ics),
-            coeffs[4] * self.dt_ground_fit_weight * self.dt_ground_fit(ics),
-            coeffs[5] * self.rt_ground_fit_weight * self.rt_ground_fit(ics),
-            coeffs[6] * self.rt_ground_rmse_weight * self.rt_ground_rmse(ics),
-            coeffs[7] * self.auc_ground_rmse_weight * self.auc_ground_rmse(ics),
-            coeffs[8] * self.rmses_sum_weight * self.rmses_sum(ics),
-            #coeffs[9] * self.int_mz_FWHM_rmse_weight * self.int_mz_FWHM_rmse(ics),
-            coeffs[10] * self.nearest_neighbor_penalty_weight * self.nearest_neighbor_penalty(ics),
+            self.baseline_peak_error_weight * self.baseline_peak_error(ics),
+            self.dt_ground_rmse_weight * self.dt_ground_rmse(ics),
+            self.dt_ground_fit_weight * self.dt_ground_fit(ics),
+            self.rt_ground_fit_weight * self.rt_ground_fit(ics),
+            self.rt_ground_rmse_weight * self.rt_ground_rmse(ics),
+            self.auc_ground_rmse_weight * self.auc_ground_rmse(ics),
+            self.rmses_sum_weight * self.rmses_sum(ics),
+            self.nearest_neighbor_penalty_weight * self.nearest_neighbor_penalty(ics),
         ])
            
                                          
@@ -1682,8 +1659,6 @@ class PathOptimizer:
     # TODO Add additional scores to this function                                    
 
         return {
-            "int_mz_std_rmse": (self.int_mz_std_rmse_weight,
-                                self.int_mz_std_rmse(ics)),
             "baseline_peak_error": (
                 self.baseline_peak_error_weight,
                 self.baseline_peak_error(ics),
@@ -1692,7 +1667,6 @@ class PathOptimizer:
                 (self.delta_mz_rate_backward_weight, self.delta_mz_rate(ics)[0]),
             "delta_mz_rate_foward":
                 (self.delta_mz_rate_forward_weight, self.delta_mz_rate(ics)[1]),
-            # self.int_mz_rot_fit_weight*self.int_mz_rot_fit(ics),
             "dt_ground_rmse": (self.dt_ground_rmse_weight,
                                self.dt_ground_rmse(ics)),
             "dt_ground_fit":
