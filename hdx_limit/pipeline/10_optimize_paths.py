@@ -192,12 +192,12 @@ def main(library_info_path,
 
     # Order files, pooling all replicates and charges by timepoint.
     atc = []
+    suffix = ".mzML"
     for tp in timepoints["timepoints"]:
         tp_buf = []
         for fn in timepoints[tp]:
             for file in all_ic_input_paths:
-                if fn.split(
-                    ".")[0] in file:  # only match filename without .mzML
+                if fn[:-len(suffix)] in file:  # only match filename without .mzML
                     ics = limit_read(file)  # expects list of ics
                     for ic in ics:
                         tp_buf.append(ic)
