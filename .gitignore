@@ -1,0 +1,12 @@
+*
+!.gitignore
+!hdx_limit/**
+hdx_limit.egg-info/
+hdx_limit.egg-info/**
+**/__pycache__/
+**/__pycache__/*
+**/__pycache__/**
+**/.ipynb_checkpoints/
+**/.ipynb_checkpoints/*
+**/.ipynb_checkpoints/**
+**/.DS_Store

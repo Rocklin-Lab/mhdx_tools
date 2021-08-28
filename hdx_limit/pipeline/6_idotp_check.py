@@ -38,7 +38,6 @@ import yaml
 import zlib
 import math
 import copy
-import ipdb
 import pickle
 import pymzml
 import molmass
@@ -53,7 +52,7 @@ from scipy.stats import norm
 from scipy.signal import find_peaks
 from collections import defaultdict as ddict
 from scipy.ndimage.filters import gaussian_filter
-from HDX_LIMIT.core.processing import TensorGenerator, generate_tensor_factors
+from hdx_limit.core.processing import TensorGenerator, generate_tensor_factors
 
 def cum_peak_gaps_from_sequence(sequence):
     """Determine expected cumulative mass distances between isotopes of a given protein sequence. 
