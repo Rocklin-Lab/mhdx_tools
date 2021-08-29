@@ -31,7 +31,6 @@ Todo:
    http://google.github.io/styleguide/pyguide.html
 
 """
-import ipdb
 import os
 import time
 import sys
@@ -188,7 +187,7 @@ class DataTensor:
         
         mz_bin_centers = np.ravel([np.linspace(lowlim, highlim, bins_per_isotope_peak) for lowlim, highlim in integrated_mz_limits])
         tensor3_out = np.zeros((len(retention_labels), len(drift_labels), len(mz_bin_centers)))
-        ipdb.set_trace()
+
         scan = 0
         for i in range(len(retention_labels)):
             for j in range(len(drift_labels)):
