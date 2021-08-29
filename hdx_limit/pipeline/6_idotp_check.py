@@ -366,9 +366,10 @@ def main(library_info_path,
 if __name__ == "__main__":
 
     if "snakemake" in globals():
-        config_dict = yaml.load(open(snakemake.input[0], 'rb'), Loader=yaml.Loader)
-        normalization_factors = pd.read_csv(snakemake.input[1])
-        undeut_tensor_path_list = snakemake.input[2:]
+        library_info_path = snakemake.input[0]
+        config_dict = yaml.load(open(snakemake.input[1], 'rb'), Loader=yaml.Loader)
+        normalization_factors = pd.read_csv(snakemake.input[2])
+        undeut_tensor_path_list = snakemake.input[3:]
         output_path = snakemake.output[0]
         factor_output_path_list = [item for item in snakemake.output if item.endswith(".factor")]
         factor_plot_output_path_list = [item for item in snakemake.output if item.endswith(".factor.pdf")]
@@ -381,7 +382,7 @@ if __name__ == "__main__":
         ic_rel_ht_baseline = config_dict["ic_rel_height_filter_baseline"]
         ic_rel_ht_threshold = config_dict["ic_rel_height_threshold"]
 
-        main(library_info_path=snakemake.input[0],
+        main(library_info_path=library_info_path,
              normalization_factors=normalization_factors,
              undeut_tensor_path_list=undeut_tensor_path_list,
              factor_output_path_list=factor_output_path_list,
