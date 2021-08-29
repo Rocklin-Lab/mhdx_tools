@@ -42,7 +42,7 @@ import collections
 import numpy as np
 import pandas as pd
 import _pickle as cpickle
-from HDX_LIMIT.core.io import limit_write
+from hdx_limit.core.io import limit_write
 
 def main(mzml_path, return_flag=None, out_path=None, mzml_sum_outpath=None):
     """Generate LC Chromatogram by summing ionic current over IMS and m/Z dimensions.

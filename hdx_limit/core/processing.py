@@ -267,7 +267,7 @@ class TensorGenerator:
         self.library_info = library_info
         self.mz_centers = mz_centers
         self.normalization_factors = normalization_factors
-        my_mzml = ".".join("_".join(self.filename.split("_")[-5:]).split(".")[:2]) # Fix for updated rt-group directories.
+        my_mzml = ".".join("_".join(self.filename.split("_")[-4:]).split(".")[:2]) # Fix for updated rt-group directories.
         print(my_mzml)
         self.normalization_factor = normalization_factors.loc[normalization_factors["mzml"]==my_mzml]["normalization_factor"].values[0]
 
