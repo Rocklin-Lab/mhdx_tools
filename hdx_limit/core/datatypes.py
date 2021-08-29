@@ -31,6 +31,7 @@ Todo:
    http://google.github.io/styleguide/pyguide.html
 
 """
+import ipdb
 import os
 import time
 import sys
@@ -183,12 +184,11 @@ class DataTensor:
         retention_labels, drift_labels, sparse_data = data
         
         FWHM = np.average(integrated_mz_limits) / ms_resolution
-        gaussian_scale = FWHM / 2.355 #a gaussian with scale = standard deviation = 1 has FWHM 2.355
+        gaussian_scale = FWHM / 2.355 # A gaussian with scale = standard deviation = 1 has FWHM 2.355.
         
         mz_bin_centers = np.ravel([np.linspace(lowlim, highlim, bins_per_isotope_peak) for lowlim, highlim in integrated_mz_limits])
         tensor3_out = np.zeros((len(retention_labels), len(drift_labels), len(mz_bin_centers)))
-
-
+        ipdb.set_trace()
         scan = 0
         for i in range(len(retention_labels)):
             for j in range(len(drift_labels)):

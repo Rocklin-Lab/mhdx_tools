@@ -42,8 +42,7 @@ import matplotlib.pyplot as plt
 
 
 def main(library_info_path,
-         all_idotp_csv_inputs,
-         indices_out_path=None,
+         all_idotp_inputs,
          library_info_out_path=None,
          plot_out_path=None,
          return_flag=False,
@@ -52,7 +51,7 @@ def main(library_info_path,
 
     Args:
         library_info_path (str): path/to/library_info.json
-        all_idotp_csv_inputs (list of strings): list of all input IsotopeCluster-list filepaths
+        all_idotp_inputs (list of strings): list of all input IsotopeCluster-list filepaths
         indices_out_path (str): path/to/filter_passing_indices.csv
         library_info_out_path (str): path/to/checked_library_info.json
         plot_out_path (str): path/to/file.png for idotp_distribution plot
@@ -64,54 +63,26 @@ def main(library_info_path,
 
     """
     library_info = pd.read_json(library_info_path)
-    sorted_inputs = sorted(all_idotp_csv_inputs, key=lambda fn: int([item[6:] for item in fn.split("/")[-1].split("_") if "charge" in item][0]))
-    print("Length of inputs: "+str(len(sorted_inputs)))
+    out_dict = pd.DataFrame(columns=list(library_info.columns)+['idotp', 'integrated_mz_width', 'mz_centers', 'theor_mz_dist'])
 
-    out_dict = {}
-    filter_passing_indices = []
-    idotps = []
-    mz_centers = []
-    theor_mz_dists = []
-    integrated_mz_width_list = []
-
-    for fn in sorted_inputs:
-        prot_name = fn.split("/")[-2] # Name from protein directory.
-        prot_charge = int([item[6:] for item in fn.split("/")[-1].split("_") if "charge" in item][0]) # Finds by keyword and strip text.
-        lib_idx = library_info.loc[(library_info["name"]==prot_name) & (library_info["charge"]==prot_charge)].index
-        idpc = pd.read_json(fn)
-        idotps.append(idpc["idotp"].values[0])
-        mz_centers.append(idpc["mz_centers"][0]) # Account for nested list structure
-        theor_mz_dists.append(idpc["theor_mz_dist"][0])
-        integrated_mz_width_list.append(idpc["integrated_mz_width"].values[0])
-        if idpc["idotp"].values[0] >= idotp_cutoff:
-            filter_passing_indices.append(lib_idx)
-
-    # Set values in library_info and write out
-    library_info["idotp"] = idotps
-    library_info["mz_centers"] = mz_centers
-    library_info["theor_mz_dist"] = theor_mz_dists
-    library_info["integrated_mz_width"] = integrated_mz_width_list
+    # Opens each idotp_check dataframe, if idotp>=cutoff adds computed values to row and appends row to output.
+    for idpc in all_idotp_inputs:
+        open_idpc = pd.read_json(idpc)
+        if open_idpc["idotp"].values>=0.99:
+            my_name = idpc.split("/")[-2]
+            my_charge = int([item[6:] for item in idpc.split("/")[-1].split("_") if "charge" in item][0])
+            my_row = library_info.loc[(library_info["name"]==my_name) & (library_info["charge"]==my_charge)]
+            for column in open_idpc.columns:
+                my_row[column] = open_idpc[column].values
+            out_df = out_df.append(my_row)
 
     if library_info_out_path is not None:
-        library_info.to_json(library_info_out_path)
-
-    # re-order indices
-    filter_passing_indices = sorted(filter_passing_indices)
-    # add passing indices to output dict
-
-    out_dict["filter_passing_indices"] = filter_passing_indices
-    out_dict["mz_centers"] = mz_centers
-    out_dict["theor_mz_dist"] = theor_mz_dists
-
-    out_df = pd.DataFrame.from_dict({"index": filter_passing_indices})
+        out_dict.to_json(library_info_out_path)
 
     if plot_out_path is not None:
         sns.displot(idotps)
         plt.axvline(idotp_cutoff, 0, 1)
         plt.savefig(plot_out_path)
-
-    if indices_out_path is not None:
-        out_df.to_csv(indices_out_path)
 
     if return_flag:
         return out_dict
@@ -121,16 +92,14 @@ if __name__ == "__main__":
     # If the snakemake global object is present, save expected arguments from snakemake to be passed to main().
     if "snakemake" in globals():
         library_info_path = snakemake.input.pop(0)
-        all_idotp_csv_inputs = snakemake.input
+        all_idotp_inputs = snakemake.input
 
-        indices_out_path = snakemake.output[0]
-        library_info_out_path =  snakemake.output[1]
-        plot_out_path = snakemake.output[2]
+        library_info_out_path =  snakemake.output[0]
+        plot_out_path = snakemake.output[1]
 
 
         main(library_info_path=library_info_path,
-             all_idotp_csv_inputs=all_idotp_csv_inputs,
-             indices_out_path=indices_out_path,
+             all_idotp_inputs=all_idotp_inputs,
              library_info_out_path=library_info_out_path,
              plot_out_path=plot_out_path)
     else:
@@ -141,14 +110,11 @@ if __name__ == "__main__":
         )
         parser.add_argument("library_info_path", help="path/to/library_info.json")
         parser.add_argument("-i",
-                            "--all_idotp_csv_inputs",
-                            help="list of all idotp check .csv outputs to be read")
+                            "--all_idotp_inputs",
+                            help="list of all idotp check .json outputs to be read")
         parser.add_argument("-d",
                             "--input_dir_path",
                             help="path/to/dir/ containing idotp_check.csv files")
-        parser.add_argument("-o",
-                            "--indices_out_path",
-                            help="path/to/filter_passing_indices.csv")
         parser.add_argument("-l",
                             "--library_info_out_path",
                             help="path/to/checked_library_info.json")
@@ -165,19 +131,18 @@ if __name__ == "__main__":
         )
         args = parser.parse_args()
 
-        if args.all_idotp_csv_inputs is None and args.input_dir_path is None:
+        if args.all_idotp_inputs is None and args.input_dir_path is None:
             parser.print_help()
             sys.exit()
 
-        if args.all_idotp_csv_inputs is None and args.input_dir_path is not None:
-            args.all_idotp_csv_inputs = sorted(
+        if args.all_idotp_inputs is None and args.input_dir_path is not None:
+            args.all_idotp_inputs = sorted(
                 list(glob.glob(args.input_dir_path + "*idotp_check.csv")))
 
-        all_idotp_csv_inputs = args.all_idotp_csv_inputs.split(' ')
+        all_idotp_inputs = args.all_idotp_inputs.split(' ')
 
         main(library_info_path=args.library_info_path,
-             all_idotp_csv_inputs=args.all_idotp_csv_inputs,
-             indices_out_path=args.indices_out_path,
+             all_idotp_inputs=args.all_idotp_inputs,
              library_info_out_path = args.library_info_out_path,
              plot_out_path=args.plot_out_path,
              idotp_cutoff=args.idotp_cutoff)
