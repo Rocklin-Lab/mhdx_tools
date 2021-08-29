@@ -366,9 +366,9 @@ def main(library_info_path,
 if __name__ == "__main__":
 
     if "snakemake" in globals():
-        config_dict = yaml.load(open(snakemake.input[1], 'rb'), Loader=yaml.Loader)
-        normalization_factors = pd.read_csv(snakemake.input[2])
-        undeut_tensor_path_list = snakemake.input[3:]
+        config_dict = yaml.load(open(snakemake.input[0], 'rb'), Loader=yaml.Loader)
+        normalization_factors = pd.read_csv(snakemake.input[1])
+        undeut_tensor_path_list = snakemake.input[2:]
         output_path = snakemake.output[0]
         factor_output_path_list = [item for item in snakemake.output if item.endswith(".factor")]
         factor_plot_output_path_list = [item for item in snakemake.output if item.endswith(".factor.pdf")]
