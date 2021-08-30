@@ -202,7 +202,7 @@ def plot_ics_from_ic_list(list_of_ics, output_path):
 def main(library_info_path,
          tensor_input_path,
          timepoints_dict,
-         normalization_factors,
+         normalization_factor,
          isotope_clusters_out_path=None,
          factor_out_path=None,
          factor_plot_output_path=None,
@@ -238,8 +238,8 @@ def main(library_info_path,
     library_info = pd.read_json(library_info_path)
     my_name = tensor_input_path.split("/")[-2] # Name from protein directory.
     my_charge = int([item[6:] for item in tensor_input_path.split("/")[-1].split("_") if "charge" in item][0]) # Finds by keyword and strip text.
-    my_idx = library_info.loc[(library_info["name"]==my_name) & (library_info["charge"]==my_charge)].index
-    my_centers = library_info.loc[(library_info["name"]==my_name) & (library_info["charge"]==my_charge)]["mz_centers"].values
+    my_row = library_info.loc[(library_info["name"]==my_name) & (library_info["charge"]==my_charge)]
+    my_centers = my_row["mz_centers"].values
     centers = my_centers[0]
 
     # Finds timepoint of passed filename by config comparison.
@@ -254,7 +254,7 @@ def main(library_info_path,
                                           gauss_params=gauss_params,
                                           n_factors=n_factors,
                                           mz_centers=centers,
-                                          normalization_factors=normalization_factors,
+                                          normalization_factor=normalization_factor,
                                           factor_output_fpath=factor_out_path,
                                           factor_plot_output_path=factor_plot_output_path,
                                           timepoint_label=None,
@@ -264,7 +264,7 @@ def main(library_info_path,
 
     all_ics = []
 
-    ic_peak_width_auto = 0.8 * library_info['integrated_mz_width'].values[my_idx][0]
+    ic_peak_width_auto = 0.8 * my_row['integrated_mz_width'].values[0]
 
     for factor in data_tensor.DataTensor.factors:
 
@@ -364,11 +364,13 @@ if __name__ == "__main__":
     ic_rel_ht_threshold = config_dict["ic_rel_height_threshold"]
 
     normalization_factors = pd.read_csv(args.normalization_factors_path)
+    my_mzml = [filename for timepoint in config_dict["timepoints"] for filename in config_dict[timepoint] if filename in args.tensor_input_path][0]
+    normalization_factor = normalization_factors.loc[normalization_factors["mzml"]==my_mzml]["normalization_factor"].values
 
     main(library_info_path=args.library_info_path,
          tensor_input_path=args.tensor_input_path,
          timepoints_dict=config_dict,
-         normalization_factors=normalization_factors,
+         normalization_factor=normalization_factor,
          isotope_clusters_out_path=args.isotope_clusters_out_path,
          factor_out_path=args.factor_data_out_path,
          factor_plot_output_path=args.factor_plot_out_path,

@@ -293,16 +293,15 @@ class TensorGenerator:
         self.name = filename.split("/")[-2] # Expects format: path/to/{rt-group-name}/{rt-group-name}_{charge}_{file.mzML.gz}.cpickle.zlib.
         self.charge = int([item[6:] for item in filename.split("/")[-1].split("_") if "charge" in item][0]) # Finds by keyword and strip text.
         self.lib_idx = self.library_info.loc[(library_info["name"]==self.name) & (library_info["charge"]==self.charge)].index
-        self.max_peak_center = len(self.library_info.loc[
-            self.library_info["name"] == self.name]["sequence"].values[0])
+        self.my_row = self.library_info.loc[(library_info["name"]==self.name) & (library_info["charge"]==self.charge)]
+        self.max_peak_center = len(self.library_info.loc[self.library_info["name"] == self.name]["sequence"].values[0])
         self.total_isotopes = self.max_peak_center + self.high_mass_margin
         self.total_mass_window = self.low_mass_margin + self.total_isotopes
 
-        i = self.lib_idx
-        self.mz_lows = self.library_info["obs_mz"].values[i] - (
-            self.low_mass_margin / self.library_info["charge"].values[i])
-        self.mz_highs = self.library_info["obs_mz"].values[i] + (
-            self.total_isotopes / self.library_info["charge"].values[i])
+        self.mz_lows = self.my_row["obs_mz"].values[0] - (
+            self.low_mass_margin / self.charge)
+        self.mz_highs = self.my_row["obs_mz"].values[0] + (
+            self.total_isotopes / self.charge)
 
         low_mz_limits = [center * ((1000000.0 - self.ppm_radius) / 1000000.0) for center in self.mz_centers]
         high_mz_limits = [center * ((1000000.0 + self.ppm_radius) / 1000000.0) for center in self.mz_centers]
@@ -317,7 +316,7 @@ class TensorGenerator:
             name=self.name,
             total_mass_window=self.total_mass_window,
             n_concatenated=1,
-            charge_states=[self.library_info["charge"].values[self.lib_idx]],
+            charge_states=[self.my_row["charge"].values[0]],
             rts=self.tensor[0],
             dts=self.tensor[1],
             seq_out=self.tensor[2],
