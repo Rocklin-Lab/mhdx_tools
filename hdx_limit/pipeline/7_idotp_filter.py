@@ -64,10 +64,11 @@ def main(library_info_path,
     """
     library_info = pd.read_json(library_info_path)
     out_df = pd.DataFrame(columns=list(library_info.columns)+['idotp', 'integrated_mz_width', 'mz_centers', 'theor_mz_dist'])
-
+    idotps = []
     # Opens each idotp_check dataframe, if idotp>=cutoff adds computed values to row and appends row to output.
     for idpc in all_idotp_inputs:
         open_idpc = pd.read_json(idpc)
+        idotps.append(open_idpc["idotp"].values)
         if open_idpc["idotp"].values>=0.99:
             my_name = idpc.split("/")[-2]
             my_charge = int([item[6:] for item in idpc.split("/")[-1].split("_") if "charge" in item][0])
