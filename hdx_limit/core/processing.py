@@ -142,7 +142,7 @@ def create_factor_data_object(data_tensor, gauss_params, timepoint_label=None):
     return factor_data_dict
 
 
-def generate_tensor_factors(tensor_fpath, library_info_df, timepoint_index, gauss_params, mz_centers, normalization_factors,
+def generate_tensor_factors(tensor_fpath, library_info_df, timepoint_index, gauss_params, mz_centers, normalization_factor,
                             n_factors=15,
                             factor_output_fpath=None,
                             factor_plot_output_path=None,
@@ -182,7 +182,7 @@ def generate_tensor_factors(tensor_fpath, library_info_df, timepoint_index, gaus
                                   library_info=library_info_df,
                                   timepoint_index=timepoint_index,
                                   mz_centers=mz_centers,
-                                  normalization_factors=normalization_factors)
+                                  normalization_factor=normalization_factor)
 
     print("Post-Tensor-Pre-Factor-Initialization: " + str(process.memory_info().rss /
                                         (1024 * 1024 * 1024)))
@@ -238,7 +238,7 @@ class TensorGenerator:
     c13_mass_diff = 1.00335
 
 
-    def __init__(self, filename, timepoint_index, library_info, mz_centers, normalization_factors, **kwargs):
+    def __init__(self, filename, timepoint_index, library_info, mz_centers, normalization_factor, **kwargs):
         """Example of docstring on the __init__ method.
 
         The __init__ method may be documented in either the class level
@@ -266,10 +266,7 @@ class TensorGenerator:
         self.timepoint_index = timepoint_index
         self.library_info = library_info
         self.mz_centers = mz_centers
-        self.normalization_factors = normalization_factors
-        my_mzml = ".".join("_".join(self.filename.split("_")[-4:]).split(".")[:2]) # Fix for updated rt-group directories.
-        print(my_mzml)
-        self.normalization_factor = normalization_factors.loc[normalization_factors["mzml"]==my_mzml]["normalization_factor"].values[0]
+        self.normalization_factor = normalization_factor
 
         if (
                 kwargs is not None

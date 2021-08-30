@@ -156,7 +156,7 @@ def calculate_isotope_dist_dot_product(sequence, undeut_integrated_mz_array):
 def gen_tensors_factorize(library_info_df,
                           undeut_tensor_path_list,
                           mz_centers,
-                          normalization_factors,
+                          normalization_factor,
                           factor_output_path_list=None,
                           factor_plot_output_path_list=None,
                           timepoint_index=0,
@@ -211,7 +211,7 @@ def gen_tensors_factorize(library_info_df,
                                               gauss_params=gauss_params,
                                               n_factors=n_factors,
                                               mz_centers=mz_centers,
-                                              normalization_factors=normalization_factors,
+                                              normalization_factor=normalization_factor,
                                               factor_output_fpath=factor_output_path,
                                               factor_plot_output_path=factor_plot_output_path,
                                               timepoint_label=None,
@@ -262,7 +262,7 @@ def calc_dot_prod_for_isotope_clusters(sequence, undeut_isotope_clusters):
 
 
 def main(library_info_path,
-         normalization_factors,
+         normalization_factor,
          undeut_tensor_path_list,
          factor_output_path_list=None,
          factor_plot_output_path_list=None,
@@ -308,14 +308,14 @@ def main(library_info_path,
     library_info = pd.read_json(library_info_path)
     prot_name = undeut_tensor_path_list[0].split("/")[-2] # Name from protein directory.
     prot_charge = int([item[6:] for item in undeut_tensor_path_list[0].split("/")[-1].split("_") if "charge" in item][0]) # Finds by keyword and strip text.
-    lib_idx = library_info.loc[(library_info["name"]==prot_name) & (library_info["charge"]==prot_charge)].index
-    prot_seq = library_info.iloc[lib_idx]["sequence"].values[0]
+    my_info = library_info.loc[(library_info["name"]==prot_name) & (library_info["charge"]==prot_charge)]
+    prot_seq = my_info["sequence"].values[0]
     print("Protein Sequence: "+prot_seq)
     prot_cum_peak_gaps = cum_peak_gaps_from_sequence(prot_seq)
     print("Cumulative Peak Gaps: "+str(prot_cum_peak_gaps))
-    print("Protein Charge States: "+str(library_info.iloc[lib_idx]["charge"].values[0]))
-    print("Observed m/Z: "+str(library_info.iloc[lib_idx]['obs_mz'].values[0]))
-    mz_centers = (prot_cum_peak_gaps/int(library_info.iloc[lib_idx]["charge"].values[0])) + library_info.iloc[lib_idx]['obs_mz'].values[0]
+    print("Protein Charge States: "+str(my_info["charge"].values[0]))
+    print("Observed m/Z: "+str(my_info['obs_mz'].values[0]))
+    mz_centers = (prot_cum_peak_gaps/prot_charge) + my_info['obs_mz'].values[0]
 
     iso_clusters_list, data_tensor_list = gen_tensors_factorize(
         library_info_df=library_info,
@@ -323,7 +323,7 @@ def main(library_info_path,
         factor_output_path_list=factor_output_path_list,
         factor_plot_output_path_list=factor_plot_output_path_list,
         mz_centers=mz_centers,
-        normalization_factors=normalization_factors,
+        normalization_factor=normalization_factor,
         n_factors=n_factors,
         gauss_params=gauss_params,
         filter_factors=filter_factors,
@@ -370,6 +370,10 @@ if __name__ == "__main__":
         config_dict = yaml.load(open(snakemake.input[1], 'rb'), Loader=yaml.Loader)
         normalization_factors = pd.read_csv(snakemake.input[2])
         undeut_tensor_path_list = snakemake.input[3:]
+        my_mzml = [filename for timepoint in config_dict["timepoints"] for filename in config_dict[timepoint] if filename in undeut_tensor_path_list[0]][0]
+        print(undeut_tensor_path_list[0])
+        print(my_mzml)
+        normalization_factor = normalization_factors.loc[normalization_factors["mzml"]==my_mzml]["normalization_factor"].values
         output_path = snakemake.output[0]
         factor_output_path_list = [item for item in snakemake.output if item.endswith(".factor")]
         factor_plot_output_path_list = [item for item in snakemake.output if item.endswith(".factor.pdf")]
@@ -383,7 +387,7 @@ if __name__ == "__main__":
         ic_rel_ht_threshold = config_dict["ic_rel_height_threshold"]
 
         main(library_info_path=library_info_path,
-             normalization_factors=normalization_factors,
+             normalization_factor=normalization_factor,
              undeut_tensor_path_list=undeut_tensor_path_list,
              factor_output_path_list=factor_output_path_list,
              output_path=output_path,
@@ -451,9 +455,11 @@ if __name__ == "__main__":
         ic_rel_ht_threshold = config_dict["ic_rel_height_threshold"]
 
         normalization_factors = pd.read_csv(args.normalization_factors)
+        my_mzml = [filename for timepoint in config_dict["timepoints"] for filename in config_dict[timepoint] if filename in undeut_tensor_path_list[0]][0]
+        normalization_factor = normalization_factors.loc[normalization_factors["mzml"]==my_mzml]["normalization_factor"].values
 
         main(library_info_path=args.library_info_path,
-             normalization_factors=normalization_factors,
+             normalization_factor=normalization_factor,
              undeut_tensor_path_list=args.undeut_tensor_path_list,
              factor_output_path_list=args.factor_output_path_list,
              output_path=args.output_path,
