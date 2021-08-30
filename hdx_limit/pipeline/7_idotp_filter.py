@@ -59,11 +59,11 @@ def main(library_info_path,
         idotp_cutoff (float): inclusive lower-bound on idotp [0,1] to be considered for evaluation, default=0.95
 
     Returns:
-        out_dict (dict) = dictionary containing "filter_passing_indices"
+        out_df (Pandas DataFrame): Dataframe with all information from library_info and idotp_check for all idotp filter passing rows.
 
     """
     library_info = pd.read_json(library_info_path)
-    out_dict = pd.DataFrame(columns=list(library_info.columns)+['idotp', 'integrated_mz_width', 'mz_centers', 'theor_mz_dist'])
+    out_df = pd.DataFrame(columns=list(library_info.columns)+['idotp', 'integrated_mz_width', 'mz_centers', 'theor_mz_dist'])
 
     # Opens each idotp_check dataframe, if idotp>=cutoff adds computed values to row and appends row to output.
     for idpc in all_idotp_inputs:
@@ -77,7 +77,7 @@ def main(library_info_path,
             out_df = out_df.append(my_row)
 
     if library_info_out_path is not None:
-        out_dict.to_json(library_info_out_path)
+        out_df.to_json(library_info_out_path)
 
     if plot_out_path is not None:
         sns.displot(idotps)
@@ -85,7 +85,7 @@ def main(library_info_path,
         plt.savefig(plot_out_path)
 
     if return_flag:
-        return out_dict
+        return out_df
 
 
 if __name__ == "__main__":
