@@ -171,10 +171,9 @@ def main(library_info_path,
     scan_times = []
 
     # Read scan info from msrun.
-    for k in range(msrun.get_spectrum_count()):
-        nextscan = msrun.next()
-        scan_functions.append(nextscan.id_dict["function"])
-        scan_times.append(nextscan.scan_time_in_minutes())
+    for scan in msrun:
+        scan_functions.append(scan.id_dict["function"])
+        scan_times.append(scan.scan_time_in_minutes())
     scan_times = np.array(scan_times)
     scan_numbers = np.arange(0, len(scan_times))
     scan_functions = np.array(scan_functions)
@@ -228,10 +227,11 @@ def main(library_info_path,
     if polyfit_calibration_dict is not None:
         calib_dict = load_pickle_file(polyfit_calibration_dict)
 
-    print(process.memory_info().rss)
-    msrun = pymzml.run.Reader(mzml_gz_path)
-    print(process.memory_info().rss)
-    print(time.time() - starttime, mzml_gz_path)
+    # No need to read msrun again - AF
+    # print(process.memory_info().rss)
+    # msrun = pymzml.run.Reader(mzml_gz_path)
+    # print(process.memory_info().rss)
+    # print(time.time() - starttime, mzml_gz_path)
 
     relevant_scans_set = set(relevant_scans)
     # Iterate over each scan, check if any line needs it, extract data within bounds for all lines needing data from the scan. 
