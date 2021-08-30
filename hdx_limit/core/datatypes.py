@@ -169,14 +169,14 @@ class DataTensor:
             data (tuple of 3 list-likes): Tuple of 3 vectors whose outer product recreates the extracted signal.
             integrated_mz_limits (list of list-likes of floats): The upper and lower bounds on integration surrounding each
                 m/Z-peak center, a list of list-likes of length 2.
-            bins_per_isotope_peak (int): Minimum number of bins a signal must span to be considered as an IsotopeCluster.
-            ms_resolution (int): Number of bins in the m/Z dimension of the reprofiled tensor.
+            bins_per_isotope_peak (int): Number of points to use to profile each isotope peak.
+            ms_resolution (int): Resolution to use in profiling the raw peaks. This determines the width of the gaussian used to profile each peak.
 
         Returns:
             retention_labels (list of floats): List of the absolute LC-RT values associated with each RT bin.
             drift_labels (list of floats):  List of the absolute IMS-DT values associated with each DT bin.
             mz_bin_centers (list of floats):  List of the absolute m/Z values associated with each m/Z bin.
-            bins_per_isotope_peak (int): Minimum number of bins a signal must span to be considered as an IsotopeCluster.
+            bins_per_isotope_peak (int): Number of points to use to profile each isotope peak.
             tensor3_out (numpy array): Full and reprofiled 3D tensor of LC-IMS-MS data.
 
         """
