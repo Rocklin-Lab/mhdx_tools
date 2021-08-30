@@ -233,12 +233,15 @@ def main(library_info_path,
     print(process.memory_info().rss)
     print(time.time() - starttime, mzml_gz_path)
 
+    relevant_scans_set = set(relevant_scans)
     # Iterate over each scan, check if any line needs it, extract data within bounds for all lines needing data from the scan. 
-    for scan_number in range(
-            msrun.get_spectrum_count()):  
-        scan = msrun.next()
+    for scan_number, scan in enumerate(
+            msrun):
 
-        if scan_number in relevant_scans:
+        if (scan_number < relevant_scans[0]) or (scan_number > relevant_scans[-1]):
+            continue
+
+        elif scan_number in relevant_scans_set:
 
             # Print progress at interval.
             if scan_number % 1 == 0:
