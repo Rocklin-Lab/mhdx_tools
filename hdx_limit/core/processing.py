@@ -49,18 +49,18 @@ from sklearn.metrics import mean_squared_error
 def filter_factors_on_rt_dt_gauss_fit(factor_list, rt_r2_cutoff=0.90, dt_r2_cutoff=0.90):
     """Filters Factors based on quality of RT and DT gaussian fit.
 
-        New factor list is created if the Factor DT and RT gaussian fit 
-        r^2 values are high. If none of the Factors pass the filtering 
-        criteria, returns original Factor list.
+    New factor list is created if the Factor DT and RT gaussian fit 
+    r^2 values are high. If none of the Factors pass the filtering 
+    criteria, returns original Factor list.
 
-        Args:
-            factor_list (list of Factor objects): A list of datatypes.Factor objects to be filtered by their rt and dt gaussian character.
-            rt_r2_cutoff (float): Minimum rt gaussian fit r^2 value for Factor to be considered of passing quality. Default = 0.9.
-            dt_r2_cutoff (float): Minimum dt gaussian fit r^2 value for Factor to be considered of passing quality. Default = 0.9.
+    Args:
+        factor_list (list of Factor objects): A list of datatypes.Factor objects to be filtered by their rt and dt gaussian character.
+        rt_r2_cutoff (float): Minimum rt gaussian fit r^2 value for Factor to be considered of passing quality. Default = 0.9.
+        dt_r2_cutoff (float): Minimum dt gaussian fit r^2 value for Factor to be considered of passing quality. Default = 0.9.
 
-        Returns:
-            new_factor_list (list of Factor objects): List of factors filtered for rt and dt gaussian likeness, 
-                return original factor list if fit quality scores are low.
+    Returns:
+        new_factor_list (list of Factor objects): List of factors filtered for rt and dt gaussian likeness, 
+            return original factor list if fit quality scores are low.
 
     """
     filtered_factors = []
@@ -317,39 +317,46 @@ class PathOptimizer:
     selected as the winning path, which is output along with the alternatives for each timepoint.
 
     Attributes:
-        attr1 (str): Description of `attr1`.
-        attr2 (:obj:`int`, optional): Description of `attr2`.
-
+        baseline_peak_error_weight (float): Weight coefficient for the baseline_peak_error score.
+        delta_mz_rate_backward_weight (float): Weight coefficient for the delta_mz_rate_backward score.
+        delta_mz_rate_forward_weight (float): Weight coefficient for the delta_mz_rate_forward score.
+        dt_ground_rmse_weight (float): Weight coefficient for the dt_ground_rmse score.
+        dt_ground_fit_weight (float): Weight coefficient for the dt_ground_fit score.
+        rt_ground_fit_weight (float): Weight coefficient for the rt_ground_fit score.
+        rt_ground_rmse_weight (float): Weight coefficient for the rt_ground_rmse score.
+        auc_ground_rmse_weight (float): Weight coefficient for the auc_ground_rmse score.
+        rmses_sum_weight (float): Weight coefficient for the rmses_sum score.
+        int_mz_FWHM_rmse_weight (float): Weight coefficient for the int_mz_FWHM_rmse score.
+        nearest_neighbor_penalty_weight (float): Weight coefficient for the nearest_neighbor_penalty score.
+        name (str): Name of rt-group represented.
+        all_tp_clusters (list of strings): List of filenames for ICs from all charge states in all timepoints.
+        library_info (Pandas DataFrame): Open DataFrame of library_info.json.
+        prefilter (int): Indicates wether or not to prefilter IsotopeClusters, 1 will prefilter, 0 will not. Default 1.
+        timepoints (dict): Dictionary with "timepoints" key containing a list of integers representing hdx times in seconds,
+                            and a key for each integer in that list corresponding to lists of hdx-timepoint replicate filepaths.
+        n_undeut_runs (int): Number of undeuterated replicates.
+        max_peak_center (int): Number of deuteration prone backbone atoms as determined by sequence length.
+        old_data_dir (str): Path to directory containing Gabe's data dictionary pickles. For development use - remove for release.
+        old_files (list of strings): List of Gabe's dict.pickle file paths from old_data_dir. For development use - remove for release.
+        rt_com_cv (float): The coefficient of variation (std.dev./mean) in center of mass for the rt dimension.
+        dt_com_cv (float): The coefficient of variation (std.dev./mean) in the center of mass for the dt dimension.
+        rt_error_rmse (float): Root-mean-squared error of rt centers of mass from undeuterated. Deprecated.
+        dt_error_rmse (float): Root-mean-squared error of dt centers of mass from undeuterated. Deprecated.
+        prefiltered_ics (list of lists of IsotopeClusters): IsotopeClusters after prefiltering. Deprecated.
+    
     """
-
-    """
-    Generates sample 'paths' - trajectories through HDX timeseries - optimizes 'path' through hdx timeseries for all sample paths and selects an overall winning path.
-
-    all_tp_clusters = <list> of <lists> of <TA.isotope_cluster>s for each HDX timepoint,
-
-    """
-
-    # TODO: add info_tuple-like struct, eventually change IC, PO, and bokeh related scoring systems to use dicts? Dicts would make changing column names simpler.
-
     def __init__(self,
                  name,
                  all_tp_clusters,
                  library_info,
                  timepoints,
                  n_undeut_runs,
-                 prefilter=0,
+                 prefilter=1,
                  old_data_dir=None,
                  **kwargs):
-        """Example of docstring on the __init__ method.
+        """Initializes an instance of PathOptimizer, performs preprocessing of inputs so the returned object is ready for optimization.
 
-        The __init__ method may be documented in either the class level
-        docstring, or as a docstring on the __init__ method itself.
-
-        Either form is acceptable, but the two should not be mixed. Choose one
-        convention to document the __init__ method and be consistent with it.
-
-        Note:
-            Do not include the `self` parameter in the ``Args`` section.
+        Talk about the things that happen in init.
 
         Args:
             param1 (str): Description of `param1`.
@@ -394,8 +401,10 @@ class PathOptimizer:
         self.gather_old_data()
         self.select_undeuterated()
         self.precalculate_fit_to_ground()
-        self.prefiltered_ics = self.weak_pareto_dom_filter()
-        #self.prefiltered_ics = self.all_tp_clusters
+        if self.prefilter == 1:
+            self.prefiltered_ics = self.weak_pareto_dom_filter()
+        else:
+            self.prefiltered_ics = self.all_tp_clusters
         self.generate_sample_paths()
 
 
