@@ -193,9 +193,32 @@ class TensorGenerator:
     """A class that generates required inputs to create a DataTensor object.
 
     Attributes:
-        hd_mass_diff (float): Mass difference between protium and deuterium.
-        c13_mass_diff (float): Mass difference between Carbon-12 and Carbon-13.
-        # Keep Going
+        Class:
+            hd_mass_diff (float): Mass difference between protium and deuterium.
+            c13_mass_diff (float): Mass difference between Carbon-12 and Carbon-13.
+        Instance:
+            filename (str): path/to/file containing information extracted from .mzML for a specific library protein.
+            timepoint_index (int): Index of this tensor's hdx_timepoint in config.yaml["timepoints"]. 
+            library_info (Pandas DataFrame): Open DataFrame of library_info.json. 
+            mz_centers (list of floats): List of expected isotopic peak centers in m/Z for a given protein.
+            normalization_factor (float): Factor to multiply signal by to allow comparison with signals from other MS-runs.
+            low_mass_margin (int): Number of mass bins to prepend to the window of m/Z displayed in plots.
+            high_mass_margin (int): Number of mass bins to append to the window of m/Z displayed in plots
+            ppm_radius (int): Area around expected isotpe peak center to include in integration, defined in ppm-error.
+            bins_per_isotope_peak (int): Number of bins to use in representing each isotope peak.
+            tensor (numpy ndarray): Raw values extracted from .mzML. 
+            name (str): Name of rt-group charged species represented belongs to.
+            charge (int): Charge state of species.
+            lib_idx (int): Row index of species represented in library_info.
+            my_row (pd.DataFrame): Single-row slice for charged species from library_info.
+            max_peak_center (int): Number of backbone hydrogens available for deuteration, determined by sequence length.
+            total_isotopes (int): Number of isotope-peak-widths from the base-peak to max_peak_center + high_mass_margin.
+            total_mass_window (int): Number of isotope-peak-widths for final integrated m/Z dimension. Equal to total_isotopes + low_mass_margin.
+            mz_lows (list of floats): List of m/Z positions for lower bounds of m/Z integration windows centered around mz_centers.
+            mz_highs (list of floats): List of m/Z positions for upper bounds of m/Z integration windows centered around mz_centers.
+            integrated_mz_limits (list of two lists of floats): Lists of high and low integration bounds around mz_centers including error bounding.
+            DataTensor (DataTensor): DataTensor object resulting from __init__ method.
+
 
     """
     hd_mass_diff = 1.006277
