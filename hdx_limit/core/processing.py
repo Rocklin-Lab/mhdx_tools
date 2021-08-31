@@ -14,7 +14,7 @@ Examples:
 Todo:
     * Consider breaking classes out into their own modules - hdx_limit.core.TensorGenerator etc.
     * Rework bokeh_tuple, score_dict and score_diff to draw from one definition of score names to stop things from breaking when names change.
-    * Finish all docstrings
+    * Finish all docstrings.
 
 """
 import os
@@ -47,26 +47,22 @@ from sklearn.metrics import mean_squared_error
 
 
 def filter_factors_on_rt_dt_gauss_fit(factor_list, rt_r2_cutoff=0.90, dt_r2_cutoff=0.90):
-    """Filter Factors based on quality of RT and DT gaussian fit.
+    """Filters Factors based on quality of RT and DT gaussian fit.
+
+        New factor list is created if the Factor DT and RT gaussian fit 
+        r^2 values are high. If none of the Factors pass the filtering 
+        criteria, returns original Factor list.
 
         Args:
-            arg_name (type): Description of input variable.
+            factor_list (list of Factor objects): A list of datatypes.Factor objects to be filtered by their rt and dt gaussian character.
+            rt_r2_cutoff (float): Minimum rt gaussian fit r^2 value for Factor to be considered of passing quality. Default = 0.9.
+            dt_r2_cutoff (float): Minimum dt gaussian fit r^2 value for Factor to be considered of passing quality. Default = 0.9.
 
         Returns:
-            out_name (type): Description of any returned objects.
+            new_factor_list (list of Factor objects): List of factors filtered for rt and dt gaussian likeness, 
+                return original factor list if fit quality scores are low.
 
     """
-
-    """
-    New factor list is created if the Factor 
-    DT and RT gaussian fit r^2 values are high. If none of the Factors pass
-    the filtering criteria, returns original Factor list.
-    :param factor_list: gauss fitted factor list
-    :param rt_r2_cutoff: rt gauss fit r2 cutoff
-    :param dt_r2_cutoff: dt gauss fit r2 cutoff
-    :return: filtered factor list
-    """
-
     filtered_factors = []
 
     for factor in factor_list:
@@ -82,24 +78,17 @@ def filter_factors_on_rt_dt_gauss_fit(factor_list, rt_r2_cutoff=0.90, dt_r2_cuto
 
 
 def create_factor_data_object(data_tensor, gauss_params, timepoint_label=None):
-    """Description of function.
+    """Stores DataTensor and subsequent Factor object attributes to dictionary.
 
         Args:
-            arg_name (type): Description of input variable.
+            data_tensor (DataTensor): hdx_limit.core.datatypes.DataTensor that has run the factorize() function.
+            gauss_params (tuple of two floats): Gaussian smoothing factors for rt and dt dimensions, in order.
+            timepoint_label (obj): A label for identifying the hdx timepoint of the represented tensor, any type. 
 
         Returns:
-            out_name (type): Description of any returned objects.
+            factor_data_dict (dict): A dictionary containing attributes from the parent DataTensor and its Factors.
 
     """
-
-    """
-    function to store factor data to factor data class
-    :param data_tensor:
-    :param gauss_params:
-    :param timepoint_label:
-    :return:
-    """
-
     factor_data_dict = {
     "name": data_tensor.DataTensor.name,
     "charge_state": data_tensor.DataTensor.charge_states[0],
@@ -136,34 +125,34 @@ def generate_tensor_factors(tensor_fpath, library_info_df, timepoint_index, gaus
                             filter_factors=False,
                             factor_rt_r2_cutoff=0.90,
                             factor_dt_r2_cutoff=0.90):
-    """Description of function.
+    """Generates a DataTensor from values extracted from a .mzML, along with several analytical parameters.
 
         Args:
-            arg_name (type): Description of input variable.
+            tensor_fpath (str): /path/to/file of values extracted from .mzML.
+            library_info_df (pandas DataFrame): Open DataFrame from library_info.json.
+            timepoint_index (int): Index of hdx_timepoint in config.yaml["timepoints"] list.
+            gauss_params (tuple of two floats): Gaussian smoothing factors for rt and dt dimensions, in order.
+            mz_centers (list of floats): List containing the expected centers of isotopic peaks for a given protein.
+            normalization_factor (float): Factor to multiply signal by to allow comparison with signals from other MS-runs.
+            n_factors (int): Starting number of Factors to decompose the DataTensor into, 
+                if resulting Factors are too correlated the number is iteratively decreased.
+            factor_output_fpath (str): Optional argument to define an output path for the factor_data_dict.
+            factor_plot_output_path (str): Optional argument to define an output path for a plot of Factor information.
+            timepoint_label (obj): Type flexible descriptor of hdx timepoint.
+            filter_factors (bool): Option to filter factors by quality of rt and dt gaussian character.
+            factor_rt_r2_cutoff (float): Minimum rt gaussian fit r^2 value for Factor to be considered of passing quality. Default = 0.9.
+            factor_dt_r2_cutoff (float): Minimum dt gaussian fit r^2 value for Factor to be considered of passing quality. Default = 0.9.
 
         Returns:
-            out_name (type): Description of any returned objects.
+            data_tensor (DataTensor): Returns the DataTensor created from tensor_fpath.
 
     """
-
-    """
-    generate data tensor from a given tensor file path, library info file path, and timepoint index
-    :param tensor_fpath: tensor file path
-    :param library_info_fpath: library info file path
-    :param timepoint_index: timepoint index int
-    :param gauss_params: gaussian filter params in tuple (rt_sigma, dt_sigma)
-    :param n_factors: maximum number of factors to be considered.
-    :param timepoint_label: timepoint label (in sec, hr, min, etc)
-    :return: data_tensor
-    """
-
-    #memory calculations
+    # Memory use calculation.
     process = psutil.Process(os.getpid())
-    # memory before init
+
     print("Pre-Tensor-Initialization: " + str(process.memory_info().rss /
                                        (1024 * 1024 * 1024)))
 
-    # data tensor initialization
     data_tensor = TensorGenerator(filename=tensor_fpath,
                                   library_info=library_info_df,
                                   timepoint_index=timepoint_index,
@@ -178,7 +167,6 @@ def generate_tensor_factors(tensor_fpath, library_info_df, timepoint_index, gaus
     data_tensor.DataTensor.factorize(n_factors=n_factors,
                                      gauss_params=gauss_params)
 
-    # profile memory after factorization
     print("Post-Factorization: " + str(process.memory_info().rss /
                                        (1024 * 1024 * 1024)))
 
@@ -188,15 +176,12 @@ def generate_tensor_factors(tensor_fpath, library_info_df, timepoint_index, gaus
                                                              dt_r2_cutoff=factor_dt_r2_cutoff)
         data_tensor.DataTensor.factors = filtered_factors
 
-    # save factor data object
     if factor_output_fpath != None:
-        # create factor data dictionary
         factor_data_dictionary = create_factor_data_object(data_tensor=data_tensor,
                                                            gauss_params=gauss_params,
                                                            timepoint_label=timepoint_label)
         io.limit_write(factor_data_dictionary, factor_output_fpath)
 
-    # plot_factor_data
     if factor_plot_output_path != None:
         plot_factor_data_from_data_tensor(data_tensor=data_tensor,
                                           output_path=factor_plot_output_path)
