@@ -190,19 +190,12 @@ def generate_tensor_factors(tensor_fpath, library_info_df, timepoint_index, gaus
 
 
 class TensorGenerator:
-    """The summary line for a class docstring should fit on one line.
-
-    If the class has public attributes, they may be documented here
-    in an ``Attributes`` section and follow the same formatting as a
-    function's ``Args`` section. Alternatively, attributes may be documented
-    inline with the attribute's declaration (see __init__ method below).
-
-    Properties created with the ``@property`` decorator should be documented
-    in the property's getter method.
+    """A class that generates required inputs to create a DataTensor object.
 
     Attributes:
-        attr1 (str): Description of `attr1`.
-        attr2 (:obj:`int`, optional): Description of `attr2`.
+        hd_mass_diff (float): Mass difference between protium and deuterium.
+        c13_mass_diff (float): Mass difference between Carbon-12 and Carbon-13.
+        # Keep Going
 
     """
     hd_mass_diff = 1.006277
@@ -210,29 +203,20 @@ class TensorGenerator:
 
 
     def __init__(self, filename, timepoint_index, library_info, mz_centers, normalization_factor, **kwargs):
-        """Example of docstring on the __init__ method.
-
-        The __init__ method may be documented in either the class level
-        docstring, or as a docstring on the __init__ method itself.
-
-        Either form is acceptable, but the two should not be mixed. Choose one
-        convention to document the __init__ method and be consistent with it.
-
-        Note:
-            Do not include the `self` parameter in the ``Args`` section.
+        """Initializes the TensorGenerator object to create a DataTensor.
 
         Args:
-            param1 (str): Description of `param1`.
-            param2 (:obj:`int`, optional): Description of `param2`. Multiple
-                lines are supported.
-            param3 (:obj:`list` of :obj:`str`): Description of `param3`.
-
-            TODO: This shouldn't take filename, charge and mzml should be determined external to class and passed as args.
+            filename (str): path/to/file containing information extracted from .mzML for a specific library protein.
+            timepoint_index (int): Index of this tensor's hdx_timepoint in config.yaml["timepoints"]. 
+            library_info (Pandas DataFrame): Open DataFrame of library_info.json. 
+            mz_centers (list of floats): List of expected isotopic peak centers in m/Z for a given protein.
+            normalization_factor (float): Factor to multiply signal by to allow comparison with signals from other MS-runs.
+            low_mass_margin (int, optional): Number of mass bins to prepend to the window of m/Z displayed in plots.
+            high_mass_margin (int, optional): Number of mass bins to append to the window of m/Z displayed in plots
+            ppm_radius (int, optional): Area around expected isotpe peak center to include in integration, defined in ppm-error.
+            bins_per_isotope_peak (int, optional): Number of bins to use in representing each isotope peak.
 
         """
-
-        ###Set Instance Attributes###
-
         self.filename = filename
         self.timepoint_index = timepoint_index
         self.library_info = library_info
@@ -251,12 +235,6 @@ class TensorGenerator:
             self.high_mass_margin = 17
         if not hasattr(self, "ppm_radius"):
             self.ppm_radius = 30
-        if not hasattr(self, "n_factors_low"):
-            self.n_factors_low = 1
-        if not hasattr(self, "n_factors_high"):
-            self.n_factors_high = 3
-        if not hasattr(self, "gauss_params"):
-            self.gauss_params = (3, 1)
         if not hasattr(self, "bins_per_isotope_peak"):
             self.bins_per_isotope_peak = 7
 
@@ -306,22 +284,14 @@ class TensorGenerator:
         # self.DataTensor.factorize(gauss_params=(3,1))
 
 
-###
-### Class - PathOptimizer:
-### Optimizes HDX timeseries of Isotopic Clusters by generating a set of starting timeseries based on possible trajectory though the integrated mz dimension,
-### Then iteratively uses a set of timeseries scoring functions to make the best single substitution until each starting series is optimized for score.
-### Timeseries with best score at the end of all minimizations is selected as the winning path, which is output along with the alternatives for each timepoint.
-###
 class PathOptimizer:
-    """The summary line for a class docstring should fit on one line.
+    """Generates a best-estimate mass-addition timeseries from candidate IsotopeClusters from each hdx timepoint.
 
-    If the class has public attributes, they may be documented here
-    in an ``Attributes`` section and follow the same formatting as a
-    function's ``Args`` section. Alternatively, attributes may be documented
-    inline with the attribute's declaration (see __init__ method below).
-
-    Properties created with the ``@property`` decorator should be documented
-    in the property's getter method.
+    Optimizes a timeseries of IsotopeClusters by bootstrapping a set of starting timeseries
+    based on plausible trajectories though the integrated mz dimension. Then iteratively uses 
+    a set of timeseries scoring functions to make the best single substitution until each starting 
+    series is optimized for score. Timeseries with best score at the end of all minimizations is 
+    selected as the winning path, which is output along with the alternatives for each timepoint.
 
     Attributes:
         attr1 (str): Description of `attr1`.
