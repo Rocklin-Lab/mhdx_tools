@@ -31,6 +31,7 @@ Todo:
    http://google.github.io/styleguide/pyguide.html
 
 """
+import ipdb
 import os
 import sys
 import copy
@@ -219,6 +220,7 @@ def main(library_info_path,
         mz_corrmat = gen_correlate_matrix(all_baseline_integrated_mz)
         rt_corrmat = gen_correlate_matrix(all_rts)
         minimum_corrmat = np.minimum(mz_corrmat, rt_corrmat)
+
         for column, ic in enumerate(ics):
             min_corr_list = minimum_corrmat[column][charge_list != ic.charge_states[0]]
             if len(min_corr_list) != 0:
@@ -476,6 +478,7 @@ if __name__ == "__main__":
 
         # Checks for arguments that require additional directories and creates them if they don't exist.
         check_for_create_dirs(output_paths)
+
 
         main(library_info_path=args.library_info_path,
              all_ic_input_paths=args.all_ic_input_paths,

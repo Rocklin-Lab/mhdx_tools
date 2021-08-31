@@ -1,34 +1,20 @@
-"""Example Google style docstrings.
+"""This module contains structures that use classes from datatypes.py to perform data processing.
 
-This module demonstrates documentation as specified by the `Google Python
-Style Guide`_. Docstrings may extend over multiple lines. Sections are created
-with a section header and a colon followed by a block of indented text.
+This module is non-executable, and is meant to be imported for use by higher level scripts.
+Structures contained herein should be used in more than one script and be used in tandem to 
+justify their being grouped together. In future development, classes can be separated into 
+individual mdoules, and only functions should be grouped in this module.
 
-Example:
-    Examples can be given using either the ``Example`` or ``Examples``
-    sections. Sections support any reStructuredText formatting, including
-    literal blocks::
 
-        $ python example_google.py
-
-Section breaks are created by resuming unindented text. Section breaks
-are also implicitly created anytime a new section starts.
-
-Attributes:
-    module_level_variable1 (int): Module level variables may be documented in
-        either the ``Attributes`` section of the module docstring, or in an
-        inline docstring immediately following the variable.
-
-        Either form is acceptable, but the two should not be mixed. Choose
-        one convention to document module level variables and be consistent
-        with it.
+Examples:
+    import hdx_limit.core.processing as pr
+    from hdx_limit.core import processing as pr
+    from hdx_limit.core.processing import TensorGenerator
 
 Todo:
-    * For module TODOs
-    * You have to also use ``sphinx.ext.todo`` extension
-
-.. _Google Python Style Guide:
-   http://google.github.io/styleguide/pyguide.html
+    * Consider breaking classes out into their own modules - hdx_limit.core.TensorGenerator etc.
+    * Rework bokeh_tuple, score_dict and score_diff to draw from one definition of score names to stop things from breaking when names change.
+    * Finish all docstrings
 
 """
 import os
@@ -291,7 +277,7 @@ class TensorGenerator:
 
         self.tensor = io.limit_read(self.filename)
         self.name = filename.split("/")[-2] # Expects format: path/to/{rt-group-name}/{rt-group-name}_{charge}_{file.mzML.gz}.cpickle.zlib.
-        self.charge = int([item[6:] for item in filename.split("/")[-1].split("_") if "charge" in item][0]) # Finds by keyword and strip text.
+        self.charge = int([item[6:] for item in filename.split("/")[-1].split("_") if "charge" in item][0]) # Finds by keyword and strips text.
         self.lib_idx = self.library_info.loc[(library_info["name"]==self.name) & (library_info["charge"]==self.charge)].index
         self.my_row = self.library_info.loc[(library_info["name"]==self.name) & (library_info["charge"]==self.charge)]
         self.max_peak_center = len(self.library_info.loc[self.library_info["name"] == self.name]["sequence"].values[0])
@@ -316,7 +302,7 @@ class TensorGenerator:
             name=self.name,
             total_mass_window=self.total_mass_window,
             n_concatenated=1,
-            charge_states=[self.my_row["charge"].values[0]],
+            charge_states=[self.charge],
             rts=self.tensor[0],
             dts=self.tensor[1],
             seq_out=self.tensor[2],
@@ -753,6 +739,7 @@ class PathOptimizer:
 
         for timepoint in all_tp_clusters:
             for ic in timepoint:
+
                 undeut = undeut_grounds[ic.charge_states[0]]
 
                 ic.dt_ground_err = abs(ic.dt_coms - undeut.dt_coms)
@@ -924,7 +911,7 @@ class PathOptimizer:
 
         # This order must be maintained, self.winner must exist before calling find_runners; winner and runners are both needed for set_bokeh tuple
         self.winner = final_paths[final_scores.index(min(final_scores))]
-        self.winner_scores = self.report_score_mutli(self.winner)
+        self.winner_scores = self.report_score_multi(self.winner)
         self.find_runners_multi()
         self.set_bokeh_tuples()
         self.filter_runners()
@@ -936,6 +923,15 @@ class PathOptimizer:
         ])**0.5) / np.mean([np.mean(ic.dt_coms) for ic in self.winner if ic.dt_coms is not None])
 
     def find_runners_multi(self):
+        """Description of function.
+
+        Args:
+            arg_name (type): Description of input variable.
+
+        Returns:
+            out_name (type): Description of any returned objects.
+
+        """
         # sets self.runners atr. sorts 'runner-up' single substitutions for each tp by score, lower is better.
         winner = self.winner
         prefiltered_ics = self.prefiltered_ics
@@ -965,6 +961,15 @@ class PathOptimizer:
         self.runners = runners
 
     def optimize_paths_mono(self, sample_paths=None, prefiltered_ics=None):
+        """Description of function.
+
+        Args:
+            arg_name (type): Description of input variable.
+
+        Returns:
+            out_name (type): Description of any returned objects.
+
+        """
         # Main function of PO, returns the best-scoring HDX IC time-series 'path' of a set of bootstrapped paths.
 
         if sample_paths is None:
@@ -1021,6 +1026,15 @@ class PathOptimizer:
         # Doesn't return, only sets PO attributes
 
     def find_runners_mono(self):
+        """Description of function.
+
+        Args:
+            arg_name (type): Description of input variable.
+
+        Returns:
+            out_name (type): Description of any returned objects.
+
+        """
         # sets self.runners atr. sorts 'runner-up' single substitutions for each tp by score, lower is better.
         winner = self.winner
         prefiltered_ics = self.prefiltered_ics
@@ -1112,8 +1126,8 @@ class PathOptimizer:
 
             """
             return (
-                winner_scores["int_mz_std_rmse"] -
-                substituted_scores["int_mz_std_rmse"],
+                #winner_scores["int_mz_std_rmse"] -
+                #substituted_scores["int_mz_std_rmse"],
                 winner_scores["delta_mz_rate_backward"] -
                 substituted_scores["delta_mz_rate_backward"],
                 winner_scores["delta_mz_rate_afterward"] -
@@ -1153,11 +1167,12 @@ class PathOptimizer:
         winner_scores = score_dict(winner)
 
         # Winners store absolute values of scores
+
         for ic in winner:
             ic.bokeh_tuple = ic.info_tuple + (
                 ic.rt_ground_err,
                 ic.dt_ground_err,
-                winner_scores["int_mz_std_rmse"],
+                #winner_scores["int_mz_std_rmse"],
                 winner_scores["delta_mz_rate_backward"],
                 winner_scores["delta_mz_rate_afterward"],
                 winner_scores["dt_ground_rmse"],
@@ -1181,8 +1196,8 @@ class PathOptimizer:
                 substituted_series[tp] = ic
                 substituted_scores = score_dict(substituted_series)
                 ic.bokeh_tuple = (ic.info_tuple +
-                                  (ic.rt_ground_err, ic.dt_ground_err) +
-                                  score_diff(winner_scores, substituted_scores))
+                                 (ic.rt_ground_err, ic.dt_ground_err) +
+                                 score_diff(winner_scores, substituted_scores))
 
     def filter_runners(self, n_runners=5):
         """Description of function.
@@ -1629,7 +1644,15 @@ class PathOptimizer:
         ])
 
     def combo_score_mono(self, ics):
+        """Description of function.
 
+        Args:
+            arg_name (type): Description of input variable.
+
+        Returns:
+            out_name (type): Description of any returned objects.
+
+        """
         return sum([
             self.baseline_peak_error_weight * self.baseline_peak_error(ics),
             self.dt_ground_rmse_weight * self.dt_ground_rmse(ics),
@@ -1682,6 +1705,15 @@ class PathOptimizer:
         }
 
     def report_score_mono(self, ics):
+        """Description of function.
+
+        Args:
+            arg_name (type): Description of input variable.
+
+        Returns:
+            out_name (type): Description of any returned objects.
+
+        """
         # TODO Add additional scores to this function
 
         return {
