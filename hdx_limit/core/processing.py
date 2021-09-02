@@ -331,7 +331,7 @@ class PathOptimizer:
         name (str): Name of rt-group represented.
         all_tp_clusters (list of strings): List of filenames for ICs from all charge states in all timepoints.
         library_info (Pandas DataFrame): Open DataFrame of library_info.json.
-        prefilter (int): Indicates wether or not to prefilter IsotopeClusters, 1 will prefilter, 0 will not. Default 1.
+        prefilter (int): Indicates wether or not to filter all_tp_clusters before optimization, 1 will prefilter, 0 will not. Default 1.
         timepoints (dict): Dictionary with "timepoints" key containing a list of integers representing hdx times in seconds,
                             and a key for each integer in that list corresponding to lists of hdx-timepoint replicate filepaths.
         n_undeut_runs (int): Number of undeuterated replicates.
@@ -342,7 +342,7 @@ class PathOptimizer:
         dt_com_cv (float): The coefficient of variation (std.dev./mean) in the center of mass for the dt dimension.
         rt_error_rmse (float): Root-mean-squared error of rt centers of mass from undeuterated. Deprecated.
         dt_error_rmse (float): Root-mean-squared error of dt centers of mass from undeuterated. Deprecated.
-        prefiltered_ics (list of lists of IsotopeClusters): IsotopeClusters after prefiltering. Deprecated.
+        prefiltered_ics (list of lists of IsotopeClusters): IsotopeClusters for all timepoints after prefiltering.
     
     """
     def __init__(self,
@@ -356,16 +356,26 @@ class PathOptimizer:
                  **kwargs):
         """Initializes an instance of PathOptimizer, performs preprocessing of inputs so the returned object is ready for optimization.
 
-        Talk about the things that happen in init.
+        The __init__ method sets instance attributes before selecting an undeuterated signal for each charge state of the rt-group being
+        included in the PathOptimizer object. These "ground truth" undeuterated signals are selected based on their similarity to the 
+        theoretical undeuterated isotope distribution for the protein's sequence. Deuterated signals are scored by their multidimensional 
+        agreement with these undeuterated signals and those scores are saved for use in optimization. A weak pareto dominance filter can
+        optionally be applied to IsotopeClusters of the same timepoint before creating a set of bootstrapped mass-addition timeseries based 
+        on plausible deuteration curves populated by signals that most closely match the mass uptake at each timepoint. The bootstrapped 
+        timeseries are independently optimized with a greedy optimization scheme that makes the single best replacement for the timeseries
+        at each iteration based on a set of weighted score terms. The optimization ends when no improvement can be made with any single
+        substitution, and the best scoring timeseries overall is kept as the winner.
 
         Args:
-            param1 (str): Description of `param1`.
-            param2 (:obj:`int`, optional): Description of `param2`. Multiple
-                lines are supported.
-            param3 (:obj:`list` of :obj:`str`): Description of `param3`.
-
+            name (str): Name of rt-group represented.
+            all_tp_clusters (list of strings): List of filenames for ICs from all charge states in all timepoints.
+            library_info (Pandas DataFrame): Open DataFrame of library_info.json.
+            timepoints (dict): Dictionary with "timepoints" key containing a list of integers representing hdx times in seconds,
+                                and a key for each integer in that list corresponding to lists of hdx-timepoint replicate filepaths.
+            n_undeut_runs (int): Number of undeuterated replicates.
+            prefilter (int): Indicates wether or not to filter all_tp_clusters before optimization, 1 will prefilter, 0 will not. Default 1.
+            
         """
-
         # Set score weights
         self.baseline_peak_error_weight = 100
         self.delta_mz_rate_backward_weight = 0.165
@@ -388,7 +398,7 @@ class PathOptimizer:
         self.max_peak_center = len(
             self.library_info.loc[self.library_info["name"] ==
                                   self.name]["sequence"].values[0]
-        )  # TODO: Fix. Bad solution, keep an eye on this, could break if only one charge in RT-group? Maybe always list, double check
+        )
 
         self.old_data_dir = old_data_dir
         self.old_files = None
@@ -406,7 +416,6 @@ class PathOptimizer:
         else:
             self.prefiltered_ics = self.all_tp_clusters
         self.generate_sample_paths()
-
 
     def weak_pareto_dom_filter(self):
         """Description of function.
@@ -441,7 +450,6 @@ class PathOptimizer:
                     tp_buffer.append(ic1)
             out.append(tp_buffer)
         return out
-
 
     def alt_weak_pareto_dom_filter(self):
         """Description of function.
@@ -533,7 +541,6 @@ class PathOptimizer:
 
         return out
 
-
     def gather_old_data(self):
         """Description of function.
 
@@ -559,7 +566,6 @@ class PathOptimizer:
                     for x in ts["major_species_integrated_intensities"]
                 ]
                 self.old_data.append(ts)
-
 
     def select_undeuterated(self,
                             all_tp_clusters=None,
@@ -655,7 +661,6 @@ class PathOptimizer:
         self.undeut_grounds = out
         self.undeut_ground_dot_products = charge_fits
 
-
     def gaussian_function(self, x, H, A, x0, sigma):
         """Description of function.
 
@@ -667,7 +672,6 @@ class PathOptimizer:
 
         """
         return H + A * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2))
-
 
     def gauss_fit(self, x, y):
         """Description of function.
@@ -685,7 +689,6 @@ class PathOptimizer:
         popt, pcov = curve_fit(self.gaussian_function, x, y, p0=[0, max(y), mean, sigma],
                                bounds=([0, 0, nonzeros[0], 0], [np.inf, np.inf, nonzeros[-1], np.inf]))
         return popt
-
 
     def rmse_from_gaussian_fit(self, distribution):
         """Description of function.
@@ -705,7 +708,6 @@ class PathOptimizer:
             return rmse
         except:
             return 100
-
 
     def precalculate_fit_to_ground(self,
                                    all_tp_clusters=None,
@@ -742,7 +744,6 @@ class PathOptimizer:
 
                 ic.log_baseline_auc_diff = ic.log_baseline_auc - undeut.log_baseline_auc
 
-
     def generate_sample_paths(self):
         """Description of function.
 
@@ -761,7 +762,6 @@ class PathOptimizer:
                 sample_paths.append(self.clusters_close_to_line(start, slope))
 
         self.sample_paths = [list(path) for path in set(sample_paths)]
-
 
     def clusters_close_to_line(
         self,
@@ -841,7 +841,6 @@ class PathOptimizer:
                         path.append(path[-1])
 
         return tuple(path)
-
 
     def optimize_paths_multi(self, sample_paths=None, prefiltered_ics=None):
         """Description of function.
