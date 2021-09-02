@@ -163,14 +163,20 @@ class DataTensor:
 
 
     def sparse_to_full_tensor_reprofile(self, data, integrated_mz_limits, bins_per_isotope_peak = 7, ms_resolution=25000):
-        """Takes a tuple of three vectors and performs the 3-vector outer-product and applies resolution scaling.
+        """Takes the raw m/z data and turns it into a tensor of profiled data that can be factorized.
+        
+           The raw data is only profiled at the specific locations where isotopic peaks are expected. The locations of
+           these peaks are defined by integrated_mz_limits, and each peak will be profiled at bins_per_isotope_peak
+           number of points, with the first and last points equal to the integrated_mz_limits for that peak. 
 
         Args:
-            data (tuple of 3 list-likes): Tuple of 3 vectors whose outer product recreates the extracted signal.
+            data (tuple of 3 list-likes): Tuple containing the absolute retention times for the tensor, the absolute
+                drift times for the tensor, and the raw data for all the scans that will go in the tensor.
             integrated_mz_limits (list of list-likes of floats): The upper and lower bounds on integration surrounding each
                 m/Z-peak center, a list of list-likes of length 2.
             bins_per_isotope_peak (int): Number of points to use to profile each isotope peak.
-            ms_resolution (int): Resolution to use in profiling the raw peaks. This determines the width of the gaussian used to profile each peak.
+            ms_resolution (int): Resolution to use in profiling the raw peaks. This determines the width of the gaussian
+                used to profile each peak.
 
         Returns:
             retention_labels (list of floats): List of the absolute LC-RT values associated with each RT bin.
