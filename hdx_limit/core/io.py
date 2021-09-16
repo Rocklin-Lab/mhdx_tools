@@ -149,6 +149,6 @@ def check_for_create_dirs(path_args):
     directories = ["/".join(arg.split("/")[:-1]) for arg in path_args if arg is not None]
     for dir_path in directories:
         if not os.path.isdir(dir_path):
-            os.mkdirs(dir_path)
+            os.makedirs(dir_path)
 
 
