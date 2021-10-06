@@ -937,5 +937,5 @@ if __name__ == "__main__":
              intensity_tolerance=args.intensity_tolerance,
              cluster_corr_tolerance=args.cluster_corr_tolerance,
              ppm_refilter=args.ppm_refilter,
-             lockmass_calibration_dict=args.lockmass_calibration_dict
+             lockmass_calibration_dict=args.lockmass_calibration_dict,
              runtime=args.runtime)
