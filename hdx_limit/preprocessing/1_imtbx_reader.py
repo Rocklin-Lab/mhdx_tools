@@ -723,13 +723,14 @@ def main(isotopes_path,
         testq['mz_mono_fix'] = 0
         if calib_dict[0]['polyfit_deg'] == 0:
             for rt in range(0, runtime, len(calib_dict)):
-                testq.loc[(testq['RT'] >= rt) & (testq['RT'] <= rt + delta), 'mz_mono_fix'] = calib[rt]['polyfit_coeffs'] * testq[
-                    (testq['RT'] >= rt) & (testq['RT'] <= rt + delta)]['mz_mono'].values
+                testq.loc[(testq['RT'] >= rt) & (testq['RT'] <= rt + runtime/len(calib_dict)), 'mz_mono_fix'] = \
+                    calib[rt]['polyfit_coeffs'] * testq[ (testq['RT'] >= rt) &
+                                                    (testq['RT'] <= rt + runtime/len(calib_dict))]['mz_mono'].values
         else:
-            for rt in range(0, runtime, len(calib_dict):
-                testq.loc[(testq['RT'] >= rt) & (testq['RT'] <= rt + delta), 'mz_mono_fix'] = np.polyval(
+            for rt in range(0, runtime, len(calib_dict)):
+                testq.loc[(testq['RT'] >= rt) & (testq['RT'] <= rt + runtime/len(calib_dict)), 'mz_mono_fix'] = np.polyval(
                         calib_dict[rt]['polyfit_coeffs'], testq[(testq['RT'] >= rt) &
-                                                                (testq['RT'] <= rt + delta)]['mz_mono'].values)
+                                                    (testq['RT'] <= rt + runtime/len(calib_dict))]['mz_mono'].values)
 
         testq['mz_mono_fix_round'] = np.round(testq['mz_mono_fix'].values, 3)
 
