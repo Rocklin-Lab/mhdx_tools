@@ -190,7 +190,7 @@ def main(mzml_gz_path=None,
 if __name__ == "__main__":
     # If the snakemake global object is present, save expected arguments from snakemake to be passed to main().
     if "snakemake" in globals():
-        mzml_gz_path = snakameke.input[0]
+        mzml_gz_path = snakemake.input[0]
         configfile = yaml.load(open(snakemake.input[1], "rb").read(), Loader=yaml.Loader)
         outputname = 'resources/1_imtbx/' + mzml_gz_path.split('/')[-1]
 
