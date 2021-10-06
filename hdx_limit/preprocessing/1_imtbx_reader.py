@@ -721,15 +721,17 @@ def main(isotopes_path,
         calib_dict = load_pickle_file(lockmass_calibration_dict)
         testq['mz_mono_fix'] = 0
         if calib_dict[0]['polyfit_deg'] == 0:
-            for rt in range(0, runtime, len(calib_dict)):
-                testq.loc[(testq['RT'] >= rt) & (testq['RT'] <= rt + runtime/len(calib_dict)), 'mz_mono_fix'] = \
+            delta = runtime/len(calib_dict)
+            for rt in range(0, runtime,delta):
+                testq.loc[(testq['RT'] >= rt) & (testq['RT'] <= rt + delta), 'mz_mono_fix'] = \
                     calib[rt]['polyfit_coeffs'] * testq[ (testq['RT'] >= rt) &
-                                                    (testq['RT'] <= rt + runtime/len(calib_dict))]['mz_mono'].values
+                                                         (testq['RT'] <= rt + delta)]['mz_mono'].values
         else:
-            for rt in range(0, runtime, len(calib_dict)):
-                testq.loc[(testq['RT'] >= rt) & (testq['RT'] <= rt + runtime/len(calib_dict)), 'mz_mono_fix'] = np.polyval(
+            delta = runtime / len(calib_dict)
+            for rt in range(0, runtime, delta):
+                testq.loc[(testq['RT'] >= rt) & (testq['RT'] <= rt + delta), 'mz_mono_fix'] = np.polyval(
                         calib_dict[rt]['polyfit_coeffs'], testq[(testq['RT'] >= rt) &
-                                                    (testq['RT'] <= rt + runtime/len(calib_dict))]['mz_mono'].values)
+                                                    (testq['RT'] <= rt + delta)]['mz_mono'].values)
 
         testq['mz_mono_fix_round'] = np.round(testq['mz_mono_fix'].values, 3)
     else:
@@ -754,7 +756,7 @@ def main(isotopes_path,
     # Re-cluster on the adjusted MZ, same weights.
     apply_cluster_weights(testq, dt_weight=5.0, rt_weight=0.6, mz_weight=0.006)
 
-    db = DBSCAN()
+    db = DBSCAN();
     db.fit(testq[["cluster_im", "cluster_RT", "cluster_mz", "charge"]])
     clusters = db.fit_predict(
         testq[["cluster_im", "cluster_RT", "cluster_mz", "charge"]])
@@ -768,8 +770,8 @@ def main(isotopes_path,
         kde_plot(sum_df, adjusted_mz_kde_path)
 
     # check for duplicate RT-groups THIS MAY BE USELESS TODO
-    no_duplicates, hits = find_rt_duplicates(sum_df)
-    print("No rt Duplicates: " + str(no_duplicates))
+    no_duplicates, hits = find_rt_duplicates(sum_df);
+    print("No rt Duplicates: " + str(no_duplicates));
     if not no_duplicates:
         print("DUPLICATES: " + hits)
 
