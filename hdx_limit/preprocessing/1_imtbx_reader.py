@@ -721,16 +721,16 @@ def main(isotopes_path,
         calib_dict = load_pickle_file(lockmass_calibration_dict)
         testq['mz_mono_fix'] = 0
         if calib_dict[0]['polyfit_deg'] == 0:
-            delta = runtime/len(calib_dict)
-            for rt in range(0, runtime,delta):
+            delta = int(runtime/len(calib_dict))
+            for i, rt in enumerate(range(0, runtime,delta)):
                 testq.loc[(testq['RT'] >= rt) & (testq['RT'] <= rt + delta), 'mz_mono_fix'] = \
-                    calib[rt]['polyfit_coeffs'] * testq[ (testq['RT'] >= rt) &
+                    calib[i]['polyfit_coeffs'] * testq[ (testq['RT'] >= rt) &
                                                          (testq['RT'] <= rt + delta)]['mz_mono'].values
         else:
-            delta = runtime / len(calib_dict)
-            for rt in range(0, runtime, delta):
+            delta = int(runtime / len(calib_dict))
+            for i, rt in enumerate(range(0, runtime,delta)):
                 testq.loc[(testq['RT'] >= rt) & (testq['RT'] <= rt + delta), 'mz_mono_fix'] = np.polyval(
-                        calib_dict[rt]['polyfit_coeffs'], testq[(testq['RT'] >= rt) &
+                        calib_dict[i]['polyfit_coeffs'], testq[(testq['RT'] >= rt) &
                                                     (testq['RT'] <= rt + delta)]['mz_mono'].values)
 
         testq['mz_mono_fix_round'] = np.round(testq['mz_mono_fix'].values, 3)
