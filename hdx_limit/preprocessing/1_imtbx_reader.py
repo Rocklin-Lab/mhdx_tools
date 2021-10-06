@@ -722,7 +722,7 @@ def main(isotopes_path,
         calib_dict = load_pickle_file(lockmass_calibration_dict)
         testq['mz_mono_fix'] = 0
         if calib_dict[0]['degree'] == 0:
-            for rt in range(0, runtime, len(calib_dict):
+            for rt in range(0, runtime, len(calib_dict)):
                 testq.loc[(testq['RT'] >= rt) & (testq['RT'] <= rt + delta), 'mz_mono_fix'] = calib[rt]['polyfit_coeffs'] * testq[
                     (testq['RT'] >= rt) & (testq['RT'] <= rt + delta)]['mz_mono'].values
             else:
