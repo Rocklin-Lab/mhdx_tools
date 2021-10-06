@@ -183,6 +183,7 @@ def generate_tensor_factors(tensor_fpath, library_info_df, timepoint_index, gaus
         io.limit_write(factor_data_dictionary, factor_output_fpath)
 
     if factor_plot_output_path != None:
+        data_tensor.gauss_params = gauss_params
         plot_factor_data_from_data_tensor(data_tensor=data_tensor,
                                           output_path=factor_plot_output_path)
 

@@ -83,7 +83,8 @@ class DataTensor:
     """
 
     def __init__(self, source_file, tensor_idx, timepoint_idx, name,
-                 total_mass_window, n_concatenated, charge_states, integrated_mz_limits, bins_per_isotope_peak, normalization_factor, **kwargs):
+                 total_mass_window, n_concatenated, charge_states, integrated_mz_limits, bins_per_isotope_peak,
+                 normalization_factor, **kwargs):
         """Initializes an instance of the DataTensor class from 
 
         Args:
