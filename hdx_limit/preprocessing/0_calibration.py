@@ -144,7 +144,10 @@ def generate_lockmass_calibration_dict(mz_bins, tensor2_out, time_bins, polyfit_
                         'ppm_error_after_corr': ppm_error_after_corr}
             idx += 1
 
-        save_pickle_object(cal_dict, outputname + '_mz_calib_dict.pk')
+        if outputname is not None:
+            save_pickle_object(cal_dict, outputname + '_mz_calib_dict.pk')
+        else:
+            return cal_dict[idx]
 
     else:
         for i in range(0, len(tensor2_out), int(len(tensor2_out) / time_bins)):
@@ -166,6 +169,42 @@ def generate_lockmass_calibration_dict(mz_bins, tensor2_out, time_bins, polyfit_
 
             save_pickle_object(cal_dict, 'results/1_imtbx/' + outputname + '_mz_calib_dict.pk')
 
+        if outputname is not None:
+            save_pickle_object(cal_dict, outputname + '_mz_calib_dict.pk')
+        else:
+            return cal_dict[idx]
+
+def plot_degrees(mz_bins, tensor2_out, time_bins, m0, m1, lockmass_compound, runtime):
+    fig, ax = plt.subplots(8, 1, figsize=(6, 30))
+
+    for idx, deg in enumerate([1, 2, 3, 4, 5, 6, 7, 8]):
+        cal_dict = generate_lockmass_calibration_dict(mz_bins=mz_bins, tensor2_out=tensor2_out, time_bins=time_bins,
+                                                      m0=m0, m1=m1, lockmass_compound=lockmass_compound,
+                                                      outputname=None)
+        delta = int(runtime / time_bins)
+
+        t = 0
+        for key in cal_dict:
+            ax[idx].scatter(cal_dict[key]['thr_mz'], cal_dict[key]['ppm_error_before_corr'], label='%i-%imin' % (t, t + delta))
+            ax[idx].scatter(cal_dict[key]['thr_mz'], cal_dict[key]['ppm_error_after_corr'], marker='x')
+            xs = np.linspace(50, 2000, 1000)
+            ys = np.polyval(cal_dict[key]['polyfit_coeffs'], xs)
+            ax[idx].plot(xs, (ys - xs) * 1e6 / xs, '--')
+            t += delta
+        ax[idx].text(0.05, 0.9, 'degree=%i' % (deg), transform=ax[idx].transAxes, fontsize=12)
+        ax[idx].text(0.05, 0.85, 'avg_err_before=%.2f' % (np.mean(cal_dict[key]['ppm_error_before_corr'])),
+                     transform=ax[idx].transAxes, fontsize=12)
+        ax[idx].text(0.05, 0.75, 'avg_err_after=%.2f' % (np.mean(cal_dict[key]['ppm_error_after_corr'])),
+                        transform=ax[idx][0].transAxes, fontsize=12)
+        ax[idx].set_ylabel('ppm error')
+        ax[idx].set_xlabel('m/z')
+        ax[idx].set_ylim(-50, 50)
+        ax[idx].legend(loc=1, fontsize=11)
+
+    plt.tight_layout()
+
+    plt.savefig('results/plots/preprocessing/calibration_' + lockmass_compound + '_degrees.pdf', dpi=300, format='pdf')
+
 
 def main(mzml_gz_path=None,
          m0=None,
@@ -177,14 +216,20 @@ def main(mzml_gz_path=None,
          ms_resolution=None,
          polyfit_deg=None,
          outputname=None,
+         runtime=None,
          ):
 
     mz_bins, tensor2_out = generate_tensor(mzml_gz_path=mzml_gz_path, m0=m0, m1=m1, ppm_radius=ppm_radius,
                                            bins_per_isotope_peak=bins_per_isotopic_peak, ms_resolution=ms_resolution,
                                            lockmass_compound=lockmass_compound)
 
-    generate_lockmass_calibration_dict(mz_bins, tensor2_out, time_bins=time_bins, polyfit_deg=polyfit_deg,
-                                       m0=m0, m1=m1, lockmass_compound=lockmass_compound, outputname=outputname)
+    generate_lockmass_calibration_dict(mz_bins=mz_bins, tensor2_out=tensor2_out, time_bins=time_bins,
+                                       polyfit_deg=polyfit_deg, m0=m0, m1=m1,
+                                       lockmass_compound=lockmass_compound, outputname=outputname)
+
+    if lockmass_compound != 'GluFibPrecursor':
+        plot_degrees(mz_bins=mz_bins, tensor2_out=tensor2_out, time_bins=time_bins, m0=m0, m1=m1,
+                     lockmass_compound=lockmass_compound, runtime=runtime)
 
 
 if __name__ == "__main__":
@@ -208,6 +253,8 @@ if __name__ == "__main__":
             ppm_lockmass_radius = int(configfile['ppm_lockmass_radius'])
         if configfile['bins_per_isotopic_peak'] is not None:
             bins_per_isotopic_peak = int(configfile['bins_per_isotopic_peak'])
+        if configfile['runtime'] is not None:
+            runtime = int(configfile['runtime'])
 
 
         main(mzml_gz_path=mzml_gz_path,
@@ -220,6 +267,7 @@ if __name__ == "__main__":
              ms_resolution=ms_resolution,
              ppm_radius=ppm_lockmass_radius,
              bins_per_isotopic_peak=bins_per_isotopic_peak,
+             runtime=runtime,
              )
     else:
         # CLI context, set expected arguments with argparse module.
@@ -289,6 +337,13 @@ if __name__ == "__main__":
             help=
             "ppm window to reprofile peak"
         )
+        parser.add_argument(
+            "-runtime",
+            "--runtime",
+            default=25,
+            help=
+            "chromatographic runtime"
+        )
         args = parser.parse_args()
 
         if args.m0 is not None:
@@ -303,6 +358,8 @@ if __name__ == "__main__":
             args.ppm_lockmass_radius = int(args.ppm_lockmass_radius)
         if args.bins_per_isotopic_peak is not None:
             args.bins_per_isotopic_peak = int(args.bins_per_isotopic_peak)
+        if args.runtime is not None:
+            args.runtime = int(args.runtime)
 
 
 
@@ -316,4 +373,5 @@ if __name__ == "__main__":
              ms_resolution=args.ms_resolution,
              ppm_radius=args.ppm_lockmass_radius,
              bins_per_isotopic_peak=args.bins_per_isotopic_peak,
+             runtime=args.runtime,
              )
