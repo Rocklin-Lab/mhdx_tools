@@ -145,7 +145,7 @@ def generate_lockmass_calibration_dict(mz_bins, tensor2_out, time_bins, polyfit_
             idx += 1
 
         if outputname is not None:
-            save_pickle_object(cal_dict, outputname + '_mz_calib_dict.pk')
+            save_pickle_object(cal_dict, 'resources/0_calibration/' + outputname + '_mz_calib_dict.pk')
         else:
             return cal_dict
 
@@ -167,14 +167,12 @@ def generate_lockmass_calibration_dict(mz_bins, tensor2_out, time_bins, polyfit_
 
             idx += 1
 
-            save_pickle_object(cal_dict, 'results/1_imtbx/' + outputname + '_mz_calib_dict.pk')
-
         if outputname is not None:
-            save_pickle_object(cal_dict, outputname + '_mz_calib_dict.pk')
+            save_pickle_object(cal_dict, 'resources/0_calibration/' + outputname + '_mz_calib_dict.pk')
         else:
             return cal_dict
 
-def plot_degrees(mz_bins, tensor2_out, time_bins, m0, m1, lockmass_compound, runtime):
+def plot_degrees(mz_bins, tensor2_out, time_bins, m0, m1, lockmass_compound, runtime, outputname):
     fig, ax = plt.subplots(8, 1, figsize=(6, 30))
 
     for idx, deg in enumerate([1, 2, 3, 4, 5, 6, 7, 8]):
@@ -203,7 +201,7 @@ def plot_degrees(mz_bins, tensor2_out, time_bins, m0, m1, lockmass_compound, run
 
     plt.tight_layout()
 
-    plt.savefig('results/plots/preprocessing/calibration_' + lockmass_compound + '_degrees.pdf', dpi=300, format='pdf')
+    plt.savefig('results/plots/preprocessing/' + outputname + '_degrees.pdf', dpi=300, format='pdf')
 
 
 def main(mzml_gz_path=None,
@@ -229,7 +227,7 @@ def main(mzml_gz_path=None,
 
     if lockmass_compound != 'GluFibPrecursor':
         plot_degrees(mz_bins=mz_bins, tensor2_out=tensor2_out, time_bins=time_bins, m0=m0, m1=m1,
-                     lockmass_compound=lockmass_compound, runtime=runtime)
+                     lockmass_compound=lockmass_compound, runtime=runtime, outputname=outputname)
 
 
 if __name__ == "__main__":
@@ -237,7 +235,7 @@ if __name__ == "__main__":
     if "snakemake" in globals():
         mzml_gz_path = snakemake.input[0]
         configfile = yaml.load(open(snakemake.input[1], "rb").read(), Loader=yaml.Loader)
-        outputname = 'resources/1_imtbx/' + mzml_gz_path.split('/')[-1]
+        outputname =  mzml_gz_path.split('/')[-1]
 
         if configfile['polyfit_deg'] is not None:
             polyfit_deg = int(configfile['polyfit_deg'])
