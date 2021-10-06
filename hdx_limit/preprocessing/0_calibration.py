@@ -206,6 +206,8 @@ if __name__ == "__main__":
             ms_resolution = int(configfile['ms_resolution'])
         if configfile['ppm_lockmass_radius'] is not None:
             ppm_lockmass_radius = int(configfile['ppm_lockmass_radius'])
+        if configfile['bins_per_isotopic_peak'] is not None:
+            bins_per_isotopic_peak = int(configfile['bins_per_isotopic_peak'])
 
 
         main(mzml_gz_path=mzml_gz_path,
