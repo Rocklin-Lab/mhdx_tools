@@ -147,7 +147,7 @@ def generate_lockmass_calibration_dict(mz_bins, tensor2_out, time_bins, polyfit_
         if outputname is not None:
             save_pickle_object(cal_dict, outputname + '_mz_calib_dict.pk')
         else:
-            return cal_dict[idx]
+            return cal_dict
 
     else:
         for i in range(0, len(tensor2_out), int(len(tensor2_out) / time_bins)):
@@ -172,7 +172,7 @@ def generate_lockmass_calibration_dict(mz_bins, tensor2_out, time_bins, polyfit_
         if outputname is not None:
             save_pickle_object(cal_dict, outputname + '_mz_calib_dict.pk')
         else:
-            return cal_dict[idx]
+            return cal_dict
 
 def plot_degrees(mz_bins, tensor2_out, time_bins, m0, m1, lockmass_compound, runtime):
     fig, ax = plt.subplots(8, 1, figsize=(6, 30))
