@@ -367,8 +367,10 @@ if __name__ == "__main__":
         if len(snakemake.input) > 3:
             if ".pk" in snakemake.input[3]:
                 if snakemake.params.lockmass_calibration:
+                    print("Get lockmass calibration file")
                     lockmass_calibration_dict = snakemake.input[3]
                 elif snakemake.params.polyfit_calibration:
+                    print("Get polyfit calibration file")
                     polyfit_calibration_dict = snakemake.input[3]
                 if len(snakemake.input) > 4:
                     indices = pd.read_csv(snakemake.input[4])['index'].values
