@@ -717,7 +717,6 @@ def main(isotopes_path,
         testq["mz_mono_fix"] = apply_polyfit_cal_mz(
             polyfit_coeffs=calib_dict["polyfit_coeffs"], mz=df["mz_mono"])
         testq["mz_mono_fix_round"] = np.round(testq["mz_mono_fix"].values, 3)
-
     elif lockmass_calibration_dict is not None:
         calib_dict = load_pickle_file(lockmass_calibration_dict)
         testq['mz_mono_fix'] = 0
@@ -733,12 +732,6 @@ def main(isotopes_path,
                                                     (testq['RT'] <= rt + runtime/len(calib_dict))]['mz_mono'].values)
 
         testq['mz_mono_fix_round'] = np.round(testq['mz_mono_fix'].values, 3)
-
-
-        testq["mz_mono_fix"] = apply_polyfit_cal_mz(
-            polyfit_coeffs=calib_dict["polyfit_coeffs"], mz=df["mz_mono"])
-        testq["mz_mono_fix_round"] = np.round(testq["mz_mono_fix"].values, 3)
-
     else:
         # This is what is initially implemented for mz correction.
         # Identify major peak of abs_ppm_error clusters, apply correction to all monoisotopic mz values.
