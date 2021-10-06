@@ -78,7 +78,6 @@ def apply_polyfit_cal_mz(polyfit_coeffs, mz):
     corrected_mz = np.polyval(polyfit_coeffs, mz)
     return corrected_mz
 
-
 def main(library_info_path,
          mzml_gz_path,
          timepoints_dict,
@@ -89,6 +88,7 @@ def main(library_info_path,
          rt_radius=0.4,
          dt_radius_scale=0.06,
          polyfit_calibration_dict=None,
+         lockmass_calibration_dict=None,
          indices=None):
     """Reads through .mzML file and extracts subtensors whose dimensions are defined in 
        library_info.json, optionally saves individual tensors or returns all as a dictionary.
@@ -226,6 +226,8 @@ def main(library_info_path,
     # Perform polyfit calibration if adjustment dict passed.
     if polyfit_calibration_dict is not None:
         calib_dict = load_pickle_file(polyfit_calibration_dict)
+    if lockmass_calibration_dict is not None:
+        calib_dict = load_pickle_file(lockmass_calibration_dict)
 
     # No need to read msrun again - AF
     # print(process.memory_info().rss)
@@ -260,6 +262,13 @@ def main(library_info_path,
                 spectrum[:, 0] = apply_polyfit_cal_mz(
                     polyfit_coeffs=calib_dict["polyfit_coeffs"],
                     mz=spectrum[:, 0])
+            if lockmass_calibration_dict is not None:
+                idx = int((len(calib_dict)*scan_number/len(scan_times))//1)
+                if calib_dict[idx]['polyfit_deg'] != 0:
+                    spectrum[:, 0] = apply_polyfit_cal_mz(polyfit_coeffs=calib_dict[idx]["polyfit_coeffs"],
+                                                          mz=spectrum[:, 0])
+                else:
+                    spectrum[:, 0] = calib_dict[idx]["polyfit_coeffs"]*spectrum[:, 0]
 
             # Iterate over each library_info index that needs to read the scan.
             for i in scan_to_lines[scan_number]:  
@@ -351,12 +360,16 @@ if __name__ == "__main__":
     # If the snakemake global object is present, save expected arguments from snakemake to be passed to main().
     if "snakemake" in globals():
         polyfit_calibration_dict = None
+        lockmass_calibration_dict = None
         indices = None
         open_timepoints = yaml.load(open(snakemake.input[2], "rb").read(), Loader=yaml.Loader)
         # Check for optional arguments.
         if len(snakemake.input) > 3:
             if ".pk" in snakemake.input[3]:
-                polyfit_calibration_dict = snakemake.input[3]
+                if open_timepoints['lockmass']:
+                    lockmass_calibration_dict = snakemake.input[3]
+                else:
+                    polyfit_calibration_dict = snakemake.input[3]
                 if len(snakemake.input) > 4:
                     indices = pd.read_csv(snakemake.input[4])['index'].values
             else:
@@ -373,6 +386,7 @@ if __name__ == "__main__":
              rt_radius = config_rt_radius,
              dt_radius_scale = config_dt_radius_scale,
              polyfit_calibration_dict=polyfit_calibration_dict,
+             lockmass_calibration_dict=lockmass_calibration_dict,
              indices=indices)
     else:
         # CLI context, set expected arguments with argparse module.
@@ -431,6 +445,12 @@ if __name__ == "__main__":
             help=
             "path/to/output_dir/ to generate outputs automatically, using without -i will extract all charged species from library_info, overridden by -o"
         )
+        parser.add_argument(
+            "-lockmass_dict",
+            "--lockmass_dict",
+            help=
+            "path/to/lockmass_calibration_dictionary"
+        )
         args = parser.parse_args()
         
         # Handle implicit arguments.
@@ -480,4 +500,5 @@ if __name__ == "__main__":
              rt_radius=args.rt_radius,
              dt_radius_scale=args.dt_radius_scale,
              polyfit_calibration_dict=args.polyfit_calibration_dict,
+             lockmass_calibration_dict=args.lockmass_calibration_dict,
              indices=args.indices)

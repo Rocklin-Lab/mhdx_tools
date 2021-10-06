@@ -390,6 +390,21 @@ def save_pickle_object(obj, fpath):
         pk.dump(obj, outfile)
 
 
+def load_pickle_file(pickle_fpath):
+    """Loads a pickle file.
+
+    Args:
+        pickle_fpath (str): path/to/file.pickle
+
+    Returns:
+        pk_object (Python Object: unpickled object
+
+    """
+    with open(pickle_fpath, "rb") as file:
+        pk_object = pk.load(file)
+    return pk_object
+
+
 def cluster_df(testq, allseq, ppm=50, adjusted=False):
     """Determine clustered charged-species signals and label with their cluster index.
 
@@ -601,7 +616,9 @@ def main(isotopes_path,
          ppm_tolerance=50,
          intensity_tolerance=10000,
          cluster_corr_tolerance=0.99,
-         ppm_refilter=10):
+         ppm_refilter=10,
+         lockmass_calibration_dict=None,
+         runtime=None):
     """Reads IMTBX file and clusters identified signals with close physical values. 
 
     Args:
@@ -701,6 +718,26 @@ def main(isotopes_path,
             polyfit_coeffs=calib_dict["polyfit_coeffs"], mz=df["mz_mono"])
         testq["mz_mono_fix_round"] = np.round(testq["mz_mono_fix"].values, 3)
 
+    elif lockmass_calibration_dict is not None:
+        calib_dict = load_pickle_file(lockmass_calibration_dict)
+        testq['mz_mono_fix'] = 0
+        if calib_dict[0]['degree'] == 0:
+            for rt in range(0, runtime, len(calib_dict):
+                testq.loc[(testq['RT'] >= rt) & (testq['RT'] <= rt + delta), 'mz_mono_fix'] = calib[rt]['polyfit_coeffs'] * testq[
+                    (testq['RT'] >= rt) & (testq['RT'] <= rt + delta)]['mz_mono'].values
+            else:
+            for rt in range(0, runtime, len(calib_dict):
+                testq.loc[(testq['RT'] >= rt) & (testq['RT'] <= rt + delta), 'mz_mono_fix'] = np.polyval(
+                calib_dict[rt]['polyfit_coeffs'], testq[(testq['RT'] >= rt) &
+                                                        (testq['RT'] <= rt + delta)]['mz_mono'].values)
+
+        testq['mz_mono_fix_round'] = np.round(testq['mz_mono_fix'].values, 3)
+
+
+        testq["mz_mono_fix"] = apply_polyfit_cal_mz(
+            polyfit_coeffs=calib_dict["polyfit_coeffs"], mz=df["mz_mono"])
+        testq["mz_mono_fix_round"] = np.round(testq["mz_mono_fix"].values, 3)
+
     else:
         # This is what is initially implemented for mz correction.
         # Identify major peak of abs_ppm_error clusters, apply correction to all monoisotopic mz values.
@@ -756,11 +793,16 @@ if __name__ == "__main__":
     if "snakemake" in globals():
         isotopes_path = snakemake.input[0]
         names_and_seqs_path = snakemake.input[1]
+        lockmass_calibration_dict = None
+        runtime = None
         out_path = snakemake.output[0]
         original_mz_kde_path = snakemake.output[1]
         adjusted_mz_kde_path = snakemake.output[2]
         calibration_outpath = None
         polyfit_deg = None
+        if len(snakemake.input) == 4:
+            lockmass_calibration_dict = snakemake.input[2]
+            runtime = snakemake.input[3]
         if len(snakemake.output) == 4:
             calibration_outpath = snakemake.output[3]
             if "polyfit_deg" not in snakemake.params:
@@ -774,7 +816,9 @@ if __name__ == "__main__":
              original_mz_kde_path=original_mz_kde_path,
              adjusted_mz_kde_path=adjusted_mz_kde_path,
              calibration_outpath=calibration_outpath,
-             polyfit_deg=polyfit_deg)
+             polyfit_deg=polyfit_deg,
+             lockmass_calibration_dict=lockmass_calibration_dict,
+             runtime=runtime)
 
     else:
         # Sets expected command line arguments.
@@ -846,6 +890,19 @@ if __name__ == "__main__":
             "ppm error tolerance for post-mz-adjustment clusters, default 10 ppm",
             type=float,
             default=10)
+        parser.add_argument(
+            "-lockmass_dict",
+            "--lockmass_dict",
+            help=
+            "path/to/lockmass_calibration_dictionary"
+        )
+        parser.add_argument(
+            "-runtime",
+            "--runtime",
+            help=
+            "total time of chromatographic run",
+            type=int,
+            default=25)
 
         # parse given arguments
         args = parser.parse_args()
@@ -878,4 +935,6 @@ if __name__ == "__main__":
              ppm_tolerance=args.ppm_tolerance,
              intensity_tolerance=args.intensity_tolerance,
              cluster_corr_tolerance=args.cluster_corr_tolerance,
-             ppm_refilter=args.ppm_refilter)
+             ppm_refilter=args.ppm_refilter,
+             lockmass_calibration_dict=args.lockmass_calibration_dict
+             runtime=args.runtime)
