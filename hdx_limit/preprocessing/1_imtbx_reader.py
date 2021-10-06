@@ -793,16 +793,17 @@ if __name__ == "__main__":
     if "snakemake" in globals():
         isotopes_path = snakemake.input[0]
         names_and_seqs_path = snakemake.input[1]
-        lockmass_calibration_dict = None
-        runtime = None
         out_path = snakemake.output[0]
         original_mz_kde_path = snakemake.output[1]
         adjusted_mz_kde_path = snakemake.output[2]
         calibration_outpath = None
         polyfit_deg = None
-        if len(snakemake.input) == 4:
+        if len(snakemake.input) == 3:
             lockmass_calibration_dict = snakemake.input[2]
-            runtime = snakemake.input[3]
+            if "runtime" not in snakemake.params:
+                runtime = None
+            else:
+                runtime = snakemake.params.runtime
         if len(snakemake.output) == 4:
             calibration_outpath = snakemake.output[3]
             if "polyfit_deg" not in snakemake.params:
