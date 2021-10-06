@@ -192,9 +192,9 @@ def plot_degrees(mz_bins, tensor2_out, time_bins, m0, m1, lockmass_compound, run
             ax[idx].plot(xs, (ys - xs) * 1e6 / xs, '--')
             t += delta
         ax[idx].text(0.05, 0.9, 'degree=%i' % (deg), transform=ax[idx].transAxes, fontsize=12)
-        ax[idx].text(0.05, 0.85, 'avg_err_before=%.2f' % (np.mean(cal_dict[key]['ppm_error_before_corr'])),
+        ax[idx].text(0.05, 0.82, 'avg_err_before=%.2f' % (np.mean(cal_dict[key]['ppm_error_before_corr'])),
                      transform=ax[idx].transAxes, fontsize=12)
-        ax[idx].text(0.05, 0.75, 'avg_err_after=%.2f' % (np.mean(cal_dict[key]['ppm_error_after_corr'])),
+        ax[idx].text(0.05, 0.74, 'avg_err_after=%.2f' % (np.mean(cal_dict[key]['ppm_error_after_corr'])),
                         transform=ax[idx][0].transAxes, fontsize=12)
         ax[idx].set_ylabel('ppm error')
         ax[idx].set_xlabel('m/z')
