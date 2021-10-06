@@ -145,7 +145,7 @@ def generate_lockmass_calibration_dict(mz_bins, tensor2_out, time_bins, polyfit_
             idx += 1
 
         if outputname is not None:
-            save_pickle_object(cal_dict, 'resources/0_calibration/' + outputname + '_mz_calib_dict.pk')
+            save_pickle_object(cal_dict, 'resources/1_calibration/' + outputname + '_mz_calib_dict.pk')
         else:
             return cal_dict
 
@@ -168,7 +168,7 @@ def generate_lockmass_calibration_dict(mz_bins, tensor2_out, time_bins, polyfit_
             idx += 1
 
         if outputname is not None:
-            save_pickle_object(cal_dict, 'resources/0_calibration/' + outputname + '_mz_calib_dict.pk')
+            save_pickle_object(cal_dict, 'resources/1_calibration/' + outputname + '_mz_calib_dict.pk')
         else:
             return cal_dict
 
