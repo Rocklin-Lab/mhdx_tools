@@ -180,7 +180,7 @@ def plot_degrees(mz_bins, tensor2_out, time_bins, m0, m1, lockmass_compound, run
     for idx, deg in enumerate([1, 2, 3, 4, 5, 6, 7, 8]):
         cal_dict = generate_lockmass_calibration_dict(mz_bins=mz_bins, tensor2_out=tensor2_out, time_bins=time_bins,
                                                       m0=m0, m1=m1, lockmass_compound=lockmass_compound,
-                                                      outputname=None)
+                                                      polyfit_deg=deg, outputname=None)
         delta = int(runtime / time_bins)
 
         t = 0
