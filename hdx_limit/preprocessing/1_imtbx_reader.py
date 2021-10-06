@@ -798,12 +798,10 @@ if __name__ == "__main__":
         adjusted_mz_kde_path = snakemake.output[2]
         calibration_outpath = None
         polyfit_deg = None
+        runtime = None
         if len(snakemake.input) == 3:
             lockmass_calibration_dict = snakemake.input[2]
-            if "runtime" not in snakemake.params:
-                runtime = None
-            else:
-                runtime = snakemake.params.runtime
+            runtime = snakemake.params.runtime
         if len(snakemake.output) == 4:
             calibration_outpath = snakemake.output[3]
             if "polyfit_deg" not in snakemake.params:
