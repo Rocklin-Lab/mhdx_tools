@@ -173,6 +173,7 @@ def generate_lockmass_calibration_dict(mz_bins, tensor2_out, time_bins, polyfit_
             return cal_dict
 
 def plot_degrees(mz_bins, tensor2_out, time_bins, m0, m1, lockmass_compound, runtime, outputname):
+    sns.set_context('talk')
     fig, ax = plt.subplots(8, 1, figsize=(6, 30))
 
     for idx, deg in enumerate([1, 2, 3, 4, 5, 6, 7, 8]):
@@ -182,17 +183,24 @@ def plot_degrees(mz_bins, tensor2_out, time_bins, m0, m1, lockmass_compound, run
         delta = int(runtime / time_bins)
 
         t = 0
+        err_before = 0
+        err_after = 0
         for key in cal_dict:
             ax[idx].scatter(cal_dict[key]['thr_mz'], cal_dict[key]['ppm_error_before_corr'], label='%i-%imin' % (t, t + delta))
             ax[idx].scatter(cal_dict[key]['thr_mz'], cal_dict[key]['ppm_error_after_corr'], marker='x')
             xs = np.linspace(50, 2000, 1000)
             ys = np.polyval(cal_dict[key]['polyfit_coeffs'], xs)
             ax[idx].plot(xs, (ys - xs) * 1e6 / xs, '--')
+            err_before += np.mean(cal_dict[key]['ppm_error_before_corr'])
+            err_after += np.mean(cal_dict[key]['ppm_error_after_corr'])
             t += delta
+        err_before = err_before / len(cal_dict)
+        err_after = err_after / len(cal_dict)
         ax[idx].text(0.05, 0.9, 'degree=%i' % (deg), transform=ax[idx].transAxes, fontsize=12)
-        ax[idx].text(0.05, 0.82, 'avg_err_before=%.2f' % (np.mean(cal_dict[key]['ppm_error_before_corr'])),
+
+        ax[idx].text(0.05, 0.82, 'avg_err_before=%.2f' %err_before,
                      transform=ax[idx].transAxes, fontsize=12)
-        ax[idx].text(0.05, 0.74, 'avg_err_after=%.2f' % (np.mean(cal_dict[key]['ppm_error_after_corr'])),
+        ax[idx].text(0.05, 0.74, 'avg_err_after=%.2f' %err_after,
                         transform=ax[idx].transAxes, fontsize=12)
         ax[idx].set_ylabel('ppm error')
         ax[idx].set_xlabel('m/z')
@@ -201,7 +209,7 @@ def plot_degrees(mz_bins, tensor2_out, time_bins, m0, m1, lockmass_compound, run
 
     plt.tight_layout()
 
-    plt.savefig('results/plots/preprocessing/' + outputname + '_degrees.pdf', dpi=300, format='pdf')
+    plt.savefig('results/plots/preprocessing/1_calibration_' + outputname + '_degrees.pdf', dpi=300, format='pdf')
 
 
 def main(mzml_gz_path=None,
@@ -235,7 +243,7 @@ if __name__ == "__main__":
     if "snakemake" in globals():
         mzml_gz_path = snakemake.input[0]
         configfile = yaml.load(open(snakemake.input[1], "rb").read(), Loader=yaml.Loader)
-        outputname =  mzml_gz_path.split('/')[-1]
+        outputname = mzml_gz_path.split('/')[-1]
 
         if configfile['polyfit_deg'] is not None:
             polyfit_deg = int(configfile['polyfit_deg'])
