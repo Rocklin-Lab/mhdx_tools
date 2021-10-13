@@ -99,6 +99,7 @@ def kde_plot(sum_df, out_path):
     xs[np.argmax(mykde.evaluate(xs))]
     sns.distplot(sum_df["ppm"])
     plt.xlim([-50, 50])
+    plt.axvline(0, ls='--', color='red')
     plt.grid()
     plt.plot(xs, mykde(xs))
     plt.savefig(out_path)
