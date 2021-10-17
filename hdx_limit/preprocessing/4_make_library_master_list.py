@@ -359,6 +359,7 @@ def main(names_and_seqs_path,
 
     # Combines undfs and sort.
     catdf = pd.concat(undfs)
+    catdf = catdf[catdf['im_mono'] > 10] # Remove unresonable DT-based signals
     catdf = catdf.sort_values(["name", "charge", "pred_RT", "abs_ppm"])
     catdf.index = range(len(catdf))
 
