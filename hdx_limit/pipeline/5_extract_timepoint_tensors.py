@@ -246,7 +246,7 @@ def main(library_info_path,
         elif scan_number in relevant_scans_set:
 
             # Print progress at interval.
-            if scan_number % 1 == 0:
+            if scan_number % 10000 == 0:
                 print(
                     scan_number,
                     process.memory_info().rss / (1024 * 1024 * 1024),
@@ -296,6 +296,7 @@ def main(library_info_path,
                     my_name = library_info.iloc[i]["name"]
                     my_charge = library_info.iloc[i]["charge"]
                     my_out_test = "/" + my_name + "/" + my_name + "_" + "charge" + str(my_charge) + "_" + mzml + ".gz.cpickle.zlib"
+                    print("library idx = " + str(i), flush=True)
                     print("name = " + str(my_name), flush=True)
                     print("charge = " + str(my_charge), flush=True)
                     print("my_out search string = " + my_out_test, flush=True)
@@ -367,10 +368,10 @@ if __name__ == "__main__":
         if len(snakemake.input) > 3:
             if ".pk" in snakemake.input[3]:
                 if snakemake.params.lockmass_calibration:
-                    print("Get lockmass calibration file")
+                    print("Getting lockmass calibration file")
                     lockmass_calibration_dict = snakemake.input[3]
                 elif snakemake.params.polyfit_calibration:
-                    print("Get polyfit calibration file")
+                    print("Getting polyfit calibration file")
                     polyfit_calibration_dict = snakemake.input[3]
                 if len(snakemake.input) > 4:
                     indices = pd.read_csv(snakemake.input[4])['index'].values
