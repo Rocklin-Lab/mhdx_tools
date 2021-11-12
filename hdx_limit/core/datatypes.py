@@ -940,6 +940,81 @@ class IsotopeCluster:
             concat_dt_idxs (list of ints): Deprecated - Indices marking the boundaries between different DataTensors' concatenated DT dimensions.
             normalization_factor (float): Divisor for the integrated m/Z intensity of any IsotopeCluster from a parent DataTensor instance.
         """
+
+        # Compute baseline_integrated_mz_com, baseline_integrated_mz_std, baseline_integrated_mz_FWHM, and baseline_integrated_mz_rmse from gaussian fit.
+        # Define functions for Gaussian fit.
+        def gaussian_function(x, H, A, x0, sigma):
+            """Description of function.
+
+            Args:
+                arg_name (type): Description of input variable.
+
+            Returns:
+                out_name (type): Description of any returned objects.
+
+            """
+            return H + A * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2))
+
+        def gauss_fit(x, y):
+            """Description of function.
+
+            Args:
+                arg_name (type): Description of input variable.
+
+            Returns:
+                out_name (type): Description of any returned objects.
+
+            """
+            mean = sum(x * y) / sum(y)
+            sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
+            nonzeros = [index for index, value in enumerate(list(y)) if value != 0]
+            popt, pcov = curve_fit(gaussian_function, x, y, p0=[0, max(y), mean, sigma], bounds=([0, 0, nonzeros[0], 0],
+                                                                                                 [np.inf, np.inf,
+                                                                                                  nonzeros[-1],
+                                                                                                  np.inf]))
+            return popt
+
+        def params_from_gaussian_fit(self):
+            """Description of function.
+
+            Args:
+                arg_name (type): Description of input variable.
+
+            Returns:
+                out_name (type): Description of any returned objects.
+
+            """
+            try:
+                x_data = [i for i in range(len(self.baseline_integrated_mz))]
+                y_data = self.baseline_integrated_mz
+                H, A, x0, sigma = gauss_fit(x_data, y_data)
+                y_gaussian_fit = gaussian_function(x_data, *gauss_fit(x_data, y_data))
+                rmse = mean_squared_error(y_data / max(y_data), y_gaussian_fit / max(y_gaussian_fit), squared=False)
+                com = x0
+                std = sigma
+                FWHM = 2 * np.sqrt(2 * np.log(2)) * std
+                return rmse, com, std, FWHM
+            except:
+                return 100, 100, 100, 100
+            # Define functions for Gaussian fit END
+
+        def peak_error_ppm(mz_labels_array, isotope_peak_array):
+            for x, y in zip(mz_labels_array, isotope_peak_array):
+                errors = []
+                center_idx = int((len(x)-1)/2)
+                if sum(y) > 0:
+                    mean = np.average(x, weigths=y)
+                    sigma = np.sqrt(np.sum(y*(x-mean)**2)/np.sum(y))
+                    popt, pcov = curve_fit(gaussian_function, x, y, p0=[0, max(y), mean, sigma],
+                                           bounds=([0, 0, x[0], 0],
+                                                   [np.inf, np.inf, x[-1], np.inf]))
+                    errors.append(np.abs(sum(isotope_peak_array) * (popt[2] - x[center_idx]) * 1e6 / x[(center_idx)]))
+
+
+            avg_err_ppm = np.mean(errors)/np.sum(isotope_peak_array)
+
+            return avg_err_ppm
+
         self.integrated_mz_peak_width = integrated_mz_peak_width
         self.charge_states = charge_states
         self.factor_mz_data = factor_mz_data
@@ -986,6 +1061,7 @@ class IsotopeCluster:
 
         # Reshape cluster m/Z data by expected number of bins per isotope.
         isotope_peak_array = np.reshape(self.cluster_mz_data, (-1, self.bins_per_isotope_peak))
+        mz_peak_array = np.reshape(self.mz_labels, (-1, self.bins_per_isotope_peak))
         self.baseline = 0
         self.baseline_subtracted_mz = self.cluster_mz_data 
         self.baseline_auc = self.auc
@@ -994,66 +1070,13 @@ class IsotopeCluster:
         self.baseline_integrated_mz = np.sum(isotope_peak_array, axis=1)
 
         # Takes the average of the absolute distances of peak centers from expected centers of integration bounds.
-        self.peak_error = np.average(np.abs(np.argmax(isotope_peak_array,axis=1) - ((self.bins_per_isotope_peak - 1)/2)) 
-                            / ((self.bins_per_isotope_peak - 1)/2), weights=self.baseline_integrated_mz)
+        # self.peak_error = np.average(np.abs(np.argmax(isotope_peak_array,axis=1) - ((self.bins_per_isotope_peak - 1)/2))
+        #                     / ((self.bins_per_isotope_peak - 1)/2), weights=self.baseline_integrated_mz)
+        self.peak_error = peak_error_ppm(mz_peak_array, isotope_peak_array)
         self.baseline_peak_error = self.peak_error
 
         # Cache int_mz and rt scoring values.
-        # Compute baseline_integrated_mz_com, baseline_integrated_mz_std, baseline_integrated_mz_FWHM, and baseline_integrated_mz_rmse from gaussian fit.
-        # Define functions for Gaussian fit.
-        def gaussian_function(x, H, A, x0, sigma):
-            """Description of function.
 
-            Args:
-                arg_name (type): Description of input variable.
-
-            Returns:
-                out_name (type): Description of any returned objects.
-
-            """
-            return H + A * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2))
-
-
-        def gauss_fit(x, y):
-            """Description of function.
-
-            Args:
-                arg_name (type): Description of input variable.
-
-            Returns:
-                out_name (type): Description of any returned objects.
-
-            """
-            mean = sum(x * y) / sum(y)
-            sigma = np.sqrt(sum(y * (x - mean) ** 2) / sum(y))
-            nonzeros = [index for index, value in enumerate(list(y)) if value!=0]
-            popt, pcov = curve_fit(gaussian_function, x, y, p0=[0, max(y), mean, sigma], bounds=([0, 0, nonzeros[0], 0], [np.inf, np.inf, nonzeros[-1], np.inf]))
-            return popt
-
-
-        def params_from_gaussian_fit(self):
-            """Description of function.
-
-            Args:
-                arg_name (type): Description of input variable.
-
-            Returns:
-                out_name (type): Description of any returned objects.
-
-            """
-            try:
-                x_data = [i for i in range(len(self.baseline_integrated_mz))]
-                y_data = self.baseline_integrated_mz
-                H, A, x0, sigma = gauss_fit(x_data, y_data)
-                y_gaussian_fit = gaussian_function(x_data, *gauss_fit(x_data, y_data))
-                rmse = mean_squared_error(y_data/max(y_data), y_gaussian_fit/max(y_gaussian_fit), squared=False)
-                com = x0
-                std = sigma
-                FWHM = 2*np.sqrt(2*np.log(2))*std
-                return rmse, com, std, FWHM
-            except:
-                return 100, 100, 100, 100
-            # Define functions for Gaussian fit END       
         
         
         self.baseline_integrated_mz_norm = self.baseline_integrated_mz / np.linalg.norm(
