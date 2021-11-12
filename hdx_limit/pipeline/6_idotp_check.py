@@ -315,7 +315,7 @@ def main(library_info_path,
     print("Cumulative Peak Gaps: "+str(prot_cum_peak_gaps))
     print("Protein Charge States: "+str(my_info["charge"].values[0]))
     print("Observed m/Z: "+str(my_info['obs_mz'].values[0]))
-    mz_centers = (prot_cum_peak_gaps/prot_charge) + my_info['obs_mz'].values[0]
+    mz_centers = (prot_cum_peak_gaps/prot_charge) + my_info['expect_mz'].values[0] # replaced from obs_mz to expect_mz
 
     iso_clusters_list, data_tensor_list = gen_tensors_factorize(
         library_info_df=library_info,
