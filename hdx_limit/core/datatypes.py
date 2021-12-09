@@ -188,6 +188,7 @@ class DataTensor:
 
         """
         retention_labels, drift_labels, sparse_data = data
+
         
         FWHM = np.average(integrated_mz_limits) / ms_resolution
         gaussian_scale = FWHM / 2.355 # A gaussian with scale = standard deviation = 1 has FWHM 2.355.
@@ -1003,16 +1004,15 @@ class IsotopeCluster:
                 errors = []
                 center_idx = int((len(x)-1)/2)
                 if sum(y) > 0:
-                    mean = np.average(x, weigths=y)
+                    mean = np.average(x, weights=y)
                     sigma = np.sqrt(np.sum(y*(x-mean)**2)/np.sum(y))
-                    popt, pcov = curve_fit(gaussian_function, x, y, p0=[0, max(y), mean, sigma],
-                                           bounds=([0, 0, x[0], 0],
-                                                   [np.inf, np.inf, x[-1], np.inf]))
-                    errors.append(np.abs(sum(isotope_peak_array) * (popt[2] - x[center_idx]) * 1e6 / x[(center_idx)]))
-
-
+                    try:
+                        popt, pcov = curve_fit(gaussian_function, x, y, p0=[0, max(y), mean, sigma])
+                        errors.append(np.abs(sum(y) * (popt[2] - x[center_idx]) * 1e6 / x[(center_idx)]))
+                    except:
+                        print('PEAK ERROR FAILED', x, y, mean, sigma)
+                        errors.append(30*sum(y))
             avg_err_ppm = np.mean(errors)/np.sum(isotope_peak_array)
-
             return avg_err_ppm
 
         self.integrated_mz_peak_width = integrated_mz_peak_width
