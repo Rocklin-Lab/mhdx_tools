@@ -62,18 +62,17 @@ def main(mzml_path, return_flag=None, out_path=None, mzml_sum_outpath=None):
     scan_times = []
 
     # Uses mzML string pattern to find ims drift and m/z scan times.
-    lines = gzip.open(mzml_path, "rt").readlines()
-    for line in lines:
-        if ('<cvParam cvRef="MS" accession="MS:1002476" name="ion mobility drift time" value'
-                in line):
-            dt = line.split('value="')[1].split('"')[0]  # replace('"/>',''))
-            drift_times.append(float(dt))
+    with gzip.open(mzml_path, "rt").readlines() as lines:
+        for line in lines:
+            if ('<cvParam cvRef="MS" accession="MS:1002476" name="ion mobility drift time" value'
+                    in line):
+                dt = line.split('value="')[1].split('"')[0]  # replace('"/>',''))
+                drift_times.append(float(dt))
 
-    for line in lines:
-        if ('<cvParam cvRef="MS" accession="MS:1000016" name="scan start time" value='
-                in line):
-            st = line.split('value="')[1].split('"')[0]  # replace('"/>',''))
-            scan_times.append(float(st))
+            if ('<cvParam cvRef="MS" accession="MS:1000016" name="scan start time" value='
+                    in line):
+                st = line.split('value="')[1].split('"')[0]  # replace('"/>',''))
+                scan_times.append(float(st))
 
     run = pymzml.run.Reader(mzml_path)
     # These are hardcoded values controlling the density of sampling - TODO: Arguments?
