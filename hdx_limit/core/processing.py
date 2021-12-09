@@ -378,7 +378,7 @@ class PathOptimizer:
             
         """
         # Set score weights
-        self.baseline_peak_error_weight = 100
+        self.baseline_peak_error_weight = 10 #100 before
         self.delta_mz_rate_backward_weight = 0.165
         self.delta_mz_rate_forward_weight = 0.162
         self.dt_ground_rmse_weight = 7.721
@@ -1094,8 +1094,6 @@ class PathOptimizer:
                     self.auc_ground_rmse(series) * self.auc_ground_rmse_weight,
                 "rmses_sum":
                     self.rmses_sum(series) * self.rmses_sum_weight,
-                "maxint_sum":
-                    self.maxint_sum(series) * self.rmses_sum_weight,
                 "int_mz_FWHM_rmse":
                     self.int_mz_FWHM_rmse(series) * self.int_mz_FWHM_rmse_weight,
                 "nearest_neighbor_penalty":
@@ -1113,8 +1111,6 @@ class PathOptimizer:
 
             """
             return (
-                #winner_scores["int_mz_std_rmse"] -
-                #substituted_scores["int_mz_std_rmse"],
                 winner_scores["delta_mz_rate_backward"] -
                 substituted_scores["delta_mz_rate_backward"],
                 winner_scores["delta_mz_rate_afterward"] -
@@ -1133,8 +1129,6 @@ class PathOptimizer:
                 substituted_scores["auc_ground_rmse"],
                 winner_scores["rmses_sum"]
                 - substituted_scores["rmses_sum"],
-                winner_scores["maxint_sum"]
-                - substituted_scores["maxint_sum"],
                 winner_scores["int_mz_FWHM_rmse"]
                 - substituted_scores["int_mz_FWHM_rmse"],
                 winner_scores["nearest_neighbor_penalty"]
@@ -1159,7 +1153,6 @@ class PathOptimizer:
             ic.bokeh_tuple = ic.info_tuple + (
                 ic.rt_ground_err,
                 ic.dt_ground_err,
-                #winner_scores["int_mz_std_rmse"],
                 winner_scores["delta_mz_rate_backward"],
                 winner_scores["delta_mz_rate_afterward"],
                 winner_scores["dt_ground_rmse"],
@@ -1169,7 +1162,6 @@ class PathOptimizer:
                 winner_scores["baseline_peak_error"],
                 winner_scores["auc_ground_rmse"],
                 winner_scores["rmses_sum"],
-                winner_scores["maxint_sum"],
                 winner_scores["int_mz_FWHM_rmse"],
                 winner_scores["nearest_neighbor_penalty"],
                 0,
@@ -1278,60 +1270,6 @@ class PathOptimizer:
     ### Scoring Functions for PathOptimizer ##################################################################################################################################################################################################
     ##########################################################################################################################################################################################################################################
 
-    def int_mz_std_rmse(self, ics):
-        """Description of function.
-
-        Args:
-            arg_name (type): Description of input variable.
-
-        Returns:
-            out_name (type): Description of any returned objects.
-
-        """
-        # calculates the difference in standard deviation from the mean from timepoint i-1 to i for i in [2, len(ics)]
-        sd = 0
-        for i in range(2, len(ics)):
-            sd += (ics[i].baseline_integrated_mz_std -
-                   ics[i - 1].baseline_integrated_mz_std)**2.0
-
-        return math.sqrt(sd)
-
-    def gabe_delta_mz_rate(self, major_species_centroids, timepoints=None):
-        """Description of function.
-
-        Args:
-            arg_name (type): Description of input variable.
-
-        Returns:
-            out_name (type): Description of any returned objects.
-
-        """
-        # reproduce logic of delta_mz_rate for Gabe's old data
-
-        if timepoints is None:
-            timepoints = self.timepoints
-
-        # take mean of undeuts, fix for gabe's data
-        major_species_centroids[0] = np.mean(
-            [major_species_centroids.pop(0) for i in range(3)])
-        sd = 0
-        previous_rate = (major_species_centroids[1] - major_species_centroids[0]
-                        ) / (timepoints[1] - timepoints[0])
-        for i in range(2, len(major_species_centroids)):
-            # if previous_rate == 0: diagnostic for /0 error
-            new_com = major_species_centroids[i]
-            if new_com < major_species_centroids[i - 1]:  # if we went backwards
-                sd += (100 * (new_com - major_species_centroids[i - 1])**2.0
-                      )  # penalize for going backwards
-                new_com = (
-                    major_species_centroids[i - 1] + 0.01
-                )  # pretend we went forwards for calculating current rate
-            current_rate = max([(new_com - major_species_centroids[i - 1]), 0.1
-                               ]) / (timepoints[i] - timepoints[i - 1])
-            if (current_rate / previous_rate) > 1.2:
-                sd += (current_rate / previous_rate)**2.0
-            previous_rate = current_rate
-        return sd / len(major_species_centroids)
 
     def delta_mz_rate(self, ics, timepoints=None):
         """Description of function.
@@ -1369,37 +1307,7 @@ class PathOptimizer:
             if (current_rate / previous_rate) > 1.2:
                 forward += (current_rate / previous_rate)**2.0
             previous_rate = current_rate
-        return backward / len(ics), forward / len(ics),
-
-    def int_mz_rot_fit(self, ics):
-        # Compares i to i-1 from ics[2]
-        errors = []
-        for i in range(2, len(ics)):
-            i_mz, j_mz = (
-                ics[i].baseline_integrated_mz_norm,
-                ics[i - 1].baseline_integrated_mz_norm,
-            )
-
-            new_indices_i = np.nonzero(i_mz)[0] - np.argmax(i_mz)
-            new_indices_j = np.nonzero(j_mz)[0] - np.argmax(j_mz)
-
-            concat_indices = np.concatenate([new_indices_i, new_indices_j])
-            common_low_index = min(concat_indices)
-            common_high_index = max(concat_indices)
-
-            new_array_i, new_array_j = (
-                np.zeros((common_high_index - common_low_index + 1)),
-                np.zeros((common_high_index - common_low_index + 1)),
-            )
-
-            new_indices_i -= common_low_index
-            new_indices_j -= common_low_index
-
-            new_array_i[new_indices_i] = i_mz[np.nonzero(i_mz)[0]]
-            new_array_j[new_indices_j] = j_mz[np.nonzero(j_mz)[0]]
-
-            errors.append(np.dot(new_array_i, new_array_j))
-        return -np.average(errors)
+        return backward / len(ics), forward / len(ics)
 
     def dt_ground_rmse(
         self, ics
@@ -1507,21 +1415,6 @@ class PathOptimizer:
             rmses += 100*ic.baseline_integrated_mz_rmse
         return rmses
   
-    def maxint_sum(self, ics):
-        """Description of function.
-
-        Args:
-            arg_name (type): Description of input variable.
-
-        Returns:
-            out_name (type): Description of any returned objects.
-
-        """
-        maxint = 0
-        for ic in ics:
-            maxint += max(ic.baseline_integrated_mz)
-            return 100000/maxint
-  
     def int_mz_FWHM_rmse(self, ics):
         """Description of function.
 
@@ -1569,7 +1462,6 @@ class PathOptimizer:
         dt_ground_rmse_weight=None,
         auc_ground_rmse_weight=None,
         rmses_sum_weight=None,
-        maxint_sum_weight=None,
         int_mz_FWHM_rmse_weight=None,
         nearest_neighbor_penalty_weight=None
     ):
@@ -2285,7 +2177,6 @@ class PathOptimizer:
             "int_mz_y",
             "rt_ground_err",
             "dt_ground_err",
-            "int_mz_std_rmse",
             "delta_mz_rate",
             "dt_ground_rmse_score",
             "rt_ground_rmse_score",
@@ -2326,7 +2217,6 @@ class PathOptimizer:
             ("Center of Mass in M/Z", "@abs_mz_com"),
             ("Retention Time COM Error to Ground", "@rt_ground_err"),
             ("Drift Time COM Error to Ground", "@dt_ground_err"),
-            ("int_mz_std_rmse", "@int_mz_std_rmse"),
             ("delta_mz_rate", "@delta_mz_rate"),
             ("dt_ground_rmse", "@dt_ground_rmse_score"),
             ("rt_ground_rmse", "@rt_ground_rmse_score"),
