@@ -271,9 +271,9 @@ class TensorGenerator:
         self.total_isotopes = self.max_peak_center + self.high_mass_margin
         self.total_mass_window = self.low_mass_margin + self.total_isotopes
 
-        self.mz_lows = self.my_row["obs_mz"].values[0] - (
+        self.mz_lows = self.my_row["expect_mz"].values[0] - (
             self.low_mass_margin / self.charge)
-        self.mz_highs = self.my_row["obs_mz"].values[0] + (
+        self.mz_highs = self.my_row["expect_mz"].values[0] + (
             self.total_isotopes / self.charge)
 
         low_mz_limits = [center * ((1000000.0 - self.ppm_radius) / 1000000.0) for center in self.mz_centers]
