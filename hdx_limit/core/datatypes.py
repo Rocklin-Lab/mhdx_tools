@@ -1000,14 +1000,15 @@ class IsotopeCluster:
             # Define functions for Gaussian fit END
 
         def peak_error_ppm(mz_labels_array, isotope_peak_array):
+            errors = []
             for x, y in zip(mz_labels_array, isotope_peak_array):
-                errors = []
                 center_idx = int((len(x)-1)/2)
                 if sum(y) > 0:
                     mean = np.average(x, weights=y)
                     sigma = np.sqrt(np.sum(y*(x-mean)**2)/np.sum(y))
                     try:
-                        popt, pcov = curve_fit(gaussian_function, x, y, p0=[0, max(y), mean, sigma])
+                        popt, pcov = curve_fit(gaussian_function, x, y, p0=[0, max(y), mean, sigma],
+                                               bounds=([0, 0, x[0], 0],[np.inf, np.inf, x[-1], np.inf]))
                         errors.append(np.abs(sum(y) * (popt[2] - x[center_idx]) * 1e6 / x[(center_idx)]))
                     except:
                         print('PEAK ERROR FAILED', x, y, mean, sigma)
