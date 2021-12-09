@@ -352,6 +352,7 @@ class PathOptimizer:
                  library_info,
                  timepoints,
                  n_undeut_runs,
+                 user_prefilter,
                  prefilter=1,
                  old_data_dir=None,
                  **kwargs):
@@ -412,11 +413,42 @@ class PathOptimizer:
         self.gather_old_data()
         self.select_undeuterated()
         self.precalculate_fit_to_ground()
+        if user_prefilter:
+            self.filters_from_user()
         if self.prefilter == 1:
             self.prefiltered_ics = self.weak_pareto_dom_filter()
         else:
             self.prefiltered_ics = self.all_tp_clusters
         self.generate_sample_paths()
+
+    def filters_from_user(self):
+        """Description of function.
+
+        Args:
+        arg_name (type): Description of input variable.
+
+        Returns:
+        out_name (type): Description of any returned objects.
+
+        """
+        undeut_list = self.all_tp_clusters[0]
+        filtered_atc = [
+            [ic for ic in ics if (ic.baseline_peak_error <= self.thresholds['baseline_peak_error'] and
+                                  ic.dt_ground_err <= self.thresholds['dt_ground_err'] and
+                                  ic.dt_ground_fit >= self.thresholds['dt_ground_fit'] and
+                                  ic.rt_ground_err <= self.thresholds['rt_ground_err'] and
+                                  ic.rt_ground_fit >= self.thresholds['rt_ground_fit'] and
+                                  ic.baseline_integrated_mz_rmse <= self.thresholds[
+                                      'baseline_integrated_rmse'] and
+                                  ic.baseline_integrated_mz_FWHM >= self.thresholds[
+                                      'baseline_integrated_FWHM'] and
+                                  ic.nearest_neighbor_correlation >= self.thresholds[
+                                      'nearest_neighbor_correlation'])
+             ] for ics in self.all_tp_clusters[1:]]
+        filtered_atc = np.array(undeut_list + filtered_atc)
+        filtered_indexes = np.array([True if len(ics) > 0 else False for ics in filtered_atc])
+        self.all_tp_clusters = list(filtered_atc[filtered_indexes])
+        self.timepoints = list(np.array(self.timepoints)[filtered_indexes])
 
     def weak_pareto_dom_filter(self):
         """Description of function.

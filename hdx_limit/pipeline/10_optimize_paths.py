@@ -46,14 +46,14 @@ from hdx_limit.core.gjr_plot import plot_gjr_
 
 
 def optimize_paths_inputs(library_info_path, input_directory_path,
-                          rt_group_name, timepoints):
+                          rt_group_name, configfile):
     """Generate explicit PathOptimizer input paths for one rt_group.
 
     Args:
         library_info_path (str): path/to/checked_library_info.json
         input_directory_path (str): /path/to/dir/ to prepend to each outpath
         rt_group_name (str): value from 'name' column of library_info
-        timepoints (dict): dictionary containing list of hdx timepoints in seconds, where each timepoint is also an integer key corresponding to that timepoint's .mzML filenames
+        configfile (dict): dictionary containing list of hdx timepoints in seconds, where each timepoint is also an integer key corresponding to that timepoint's .mzML filenames
 
     Returns:
         name_inputs (list of strings): flat list of all IsotopeCluster inputs to PathOptimizer
@@ -62,9 +62,9 @@ def optimize_paths_inputs(library_info_path, input_directory_path,
     name_inputs = []
     library_info = pd.read_json(library_info_path)
     charges = library_info.loc[library_info["name"]==name]['charge'].values
-    for key in timepoints["timepoints"]:
-        if len(timepoints[key]) > 1:
-            for file in timepoints[key]:
+    for key in configfile["timepoints"]:
+        if len(configfile[key]) > 1:
+            for file in configfile[key]:
                 for charge in charges:
                     name_inputs.append(
                         input_directory_path 
@@ -77,7 +77,7 @@ def optimize_paths_inputs(library_info_path, input_directory_path,
                         +".cpickle.zlib"
                     )  # TODO: This won't work if we go to .mzML/.RAW interoperability.
         else:
-            file = timepoints[key][0]
+            file = configfile[key][0]
             for charge in charges:
                 name_inputs.append(
                     input_directory_path 
@@ -110,7 +110,8 @@ def gen_correlate_matrix(list_of_arrays):
 
 def main(library_info_path,
          all_ic_input_paths,
-         timepoints,
+         configfile,
+         user_prefilter=False,
          monobody_return_flag=False,
          multibody_return_flag=False,
          rt_group_name=None,
@@ -136,7 +137,7 @@ def main(library_info_path,
     Args:
         library_info_path (str): path/to/checked_library_info.json
         all_ic_input_paths (list of strings): list of paths/to/files.cpickle.zlib for all lists of IsotopeClusters from generate_tensor_ics.py
-        timepoints (dict): dictionary with 'timepoints' key containing list of hdx timepoints in integer seconds, which are keys mapping to lists of each timepoint's replicate .mzML filenames
+        configfile (dict): dictionary with 'timepoints' key containing list of hdx timepoints in integer seconds, which are keys mapping to lists of each timepoint's replicate .mzML filenames
         monobody_return_flag: option to return monobody output in python, for notebook context, can be combined with multibody_return_flag.
         multibody_return_flag: option to return multibody output in python, for notebook context, can be combined with monobody_return_flag.
         rt_group_name (str): library_info['name'] value
@@ -193,9 +194,9 @@ def main(library_info_path,
     # Order files, pooling all replicates and charges by timepoint.
     atc = []
     suffix = ".mzML"
-    for tp in timepoints["timepoints"]:
+    for tp in configfile["timepoints"]:
         tp_buf = []
-        for fn in timepoints[tp]:
+        for fn in configfile[tp]:
             for file in all_ic_input_paths:
                 if fn[:-len(suffix)] in file:  # only match filename without .mzML
                     ics = limit_read(file)  # expects list of ics
@@ -231,8 +232,9 @@ def main(library_info_path,
         name,
         atc,
         library_info,
-        timepoints=timepoints["timepoints"],
-        n_undeut_runs=len(timepoints[0]),
+        user_prefilter=user_prefilter,
+        timepoints=configfile["timepoints"],
+        n_undeut_runs=len(configfile[0]),
         old_data_dir=old_data_dir,
     )
 
@@ -313,7 +315,7 @@ if __name__ == "__main__":
     if "snakemake" in globals():
 
         library_info_path = snakemake.input[0]
-        timepoints = yaml.load(open(snakemake.input[1], "rb").read(), Loader=yaml.Loader)
+        configfile = yaml.load(open(snakemake.input[1], "rb").read(), Loader=yaml.Loader)
         all_ic_input_paths = snakemake.input[2:]
         old_data_dir = None
         rt_group_name = snakemake.params.rt_group_name
@@ -336,7 +338,8 @@ if __name__ == "__main__":
 
         main(library_info_path=library_info_path,
              all_ic_input_paths=all_ic_input_paths,
-             timepoints=timepoints,
+             configfile=configfile,
+             user_prefilter=configfile['user_prefilter'],
              old_data_dir = old_data_dir,
              rt_group_name=rt_group_name,
              all_timepoint_clusters_out_path=all_timepoint_clusters_out_path,
@@ -366,7 +369,7 @@ if __name__ == "__main__":
         # Inputs
         parser.add_argument("library_info_path", help="path/to/checked_library_info.json")
         parser.add_argument(
-            "timepoints_yaml",
+            "configfile_yaml",
             help=
             "path/to/file.yaml containing list of hdx timepoints in integer seconds which are also keys mapping to lists of each timepoint's .mzML file, can pass config/config.yaml - for Snakemake context"
         )
@@ -444,13 +447,13 @@ if __name__ == "__main__":
         
         args = parser.parse_args()
 
-        # Opens timepoints .yaml and generates explicit inputs.
-        timepoints = yaml.load(open(args.timepoints_yaml, "rb").read(), Loader=yaml.Loader)
+        # Opens configfile .yaml and generates explicit inputs.
+        configfile = yaml.load(open(args.configfile_yaml, "rb").read(), Loader=yaml.Loader)
         if args.all_ic_input_paths is None:
             if args.input_directory_path is not None and args.rt_group_name is not None:
                 args.all_ic_input_paths = optimize_paths_inputs(
                     args.library_info_path, args.input_directory_path,
-                    args.rt_group_name, timepoints)
+                    args.rt_group_name, configfile)
             else:
                 parser.print_help()
                 sys.exit()
@@ -481,7 +484,8 @@ if __name__ == "__main__":
 
         main(library_info_path=args.library_info_path,
              all_ic_input_paths=args.all_ic_input_paths,
-             timepoints=timepoints,
+             configfile=configfile,
+             user_prefilter=configfile['user_prefilter'],
              rt_group_name=args.rt_group_name,
              old_data_dir=args.old_data_dir,
              all_timepoint_clusters_out_path=args.all_timepoint_clusters_out_path,
