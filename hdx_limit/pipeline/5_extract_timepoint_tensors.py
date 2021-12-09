@@ -148,16 +148,18 @@ def main(library_info_path,
     dt_lbounds = library_info["Drift Time MS1"].values * (1 - dt_radius_scale)
 
     drift_times = []
-    scan_times = []
 
     # TODO replace this hardcoded search string with an optional search string parameter with this value as default?
-    lines = gzip.open(mzml_gz_path, "rt").readlines()
-    for line in lines:
-        if ('<cvParam cvRef="MS" accession="MS:1002476" name="ion mobility drift time" value'
-                in line):
-            dt = line.split('value="')[1].split('"')[0]  # replace('"/>',''))
-            drift_times.append(float(dt))
-    drift_times = np.array(drift_times)
+    with gzip.open(mzml_gz_path, "rt") as lines:
+        for line in lines:
+            if ('<cvParam cvRef="MS" accession="MS:1002476" name="ion mobility drift time" value'
+                    in line):
+                dt = line.split('value="')[1].split('"')[0]  # replace('"/>',''))
+                if dt not in drift_times:
+                    drift_times.append(float(dt))
+                else:
+                    break
+        drift_times = np.array(drift_times)
 
     # Display memory use before beginning iteration.
     process = psutil.Process(os.getpid())
@@ -177,6 +179,10 @@ def main(library_info_path,
     scan_times = np.array(scan_times)
     scan_numbers = np.arange(0, len(scan_times))
     scan_functions = np.array(scan_functions)
+
+    drift_times = np.tile(np.array(drift_times, dtype=np.float32),
+                          int(len(scan_times) / len(drift_times)))
+    assert len(scan_times) == len(drift_times)
 
     # Set upper m/Z bounds for each sequence
     isotope_totals = [
@@ -240,13 +246,15 @@ def main(library_info_path,
     for scan_number, scan in enumerate(
             msrun):
 
-        if (scan_number < relevant_scans[0]) or (scan_number > relevant_scans[-1]):
+        if (scan_number < relevant_scans[0]):
             continue
+        elif (scan_number > relevant_scans[-1]):
+            break
 
         elif scan_number in relevant_scans_set:
 
             # Print progress at interval.
-            if scan_number % 10000 == 0:
+            if scan_number % 25000 == 0:
                 print(
                     scan_number,
                     process.memory_info().rss / (1024 * 1024 * 1024),
