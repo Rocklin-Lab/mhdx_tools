@@ -1013,7 +1013,7 @@ class IsotopeCluster:
                     except:
                         print('PEAK ERROR FAILED', x, y, mean, sigma)
                         errors.append(30*sum(y))
-            avg_err_ppm = np.mean(errors)/np.sum(isotope_peak_array)
+            avg_err_ppm = np.sum(errors)/np.sum(isotope_peak_array)
             return avg_err_ppm
 
         self.integrated_mz_peak_width = integrated_mz_peak_width
