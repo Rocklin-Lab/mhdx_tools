@@ -169,8 +169,8 @@ def generate_lockmass_calibration_dict(mz_bins, tensor2_out, time_bins, polyfit_
 
         if output_pk is not None:
             save_pickle_object(cal_dict, output_pk)
-        else:
-            return cal_dict
+
+        return cal_dict
 
 def plot_degrees(mz_bins, tensor2_out, time_bins, m0, m1, lockmass_compound, runtime, output_pk, output_pdf):
     sns.set_context('talk')
