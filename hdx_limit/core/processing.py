@@ -353,6 +353,7 @@ class PathOptimizer:
                  timepoints,
                  n_undeut_runs,
                  user_prefilter,
+                 thresholds,
                  prefilter=1,
                  old_data_dir=None,
                  **kwargs):
@@ -414,6 +415,7 @@ class PathOptimizer:
         self.select_undeuterated()
         self.precalculate_fit_to_ground()
         if user_prefilter:
+            self.thresholds = thresholds
             self.filters_from_user()
         if self.prefilter == 1:
             self.prefiltered_ics = self.weak_pareto_dom_filter()
