@@ -62,7 +62,7 @@ def main(mzml_path, return_flag=None, out_path=None, mzml_sum_outpath=None):
     scan_times = []
 
     # Uses mzML string pattern to find ims drift and m/z scan times.
-    with gzip.open(mzml_path, "rt").readlines() as lines:
+    with gzip.open(mzml_path, "rt") as lines:
         for line in lines:
             if ('<cvParam cvRef="MS" accession="MS:1002476" name="ion mobility drift time" value'
                     in line):
