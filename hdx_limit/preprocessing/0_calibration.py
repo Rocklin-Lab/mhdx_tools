@@ -118,7 +118,7 @@ def find_nearest(obs_mz, mz_centers):
     return np.array(mz_centers_subset)
 
 def generate_lockmass_calibration_dict(mz_bins, tensor2_out, time_bins, polyfit_deg, m0, m1,
-                                       lockmass_compound, outputname):
+                                       lockmass_compound, output_pk):
 
     mz_centers = get_mz_centers(m0, m1, lockmass_compound)
 
@@ -144,8 +144,8 @@ def generate_lockmass_calibration_dict(mz_bins, tensor2_out, time_bins, polyfit_
                         'ppm_error_after_corr': ppm_error_after_corr}
             idx += 1
 
-        if outputname is not None:
-            save_pickle_object(cal_dict, 'resources/0_calibration/' + outputname + '_mz_calib_dict.pk')
+        if output_pk is not None:
+            save_pickle_object(cal_dict, output_pk)
         else:
             return cal_dict
 
@@ -167,19 +167,19 @@ def generate_lockmass_calibration_dict(mz_bins, tensor2_out, time_bins, polyfit_
 
             idx += 1
 
-        if outputname is not None:
-            save_pickle_object(cal_dict, 'resources/0_calibration/' + outputname + '_mz_calib_dict.pk')
+        if output_pk is not None:
+            save_pickle_object(cal_dict, output_pk)
         else:
             return cal_dict
 
-def plot_degrees(mz_bins, tensor2_out, time_bins, m0, m1, lockmass_compound, runtime, outputname):
+def plot_degrees(mz_bins, tensor2_out, time_bins, m0, m1, lockmass_compound, runtime, output_pk, output_pdf):
     sns.set_context('talk')
     fig, ax = plt.subplots(8, 1, figsize=(6, 30))
 
     for idx, deg in enumerate([1, 2, 3, 4, 5, 6, 7, 8]):
         cal_dict = generate_lockmass_calibration_dict(mz_bins=mz_bins, tensor2_out=tensor2_out, time_bins=time_bins,
                                                       m0=m0, m1=m1, lockmass_compound=lockmass_compound,
-                                                      polyfit_deg=deg, outputname=None)
+                                                      polyfit_deg=deg, output_pk=output_pk)
         delta = int(runtime / time_bins)
 
         t = 0
@@ -209,7 +209,7 @@ def plot_degrees(mz_bins, tensor2_out, time_bins, m0, m1, lockmass_compound, run
 
     plt.tight_layout()
 
-    plt.savefig('results/plots/preprocessing/0_calibration_' + outputname + '_degrees.pdf', dpi=300, format='pdf')
+    plt.savefig(output_pdf, dpi=300, format='pdf')
 
 
 def main(mzml_gz_path=None,
@@ -221,7 +221,8 @@ def main(mzml_gz_path=None,
          bins_per_isotopic_peak=None,
          ms_resolution=None,
          polyfit_deg=None,
-         outputname=None,
+         output_pk=None,
+         output_pdf=None,
          runtime=None,
          ):
 
@@ -229,13 +230,13 @@ def main(mzml_gz_path=None,
                                            bins_per_isotope_peak=bins_per_isotopic_peak, ms_resolution=ms_resolution,
                                            lockmass_compound=lockmass_compound)
 
-    generate_lockmass_calibration_dict(mz_bins=mz_bins, tensor2_out=tensor2_out, time_bins=time_bins,
-                                       polyfit_deg=polyfit_deg, m0=m0, m1=m1,
-                                       lockmass_compound=lockmass_compound, outputname=outputname)
-
     if lockmass_compound != 'GluFibPrecursor':
         plot_degrees(mz_bins=mz_bins, tensor2_out=tensor2_out, time_bins=time_bins, m0=m0, m1=m1,
-                     lockmass_compound=lockmass_compound, runtime=runtime, outputname=outputname)
+                     lockmass_compound=lockmass_compound, runtime=runtime, output_pk=output_pk, output_pdf=output_pdf)
+    else:
+        generate_lockmass_calibration_dict(mz_bins=mz_bins, tensor2_out=tensor2_out, time_bins=time_bins,
+                                           polyfit_deg=polyfit_deg, m0=m0, m1=m1,
+                                           lockmass_compound=lockmass_compound, output_pk=output_pk)
 
 
 if __name__ == "__main__":
@@ -243,7 +244,8 @@ if __name__ == "__main__":
     if "snakemake" in globals():
         mzml_gz_path = snakemake.input[0]
         configfile = yaml.load(open(snakemake.input[1], "rb").read(), Loader=yaml.Loader)
-        outputname = mzml_gz_path.split('/')[-1]
+        output_pk = snakemake.output[0]
+        output_pdf = snakemake.output[1]
 
         if configfile['polyfit_deg'] is not None:
             polyfit_deg = int(configfile['polyfit_deg'])
@@ -269,7 +271,8 @@ if __name__ == "__main__":
              lockmass_compound=configfile['lockmass_compound'],
              time_bins=time_bins,
              polyfit_deg=polyfit_deg,
-             outputname=outputname,
+             output_pk=output_pk,
+             output_pdf=output_pdf,
              ms_resolution=ms_resolution,
              ppm_radius=ppm_lockmass_radius,
              bins_per_isotopic_peak=bins_per_isotopic_peak,
@@ -317,10 +320,17 @@ if __name__ == "__main__":
         )
         parser.add_argument(
             "-o",
-            "--outputname",
+            "--output_pk",
             default=None,
             help=
             "Output name for pickle file containing the dictionary"
+        )
+        parser.add_argument(
+            "-pdf",
+            "--output_pdf",
+            default=None,
+            help=
+            "Output name for pdf file containing fit analysis"
         )
         parser.add_argument(
             "-resolution",
@@ -375,7 +385,8 @@ if __name__ == "__main__":
              lockmass_compound=args.lockmass_compound,
              time_bins=args.time_bins,
              polyfit_deg=args.polyfit_deg,
-             outputname=args.outputname,
+             output_pk=args.output_pk,
+             output_pdf=args.output_pdf,
              ms_resolution=args.ms_resolution,
              ppm_radius=args.ppm_lockmass_radius,
              bins_per_isotopic_peak=args.bins_per_isotopic_peak,
