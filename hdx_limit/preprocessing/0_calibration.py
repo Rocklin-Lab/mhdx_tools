@@ -209,7 +209,7 @@ def plot_degrees(mz_bins, tensor2_out, time_bins, m0, m1, lockmass_compound, run
 
     plt.tight_layout()
 
-    plt.savefig('results/plots/preprocessing/1_calibration_' + outputname + '_degrees.pdf', dpi=300, format='pdf')
+    plt.savefig('results/plots/preprocessing/0_calibration_' + outputname + '_degrees.pdf', dpi=300, format='pdf')
 
 
 def main(mzml_gz_path=None,
