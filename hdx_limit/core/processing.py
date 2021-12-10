@@ -354,7 +354,7 @@ class PathOptimizer:
                  n_undeut_runs,
                  user_prefilter,
                  thresholds,
-                 prefilter=1,
+                 pareto_prefilter=True,
                  old_data_dir=None,
                  **kwargs):
         """Initializes an instance of PathOptimizer, performs preprocessing of inputs so the returned object is ready for optimization.
@@ -395,7 +395,6 @@ class PathOptimizer:
         self.name = name
         self.all_tp_clusters = all_tp_clusters
         self.library_info = library_info
-        self.prefilter = prefilter
         self.timepoints = timepoints
         self.n_undeut_runs = n_undeut_runs
         self.max_peak_center = len(
@@ -417,7 +416,7 @@ class PathOptimizer:
         if user_prefilter:
             self.thresholds = thresholds
             self.filters_from_user()
-        if self.prefilter == 1:
+        if pareto_prefilter:
             self.prefiltered_ics = self.weak_pareto_dom_filter()
         else:
             self.prefiltered_ics = self.all_tp_clusters
@@ -447,7 +446,7 @@ class PathOptimizer:
                                   ic.nearest_neighbor_correlation >= self.thresholds[
                                       'nearest_neighbor_correlation'])
              ] for ics in self.all_tp_clusters[1:]]
-        filtered_atc = np.array(undeut_list + filtered_atc)
+        filtered_atc = np.array([undeut_list] + filtered_atc)
         filtered_indexes = np.array([True if len(ics) > 0 else False for ics in filtered_atc])
         self.all_tp_clusters = list(filtered_atc[filtered_indexes])
         self.timepoints = list(np.array(self.timepoints)[filtered_indexes])
