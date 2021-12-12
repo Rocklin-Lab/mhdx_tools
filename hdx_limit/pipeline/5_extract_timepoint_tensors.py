@@ -155,11 +155,8 @@ def main(library_info_path,
             if ('<cvParam cvRef="MS" accession="MS:1002476" name="ion mobility drift time" value'
                     in line):
                 dt = line.split('value="')[1].split('"')[0]  # replace('"/>',''))
-                if dt not in drift_times:
-                    drift_times.append(float(dt))
-                else:
-                    break
-        drift_times = np.array(drift_times)
+                drift_times.append(float(dt))
+    drift_times = np.array(drift_times)
 
     # Display memory use before beginning iteration.
     process = psutil.Process(os.getpid())
@@ -179,10 +176,6 @@ def main(library_info_path,
     scan_times = np.array(scan_times)
     scan_numbers = np.arange(0, len(scan_times))
     scan_functions = np.array(scan_functions)
-
-    drift_times = np.tile(np.array(drift_times, dtype=np.float32),
-                          int(len(scan_times) / len(drift_times)))
-    assert len(scan_times) == len(drift_times)
 
     # Set upper m/Z bounds for each sequence
     isotope_totals = [
