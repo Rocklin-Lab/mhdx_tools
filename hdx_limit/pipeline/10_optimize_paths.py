@@ -107,6 +107,37 @@ def gen_correlate_matrix(list_of_arrays):
 
     return corr_matrix
 
+def write_baseline_integrated_mz_to_csv(path_object_list, output_path, norm_dist=True, return_flag=False):
+    """
+    write the integrated_mz_distribution for each timepoint to a .csv file
+    :param ic_object_list: ic object list
+    :param output_path: .csv output file path
+    :param norm_dist: bool. Whether to normalize the integrated_mz_distribution
+    :return: None
+    """
+    timepoint_list = [ic.timepoint_idx for ic in path_object_list]
+    timepoint_str = ','.join([str(x) for x in timepoint_list])
+    header = 'idx,'+ timepoint_str + '\n'
+    if norm_dist:
+        integrated_mz_distribution_list = [ic.baseline_integrated_mz/max(ic.baseline_integrated_mz) for ic in ic_object_list]
+    else:
+        integrated_mz_distribution_list = [ic.baseline_integrated_mz for ic in ic_object_list]
+    integrated_mz_distribution_array = np.array(integrated_mz_distribution_list)
+
+    data_string = ''
+    for ind, array in enumerate(integrated_mz_distribution_array.T):
+        arr_str = ','.join([str(x) for x in array])
+        data_string += '{},{}\n'.format(ind, arr_str)
+
+    with open(output_path, 'w') as outfile:
+        outfile.write(header + data_string)
+
+    if return_flag:
+        out_dict = dict()
+        out_dict['integrated_mz_distribution_array'] = integrated_mz_distribution_array
+        out_dict['timepoint_list'] = timepoint_list
+        return out_dict
+
 
 def main(library_info_path,
          all_ic_input_paths,
@@ -124,13 +155,15 @@ def main(library_info_path,
          mono_undeut_ground_out_path=None,
          mono_winner_scores_out_path=None,
          mono_rtdt_com_cvs_out_path=None,
+         mono_winner_csv_out_path=None,
          multi_path_plot_out_path=None,
          multi_html_plot_out_path=None,
          multi_winner_out_path=None,
          multi_runner_out_path=None,
          multi_undeut_ground_out_path=None,
          multi_winner_scores_out_path=None,
-         multi_rtdt_com_cvs_out_path=None):
+         multi_rtdt_com_cvs_out_path=None,
+         multi_winner_csv_out_path=None):
     """Uses PathOptimzier class to generate best-estimate hdx-timeseries of IsotopeClusters for a given library protein.
 
     Args:
@@ -170,6 +203,7 @@ def main(library_info_path,
                                     mono_undeut_ground_out_path, 
                                     mono_winner_scores_out_path, 
                                     mono_rtdt_com_cvs_out_path,
+                                    mono_winner_csv_out_path,
                                 ]
 
     multibody_path_arguments = [
@@ -180,6 +214,7 @@ def main(library_info_path,
                                     multi_undeut_ground_out_path, 
                                     multi_winner_scores_out_path, 
                                     multi_rtdt_com_cvs_out_path,
+                                    multi_winner_csv_out_path,
                                 ]
 
     out_dict = {}
@@ -276,6 +311,8 @@ def main(library_info_path,
             limit_write(p1.winner_scores, mono_winner_scores_out_path)
         if mono_rtdt_com_cvs_out_path is not None:
             limit_write([p1.rt_com_cv, p1.dt_com_cv], mono_rtdt_com_cvs_out_path)
+        if mono_winner_csv_out_path is not None:
+            write_baseline_integrated_mz_to_csv(p1.winner, multi_winner_csv_out_path)
 
     # Checks if arguments require multibody scoring run.
     if (any(arg is not None for arg in multibody_path_arguments)) or (multibody_return_flag is not False):
@@ -308,6 +345,8 @@ def main(library_info_path,
             limit_write(p1.winner_scores, multi_winner_scores_out_path)
         if multi_rtdt_com_cvs_out_path is not None:
             limit_write([p1.rt_com_cv, p1.dt_com_cv], multi_rtdt_com_cvs_out_path)
+        if multi_winner_csv_out_path is not None:
+            write_baseline_integrated_mz_to_csv(p1.winner, multi_winner_csv_out_path)
 
 
 if __name__ == "__main__":
@@ -329,13 +368,15 @@ if __name__ == "__main__":
         mono_undeut_ground_out_path = snakemake.output[5]
         mono_winner_scores_out_path = snakemake.output[6]
         mono_rtdt_com_cvs_out_path = snakemake.output[7]
-        multi_path_plot_out_path = snakemake.output[8]
+        mono_winner_csv_out_path = snakemake.output[8]
+        multi_path_plot_out_path = snakemake.output[9]
         multi_html_plot_out_path = None
-        multi_winner_out_path = snakemake.output[9]
-        multi_runner_out_path = snakemake.output[10]
-        multi_undeut_ground_out_path = snakemake.output[11]
-        multi_winner_scores_out_path = snakemake.output[12]
-        multi_rtdt_com_cvs_out_path = snakemake.output[13]
+        multi_winner_out_path = snakemake.output[10]
+        multi_runner_out_path = snakemake.output[11]
+        multi_undeut_ground_out_path = snakemake.output[12]
+        multi_winner_scores_out_path = snakemake.output[13]
+        multi_rtdt_com_cvs_out_path = snakemake.output[14]
+        multi_winner_csv_out_path = snakemake.output[15]
 
         main(library_info_path=library_info_path,
              all_ic_input_paths=all_ic_input_paths,
@@ -351,13 +392,15 @@ if __name__ == "__main__":
              mono_undeut_ground_out_path=mono_undeut_ground_out_path,
              mono_winner_scores_out_path=mono_winner_scores_out_path,
              mono_rtdt_com_cvs_out_path=mono_rtdt_com_cvs_out_path,
+             mono_winner_csv_out_path=multi_winner_csv_out_path,
              multi_path_plot_out_path=multi_path_plot_out_path,
              multi_html_plot_out_path=multi_html_plot_out_path,
              multi_winner_out_path=multi_winner_out_path,
              multi_runner_out_path=multi_runner_out_path,
              multi_undeut_ground_out_path=multi_undeut_ground_out_path,
              multi_winner_scores_out_path=multi_winner_scores_out_path,
-             multi_rtdt_com_cvs_out_path=multi_rtdt_com_cvs_out_path)
+             multi_rtdt_com_cvs_out_path=multi_rtdt_com_cvs_out_path,
+             multi_winner_csv_out_path=multi_winner_csv_out_path)
 
     else:
 
@@ -424,6 +467,8 @@ if __name__ == "__main__":
                             help="path/to/file to save rt/dt error measurement")
         parser.add_argument("--mono_path_plot_out_path",
                             help="path/to/file to save path plot .pdf")
+        parser.add_argument("--mono_winner_csv_out_path",
+                            help="path/to/file to save path to .csv file")
         
         # Multibody scoring outputs.
         parser.add_argument("--multi_html_plot_out_path",
@@ -444,6 +489,8 @@ if __name__ == "__main__":
                             help="path/to/file to save rt/dt error measurement")
         parser.add_argument("--multi_path_plot_out_path",
                             help="path/to/file to save path plot .pdf")
+        parser.add_argument("--multi_winner_csv_out_path",
+                            help="path/to/file to save path to .csv file")
         
         args = parser.parse_args()
 
@@ -469,6 +516,7 @@ if __name__ == "__main__":
                             args.mono_rtdt_com_cvs_out_path,
                             args.mono_path_plot_out_path,
                             args.mono_html_plot_out_path,
+                            args.mono_winner_csv_path,
                             args.multi_winner_out_path, 
                             args.multi_runner_out_path, 
                             args.multi_undeut_ground_out_path, 
@@ -476,6 +524,7 @@ if __name__ == "__main__":
                             args.multi_rtdt_com_cvs_out_path,
                             args.multi_path_plot_out_path,
                             args.multi_html_plot_out_path,
+                            args.multi_winner_csv_path,
                         ]
 
         # Checks for arguments that require additional directories and creates them if they don't exist.
@@ -496,10 +545,12 @@ if __name__ == "__main__":
              mono_undeut_ground_out_path=args.mono_undeut_ground_out_path,
              mono_winner_scores_out_path=args.mono_winner_scores_out_path,
              mono_rtdt_com_cvs_out_path=args.mono_rtdt_com_cvs_out_path,
+             mono_winner_csv_out_path=args.multi_winner_cvs_out_path,
              multi_path_plot_out_path=args.multi_path_plot_out_path,
              multi_html_plot_out_path=args.multi_html_plot_out_path,
              multi_winner_out_path=args.multi_winner_out_path,
              multi_runner_out_path=args.multi_runner_out_path,
              multi_undeut_ground_out_path=args.multi_undeut_ground_out_path,
              multi_winner_scores_out_path=args.multi_winner_scores_out_path,
-             multi_rtdt_com_cvs_out_path=args.multi_rtdt_com_cvs_out_path)
+             multi_rtdt_com_cvs_out_path=args.multi_rtdt_com_cvs_out_path,
+             multi_winner_csv_out_path=args.multi_winner_cvs_out_path)
