@@ -378,8 +378,6 @@ if __name__ == "__main__":
         multi_rtdt_com_cvs_out_path = snakemake.output[14]
         multi_winner_csv_out_path = snakemake.output[15]
 
-        print(mono_winner_)
-
         main(library_info_path=library_info_path,
              all_ic_input_paths=all_ic_input_paths,
              configfile=configfile,
