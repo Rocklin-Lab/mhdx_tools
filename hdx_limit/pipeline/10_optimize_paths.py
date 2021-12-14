@@ -119,7 +119,7 @@ def write_baseline_integrated_mz_to_csv(path_object_list, output_path, norm_dist
     timepoint_str = ','.join([str(x) for x in timepoint_list])
     header = 'idx,'+ timepoint_str + '\n'
     if norm_dist:
-        integrated_mz_distribution_list = [ic.baseline_integrated_mz/max(ic.baseline_integrated_mz) for ic in ic_object_list]
+        integrated_mz_distribution_list = [ic.baseline_integrated_mz/max(ic.baseline_integrated_mz) for ic in path_object_list]
     else:
         integrated_mz_distribution_list = [ic.baseline_integrated_mz for ic in ic_object_list]
     integrated_mz_distribution_array = np.array(integrated_mz_distribution_list)
