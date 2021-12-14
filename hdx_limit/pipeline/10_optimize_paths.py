@@ -319,7 +319,7 @@ def main(library_info_path,
        
         p1.optimize_paths_multi()
 
-        if monobody_return_flag is not False:
+        if multibody_return_flag is not False:
             out_dict["multibody_winner"] = p1.winner
             out_dict["multibody_runners"] = p1.runners
             out_dict["multibody_undeut_grounds"] = [p1.undeut_grounds, p1.undeut_ground_dot_products]
