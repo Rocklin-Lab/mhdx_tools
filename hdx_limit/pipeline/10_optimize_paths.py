@@ -320,11 +320,11 @@ def main(library_info_path,
         p1.optimize_paths_multi()
 
         if monobody_return_flag is not False:
-            out_dict["monobody_winner"] = p1.winner
-            out_dict["monobody_runners"] = p1.runners
-            out_dict["monobody_undeut_grounds"] = [p1.undeut_grounds, p1.undeut_ground_dot_products]
-            out_dict["monobody_winner_scores"] = p1.winner_scores
-            out_dict["monobody_rt_dt_com_cvs"] = [p1.rt_com_cv, p1.dt_com_cv]
+            out_dict["multibody_winner"] = p1.winner
+            out_dict["multibody_runners"] = p1.runners
+            out_dict["multibody_undeut_grounds"] = [p1.undeut_grounds, p1.undeut_ground_dot_products]
+            out_dict["multibody_winner_scores"] = p1.winner_scores
+            out_dict["multibody_rt_dt_com_cvs"] = [p1.rt_com_cv, p1.dt_com_cv]
 
         if multi_path_plot_out_path is not None:
             undeut_grounds = [p1.undeut_grounds, p1.undeut_ground_dot_products]
