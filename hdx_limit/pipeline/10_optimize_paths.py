@@ -312,7 +312,7 @@ def main(library_info_path,
         if mono_rtdt_com_cvs_out_path is not None:
             limit_write([p1.rt_com_cv, p1.dt_com_cv], mono_rtdt_com_cvs_out_path)
         if mono_winner_csv_out_path is not None:
-            write_baseline_integrated_mz_to_csv(p1.winner, multi_winner_csv_out_path)
+            write_baseline_integrated_mz_to_csv(p1.winner, mono_winner_csv_out_path)
 
     # Checks if arguments require multibody scoring run.
     if (any(arg is not None for arg in multibody_path_arguments)) or (multibody_return_flag is not False):
