@@ -378,6 +378,8 @@ if __name__ == "__main__":
         multi_rtdt_com_cvs_out_path = snakemake.output[14]
         multi_winner_csv_out_path = snakemake.output[15]
 
+        print(mono_winner_)
+
         main(library_info_path=library_info_path,
              all_ic_input_paths=all_ic_input_paths,
              configfile=configfile,
@@ -392,7 +394,7 @@ if __name__ == "__main__":
              mono_undeut_ground_out_path=mono_undeut_ground_out_path,
              mono_winner_scores_out_path=mono_winner_scores_out_path,
              mono_rtdt_com_cvs_out_path=mono_rtdt_com_cvs_out_path,
-             mono_winner_csv_out_path=multi_winner_csv_out_path,
+             mono_winner_csv_out_path=mono_winner_csv_out_path,
              multi_path_plot_out_path=multi_path_plot_out_path,
              multi_html_plot_out_path=multi_html_plot_out_path,
              multi_winner_out_path=multi_winner_out_path,
