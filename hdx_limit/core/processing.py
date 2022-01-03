@@ -432,7 +432,8 @@ class PathOptimizer:
         out_name (type): Description of any returned objects.
 
         """
-        undeut_list = self.all_tp_clusters[0]
+        undeut_list = [ic for ic in self.all_tp_clusters[0] if ic.undeut_ground_dot_product >
+                       self.thresholds['idotp_cutoff'] ]
         filtered_atc = [
             [ic for ic in ics if (ic.baseline_peak_error <= self.thresholds['baseline_peak_error'] and
                                   ic.dt_ground_err <= self.thresholds['dt_ground_err'] and

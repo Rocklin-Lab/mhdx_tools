@@ -40,6 +40,7 @@ import shutil
 import argparse
 import numpy as np
 import pandas as pd
+from pathlib import Path
 from hdx_limit.core.io import limit_read, limit_write, check_for_create_dirs
 from hdx_limit.core.processing import PathOptimizer
 from hdx_limit.core.gjr_plot import plot_gjr_
@@ -140,8 +141,8 @@ def write_baseline_integrated_mz_to_csv(path_object_list, output_path, norm_dist
 
 
 def main(library_info_path,
-         all_ic_input_paths,
          configfile,
+         all_ic_input_paths=None,
          monobody_return_flag=False,
          multibody_return_flag=False,
          rt_group_name=None,
@@ -225,42 +226,45 @@ def main(library_info_path,
     else:
         name = rt_group_name
 
-    # Order files, pooling all replicates and charges by timepoint.
-    atc = []
-    suffix = ".mzML"
-    for tp in configfile["timepoints"]:
-        tp_buf = []
-        for fn in configfile[tp]:
-            for file in all_ic_input_paths:
-                if fn[:-len(suffix)] in file:  # only match filename without .mzML
-                    ics = limit_read(file)  # expects list of ics
-                    for ic in ics:
-                        tp_buf.append(ic)
+    if config['rerun-path-optimizer']:
+        atc = limit_read(all_timepoint_clusters_out_path)
+    else:
+        # Order files, pooling all replicates and charges by timepoint.
+        atc = []
+        suffix = ".mzML"
+        for tp in configfile["timepoints"]:
+            tp_buf = []
+            for fn in configfile[tp]:
+                for file in all_ic_input_paths:
+                    if fn[:-len(suffix)] in file:  # only match filename without .mzML
+                        ics = limit_read(file)  # expects list of ics
+                        for ic in ics:
+                            tp_buf.append(ic)
 
-        atc.append(tp_buf)
+            atc.append(tp_buf)
 
-    # Generate nearest_neighbor_correlation for each ic.
-    # TODO: Maybe atc should be saved as a gz.cpickle.zlib file?
-    for ics in atc:
-        all_baseline_integrated_mz = []
-        all_rts = []
-        charge_list = []
-        for ic in ics:
-            all_baseline_integrated_mz.append(ic.baseline_integrated_mz)
-            all_rts.append(ic.rts)
-            charge_list.append(ic.charge_states[0])
+        # Generate nearest_neighbor_correlation for each ic.
+        # TODO: Maybe atc should be saved as a gz.cpickle.zlib file?
+        for ics in atc:
+            all_baseline_integrated_mz = []
+            all_rts = []
+            charge_list = []
+            for ic in ics:
+                all_baseline_integrated_mz.append(ic.baseline_integrated_mz)
+                all_rts.append(ic.rts)
+                charge_list.append(ic.charge_states[0])
 
-        charge_list = np.array(charge_list)
-        mz_corrmat = gen_correlate_matrix(all_baseline_integrated_mz)
-        rt_corrmat = gen_correlate_matrix(all_rts)
-        minimum_corrmat = np.minimum(mz_corrmat, rt_corrmat)
+            charge_list = np.array(charge_list)
+            mz_corrmat = gen_correlate_matrix(all_baseline_integrated_mz)
+            rt_corrmat = gen_correlate_matrix(all_rts)
+            minimum_corrmat = np.minimum(mz_corrmat, rt_corrmat)
 
-        for column, ic in enumerate(ics):
-            min_corr_list = minimum_corrmat[column][charge_list != ic.charge_states[0]]
-            if len(min_corr_list) != 0:
-                ic.nearest_neighbor_correlation = max(min_corr_list)
-            else:
-                ic.nearest_neighbor_correlation = 0
+            for column, ic in enumerate(ics):
+                min_corr_list = minimum_corrmat[column][charge_list != ic.charge_states[0]]
+                if len(min_corr_list) != 0:
+                    ic.nearest_neighbor_correlation = max(min_corr_list)
+                else:
+                    ic.nearest_neighbor_correlation = 0
 
     p1 = PathOptimizer(
         name,
@@ -279,74 +283,112 @@ def main(library_info_path,
         limit_write(atc, all_timepoint_clusters_out_path)
     if prefiltered_ics_out_path is not None:
         limit_write(p1.prefiltered_ics, prefiltered_ics_out_path)
-    
-    # Checks if arguments require monobody scoring run.
-    if (any(arg is not None for arg in monobody_path_arguments)) or (monobody_return_flag is not False):
 
-        p1.optimize_paths_mono()
+    if len(p1.prefiltered_ics) > 5:
 
-        if monobody_return_flag is not False:
-            out_dict["monobody_winner"] = p1.winner
-            out_dict["monobody_runners"] = p1.runners
-            out_dict["monobody_undeut_grounds"] = [p1.undeut_grounds, p1.undeut_ground_dot_products]
-            out_dict["monobody_winner_scores"] = p1.winner_scores
-            out_dict["monobody_rt_dt_com_cvs"] = [p1.rt_com_cv, p1.dt_com_cv]
+        # Checks if arguments require monobody scoring run.
+        if (any(arg is not None for arg in monobody_path_arguments)) or (monobody_return_flag is not False):
 
+            p1.optimize_paths_mono()
+
+            if monobody_return_flag is not False:
+                out_dict["monobody_winner"] = p1.winner
+                out_dict["monobody_runners"] = p1.runners
+                out_dict["monobody_undeut_grounds"] = [p1.undeut_grounds, p1.undeut_ground_dot_products]
+                out_dict["monobody_winner_scores"] = p1.winner_scores
+                out_dict["monobody_rt_dt_com_cvs"] = [p1.rt_com_cv, p1.dt_com_cv]
+
+            if mono_path_plot_out_path is not None:
+                undeut_grounds = [p1.undeut_grounds, p1.undeut_ground_dot_products]
+                plot_gjr_(winner=p1.winner,
+                          undeut_grounds=undeut_grounds,
+                          output_path=mono_path_plot_out_path,
+                          prefix=name)
+            if mono_html_plot_out_path is not None:
+                 p1.bokeh_plot(mono_html_plot_out_path)
+            if mono_winner_out_path is not None:
+                limit_write(p1.winner, mono_winner_out_path)
+            if mono_runner_out_path is not None:
+                limit_write(p1.runners, mono_runner_out_path)
+            if mono_undeut_ground_out_path is not None:
+                limit_write([p1.undeut_grounds, p1.undeut_ground_dot_products],
+                            mono_undeut_ground_out_path)
+            if mono_winner_scores_out_path is not None:
+                limit_write(p1.winner_scores, mono_winner_scores_out_path)
+            if mono_rtdt_com_cvs_out_path is not None:
+                limit_write([p1.rt_com_cv, p1.dt_com_cv], mono_rtdt_com_cvs_out_path)
+            if mono_winner_csv_out_path is not None:
+                write_baseline_integrated_mz_to_csv(p1.winner, mono_winner_csv_out_path)
+
+        # Checks if arguments require multibody scoring run.
+        if (any(arg is not None for arg in multibody_path_arguments)) or (multibody_return_flag is not False):
+
+            p1.optimize_paths_multi()
+
+            if multibody_return_flag is not False:
+                out_dict["multibody_winner"] = p1.winner
+                out_dict["multibody_runners"] = p1.runners
+                out_dict["multibody_undeut_grounds"] = [p1.undeut_grounds, p1.undeut_ground_dot_products]
+                out_dict["multibody_winner_scores"] = p1.winner_scores
+                out_dict["multibody_rt_dt_com_cvs"] = [p1.rt_com_cv, p1.dt_com_cv]
+
+            if multi_path_plot_out_path is not None:
+                undeut_grounds = [p1.undeut_grounds, p1.undeut_ground_dot_products]
+                plot_gjr_(winner=p1.winner,
+                          undeut_grounds=undeut_grounds,
+                          output_path=multi_path_plot_out_path,
+                          prefix=name)
+            if multi_html_plot_out_path is not None:
+                 p1.bokeh_plot(multi_html_plot_out_path)
+            if multi_winner_out_path is not None:
+                limit_write(p1.winner, multi_winner_out_path)
+            if multi_runner_out_path is not None:
+                limit_write(p1.runners, multi_runner_out_path)
+            if multi_undeut_ground_out_path is not None:
+                limit_write([p1.undeut_grounds, p1.undeut_ground_dot_products],
+                            multi_undeut_ground_out_path)
+            if multi_winner_scores_out_path is not None:
+                limit_write(p1.winner_scores, multi_winner_scores_out_path)
+            if multi_rtdt_com_cvs_out_path is not None:
+                limit_write([p1.rt_com_cv, p1.dt_com_cv], multi_rtdt_com_cvs_out_path)
+            if multi_winner_csv_out_path is not None:
+                write_baseline_integrated_mz_to_csv(p1.winner, multi_winner_csv_out_path)
+
+    else:
+        print('Not enough timepoints with ics to evaluate path. Creating empty files')
         if mono_path_plot_out_path is not None:
-            undeut_grounds = [p1.undeut_grounds, p1.undeut_ground_dot_products]
-            plot_gjr_(winner=p1.winner,
-                      undeut_grounds=undeut_grounds,
-                      output_path=mono_path_plot_out_path,
-                      prefix=name)
+            Path(mono_path_plot_out_path).touch()
         if mono_html_plot_out_path is not None:
-             p1.bokeh_plot(mono_html_plot_out_path)
+            Path(mono_html_plot_out_path).touch()
         if mono_winner_out_path is not None:
-            limit_write(p1.winner, mono_winner_out_path)
+            Path(mono_winner_out_path).touch()
         if mono_runner_out_path is not None:
-            limit_write(p1.runners, mono_runner_out_path)
+            Path(mono_runner_out_path).touch()
         if mono_undeut_ground_out_path is not None:
-            limit_write([p1.undeut_grounds, p1.undeut_ground_dot_products],
-                        mono_undeut_ground_out_path)
+            Path(mono_undeut_ground_out_path)
         if mono_winner_scores_out_path is not None:
-            limit_write(p1.winner_scores, mono_winner_scores_out_path)
+            Path(mono_winner_scores_out_path)
         if mono_rtdt_com_cvs_out_path is not None:
-            limit_write([p1.rt_com_cv, p1.dt_com_cv], mono_rtdt_com_cvs_out_path)
+            Path(mono_rtdt_com_cvs_out_path)
         if mono_winner_csv_out_path is not None:
-            write_baseline_integrated_mz_to_csv(p1.winner, mono_winner_csv_out_path)
-
-    # Checks if arguments require multibody scoring run.
-    if (any(arg is not None for arg in multibody_path_arguments)) or (multibody_return_flag is not False):
-       
-        p1.optimize_paths_multi()
-
-        if multibody_return_flag is not False:
-            out_dict["multibody_winner"] = p1.winner
-            out_dict["multibody_runners"] = p1.runners
-            out_dict["multibody_undeut_grounds"] = [p1.undeut_grounds, p1.undeut_ground_dot_products]
-            out_dict["multibody_winner_scores"] = p1.winner_scores
-            out_dict["multibody_rt_dt_com_cvs"] = [p1.rt_com_cv, p1.dt_com_cv]
+            Path(mono_winner_csv_out_path)
 
         if multi_path_plot_out_path is not None:
-            undeut_grounds = [p1.undeut_grounds, p1.undeut_ground_dot_products]
-            plot_gjr_(winner=p1.winner,
-                      undeut_grounds=undeut_grounds,
-                      output_path=multi_path_plot_out_path,
-                      prefix=name)
+            Path(multi_path_plot_out_path).touch()
         if multi_html_plot_out_path is not None:
-             p1.bokeh_plot(multi_html_plot_out_path)
+            Path(multi_html_plot_out_path).touch()
         if multi_winner_out_path is not None:
-            limit_write(p1.winner, multi_winner_out_path)
+            Path(multi_winner_out_path).touch()
         if multi_runner_out_path is not None:
-            limit_write(p1.runners, multi_runner_out_path)
+            Path(multi_runner_out_path).touch()
         if multi_undeut_ground_out_path is not None:
-            limit_write([p1.undeut_grounds, p1.undeut_ground_dot_products],
-                        multi_undeut_ground_out_path)
+            Path(multi_undeut_ground_out_path).touch()
         if multi_winner_scores_out_path is not None:
-            limit_write(p1.winner_scores, multi_winner_scores_out_path)
+            Path(multi_winner_scores_out_path).touch()
         if multi_rtdt_com_cvs_out_path is not None:
-            limit_write([p1.rt_com_cv, p1.dt_com_cv], multi_rtdt_com_cvs_out_path)
+            Path(multi_rtdt_com_cvs_out_path).touch()
         if multi_winner_csv_out_path is not None:
-            write_baseline_integrated_mz_to_csv(p1.winner, multi_winner_csv_out_path)
+            Path(multi_winner_csv_out_path).touch()
 
 
 if __name__ == "__main__":
