@@ -22,11 +22,6 @@ Attributes:
         Either form is acceptable, but the two should not be mixed. Choose
         one convention to document module level variables and be consistent
         with it.
-
-Todo:
-    * For module TODOs
-    * You have to also use ``sphinx.ext.todo`` extension
-
 .. _Google Python Style Guide:
    http://google.github.io/styleguide/pyguide.html
 
@@ -45,68 +40,6 @@ from hdx_limit.core.io import limit_read, limit_write, check_for_create_dirs
 from hdx_limit.core.processing import PathOptimizer
 from hdx_limit.core.gjr_plot import plot_gjr_
 
-
-def optimize_paths_inputs(library_info_path, input_directory_path,
-                          rt_group_name, configfile):
-    """Generate explicit PathOptimizer input paths for one rt_group.
-
-    Args:
-        library_info_path (str): path/to/checked_library_info.json
-        input_directory_path (str): /path/to/dir/ to prepend to each outpath
-        rt_group_name (str): value from 'name' column of library_info
-        configfile (dict): dictionary containing list of hdx timepoints in seconds, where each timepoint is also an integer key corresponding to that timepoint's .mzML filenames
-
-    Returns:
-        name_inputs (list of strings): flat list of all IsotopeCluster inputs to PathOptimizer
-
-    """
-    name_inputs = []
-    library_info = pd.read_json(library_info_path)
-    charges = library_info.loc[library_info["name"]==name]['charge'].values
-    for key in configfile["timepoints"]:
-        if len(configfile[key]) > 1:
-            for file in configfile[key]:
-                for charge in charges:
-                    name_inputs.append(
-                        input_directory_path 
-                        + name 
-                        + "_" 
-                        + "charge"
-                        + str(charge) 
-                        + "_" 
-                        + file 
-                        +".cpickle.zlib"
-                    )  # TODO: This won't work if we go to .mzML/.RAW interoperability.
-        else:
-            file = configfile[key][0]
-            for charge in charges:
-                name_inputs.append(
-                    input_directory_path 
-                    + name 
-                    + "_" 
-                    + "charge"
-                    + str(charge)
-                    + "_"
-                    + file 
-                    + ".cpickle.zlib")
-
-    return name_inputs
-
-def gen_correlate_matrix(list_of_arrays):
-    """Takes a list of 1D signal arrays and generates a correlation matrix for those signals. 
-    Args:
-        list_of_arrays (list of number arrays): A flat iterable of signals (arrays) to be compared.
-
-    Returns:
-        corr_matrix (numpy array): A correlation matrix containing correlation coefficients for each pair of signal arrays.
-
-    """
-    corr_matrix = np.zeros((len(list_of_arrays), len(list_of_arrays)))
-    for ind1, arr1 in enumerate(list_of_arrays):
-        for ind2, arr2 in enumerate(list_of_arrays):
-            corr_matrix[ind1, ind2] = max(np.correlate(arr1 / np.linalg.norm(arr1), arr2 / np.linalg.norm(arr2)))
-
-    return corr_matrix
 
 def write_baseline_integrated_mz_to_csv(path_object_list, output_path, norm_dist=True, return_flag=False):
     """
@@ -142,12 +75,11 @@ def write_baseline_integrated_mz_to_csv(path_object_list, output_path, norm_dist
 
 def main(library_info_path,
          configfile,
-         all_ic_input_paths=None,
+         all_timepoints_clusters_input_path=None,
          monobody_return_flag=False,
          multibody_return_flag=False,
          rt_group_name=None,
          old_data_dir=None,
-         all_timepoint_clusters_out_path=None,
          prefiltered_ics_out_path=None,
          mono_path_plot_out_path=None,
          mono_html_plot_out_path=None,
@@ -226,45 +158,7 @@ def main(library_info_path,
     else:
         name = rt_group_name
 
-    if config['rerun-path-optimizer']:
-        atc = limit_read(all_timepoint_clusters_out_path)
-    else:
-        # Order files, pooling all replicates and charges by timepoint.
-        atc = []
-        suffix = ".mzML"
-        for tp in configfile["timepoints"]:
-            tp_buf = []
-            for fn in configfile[tp]:
-                for file in all_ic_input_paths:
-                    if fn[:-len(suffix)] in file:  # only match filename without .mzML
-                        ics = limit_read(file)  # expects list of ics
-                        for ic in ics:
-                            tp_buf.append(ic)
-
-            atc.append(tp_buf)
-
-        # Generate nearest_neighbor_correlation for each ic.
-        # TODO: Maybe atc should be saved as a gz.cpickle.zlib file?
-        for ics in atc:
-            all_baseline_integrated_mz = []
-            all_rts = []
-            charge_list = []
-            for ic in ics:
-                all_baseline_integrated_mz.append(ic.baseline_integrated_mz)
-                all_rts.append(ic.rts)
-                charge_list.append(ic.charge_states[0])
-
-            charge_list = np.array(charge_list)
-            mz_corrmat = gen_correlate_matrix(all_baseline_integrated_mz)
-            rt_corrmat = gen_correlate_matrix(all_rts)
-            minimum_corrmat = np.minimum(mz_corrmat, rt_corrmat)
-
-            for column, ic in enumerate(ics):
-                min_corr_list = minimum_corrmat[column][charge_list != ic.charge_states[0]]
-                if len(min_corr_list) != 0:
-                    ic.nearest_neighbor_correlation = max(min_corr_list)
-                else:
-                    ic.nearest_neighbor_correlation = 0
+    atc = limit_read(all_timepoints_clusters_input_path)
 
     p1 = PathOptimizer(
         name,
@@ -279,8 +173,6 @@ def main(library_info_path,
     )
 
     # Starting condition output arguments.
-    if all_timepoint_clusters_out_path is not None:
-        limit_write(atc, all_timepoint_clusters_out_path)
     if prefiltered_ics_out_path is not None:
         limit_write(p1.prefiltered_ics, prefiltered_ics_out_path)
 
@@ -305,7 +197,7 @@ def main(library_info_path,
                           output_path=mono_path_plot_out_path,
                           prefix=name)
             if mono_html_plot_out_path is not None:
-                 p1.bokeh_plot(mono_html_plot_out_path)
+                p1.bokeh_plot(mono_html_plot_out_path)
             if mono_winner_out_path is not None:
                 limit_write(p1.winner, mono_winner_out_path)
             if mono_runner_out_path is not None:
@@ -365,13 +257,13 @@ def main(library_info_path,
         if mono_runner_out_path is not None:
             Path(mono_runner_out_path).touch()
         if mono_undeut_ground_out_path is not None:
-            Path(mono_undeut_ground_out_path)
+            Path(mono_undeut_ground_out_path).touch()
         if mono_winner_scores_out_path is not None:
-            Path(mono_winner_scores_out_path)
+            Path(mono_winner_scores_out_path).touch()
         if mono_rtdt_com_cvs_out_path is not None:
-            Path(mono_rtdt_com_cvs_out_path)
+            Path(mono_rtdt_com_cvs_out_path).touch()
         if mono_winner_csv_out_path is not None:
-            Path(mono_winner_csv_out_path)
+            Path(mono_winner_csv_out_path).touch()
 
         if multi_path_plot_out_path is not None:
             Path(multi_path_plot_out_path).touch()
@@ -398,34 +290,32 @@ if __name__ == "__main__":
 
         library_info_path = snakemake.input[0]
         configfile = yaml.load(open(snakemake.input[1], "rb").read(), Loader=yaml.Loader)
-        all_ic_input_paths = snakemake.input[2:]
+        all_timepoints_clusters_input_path = snakemake.input[2]
         old_data_dir = None
         rt_group_name = snakemake.params.rt_group_name
-        all_timepoint_clusters_out_path = snakemake.output[0]
-        prefiltered_ics_out_path = snakemake.output[1]
-        mono_path_plot_out_path = snakemake.output[2]
+        prefiltered_ics_out_path = snakemake.output[0]
+        mono_path_plot_out_path = snakemake.output[1]
         mono_html_plot_out_path = None
-        mono_winner_out_path = snakemake.output[3]
-        mono_runner_out_path = snakemake.output[4]
-        mono_undeut_ground_out_path = snakemake.output[5]
-        mono_winner_scores_out_path = snakemake.output[6]
-        mono_rtdt_com_cvs_out_path = snakemake.output[7]
-        mono_winner_csv_out_path = snakemake.output[8]
-        multi_path_plot_out_path = snakemake.output[9]
+        mono_winner_out_path = snakemake.output[2]
+        mono_runner_out_path = snakemake.output[3]
+        mono_undeut_ground_out_path = snakemake.output[4]
+        mono_winner_scores_out_path = snakemake.output[5]
+        mono_rtdt_com_cvs_out_path = snakemake.output[6]
+        mono_winner_csv_out_path = snakemake.output[7]
+        multi_path_plot_out_path = snakemake.output[8]
         multi_html_plot_out_path = None
-        multi_winner_out_path = snakemake.output[10]
-        multi_runner_out_path = snakemake.output[11]
-        multi_undeut_ground_out_path = snakemake.output[12]
-        multi_winner_scores_out_path = snakemake.output[13]
-        multi_rtdt_com_cvs_out_path = snakemake.output[14]
-        multi_winner_csv_out_path = snakemake.output[15]
+        multi_winner_out_path = snakemake.output[9]
+        multi_runner_out_path = snakemake.output[10]
+        multi_undeut_ground_out_path = snakemake.output[11]
+        multi_winner_scores_out_path = snakemake.output[12]
+        multi_rtdt_com_cvs_out_path = snakemake.output[13]
+        multi_winner_csv_out_path = snakemake.output[14]
 
         main(library_info_path=library_info_path,
-             all_ic_input_paths=all_ic_input_paths,
              configfile=configfile,
+             all_timepoints_clusters_input_path=all_timepoints_clusters_input_path,
              old_data_dir = old_data_dir,
              rt_group_name=rt_group_name,
-             all_timepoint_clusters_out_path=all_timepoint_clusters_out_path,
              prefiltered_ics_out_path=prefiltered_ics_out_path,
              mono_path_plot_out_path=mono_path_plot_out_path,
              mono_html_plot_out_path=mono_html_plot_out_path,
@@ -460,10 +350,9 @@ if __name__ == "__main__":
         )
         parser.add_argument(
             "-i",
-            "--all_ic_input_paths",
-            nargs="*",
+            "--all_timepoints_clusters_input_path",
             help=
-            "structured 2D list of extracted IsotopeCluster objects from each tensor included in the rt_group."
+            "all timepoints clusters cpickle file"
         )
         parser.add_argument(
             "-d",
@@ -485,8 +374,6 @@ if __name__ == "__main__":
         )
         
         # Starting condition output arguments.
-        parser.add_argument("--all_timepoint_clusters_out_path",
-                            help="path/to/file to output all input IsotopeClusters as a nested list")
         parser.add_argument("--prefiltered_ics_out_path",
                             help="path/to/file to output ICs passing prefiltering as a nested list")
 
@@ -548,8 +435,7 @@ if __name__ == "__main__":
                 sys.exit()
 
         # Lists of arguments grouped by required subdirectory.
-        output_paths = [    
-                            args.all_timepoint_clusters_out_path,
+        output_paths = [
                             args.prefiltered_ics_out_path,
                             args.mono_winner_out_path, 
                             args.mono_runner_out_path, 
@@ -572,13 +458,11 @@ if __name__ == "__main__":
         # Checks for arguments that require additional directories and creates them if they don't exist.
         check_for_create_dirs(output_paths)
 
-
         main(library_info_path=args.library_info_path,
-             all_ic_input_paths=args.all_ic_input_paths,
+             all_timepoints_clusters_input_path=args.all_timepoints_clusters_input_path,
              configfile=configfile,
              rt_group_name=args.rt_group_name,
              old_data_dir=args.old_data_dir,
-             all_timepoint_clusters_out_path=args.all_timepoint_clusters_out_path,
              prefiltered_ics_out_path=args.prefiltered_ics_out_path,
              mono_path_plot_out_path=args.mono_path_plot_out_path,
              mono_html_plot_out_path=args.mono_html_plot_out_path,

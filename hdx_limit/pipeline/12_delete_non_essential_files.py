@@ -5,31 +5,31 @@ from pathlib import Path
 
 
 def main(configfile_yaml,
-         outputfile=outputfile):
+         outputfile_path):
+
     configfile = yaml.load(open(configfile_yaml, "rb").read(), Loader=yaml.Loader)
     if configfile['keep_mzml_gz']:
         files_to_delete = glob.glob('resources/5_tensors/*') + glob.glob('resources/6_idotp_check/*') + \
                           glob.glob('resources/8_passing_tensors/*') + glob.glob('resources/9_subtensor_ics/*') +\
-                          glob.glob('results/plots/factors/*') + glob.glob('results/plots/ics/*')
-
+                          glob.glob('*out')
         for file in files_to_delete:
             shutil.rmtree(file)
     else:
         files_to_delete = glob.glob('resources/5_tensors/*') + glob.glob('resources/6_idotp_check/*') + \
-                          glob.glob('resources/8_passing_tensors/*') + glob.glob('resources/9_subtensor_ics/*') \
-                          + glob.glob('results/plots/factors/*') + glob.glob('results/plots/ics/*') + \
-                          glob.glob('resources/2_mzml_gz/*gz')
+                          glob.glob('resources/8_passing_tensors/*') + glob.glob('resources/9_subtensor_ics/*') +\
+                          + glob.glob('*out') + glob.glob('resources/2_mzml_gz/*gz')
         for file in files_to_delete:
             shutil.rmtree(file)
 
-    Path(outputfile).touch()
+    Path(outputfile_path).touch()
 
 if __name__ == "__main__":
 
     if "snakemake" in globals():
         configfile_yaml = snakemake.input[0]
-        outputfile = snakemake.output[0]
-        main(configfile_yaml=configfile_yaml)
+        outputfile_path = snakemake.output[0]
+        main(configfile_yaml=configfile_yaml,
+             outputfile_path=outputfile_path)
     else:
         parser = argparse.ArgumentParser(
             description=
