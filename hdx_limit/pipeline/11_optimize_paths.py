@@ -150,6 +150,9 @@ def main(library_info_path,
                                     multi_winner_csv_out_path,
                                 ]
 
+    check_for_create_dirs(monobody_path_arguments)
+    check_for_create_dirs(multibody_path_arguments)
+
     out_dict = {}
     library_info = pd.read_json(library_info_path)
 
@@ -169,7 +172,7 @@ def main(library_info_path,
         pareto_filter=configfile["pareto_prefilter"],
         timepoints=configfile["timepoints"],
         n_undeut_runs=len(configfile[0]),
-        old_data_dir=old_data_dir,
+        old_data_dir=old_data_dir
     )
 
     # Starting condition output arguments.
@@ -434,29 +437,6 @@ if __name__ == "__main__":
                 parser.print_help()
                 sys.exit()
 
-        # Lists of arguments grouped by required subdirectory.
-        output_paths = [
-                            args.prefiltered_ics_out_path,
-                            args.mono_winner_out_path, 
-                            args.mono_runner_out_path, 
-                            args.mono_undeut_ground_out_path, 
-                            args.mono_winner_scores_out_path, 
-                            args.mono_rtdt_com_cvs_out_path,
-                            args.mono_path_plot_out_path,
-                            args.mono_html_plot_out_path,
-                            args.mono_winner_csv_path,
-                            args.multi_winner_out_path, 
-                            args.multi_runner_out_path, 
-                            args.multi_undeut_ground_out_path, 
-                            args.multi_winner_scores_out_path, 
-                            args.multi_rtdt_com_cvs_out_path,
-                            args.multi_path_plot_out_path,
-                            args.multi_html_plot_out_path,
-                            args.multi_winner_csv_path,
-                        ]
-
-        # Checks for arguments that require additional directories and creates them if they don't exist.
-        check_for_create_dirs(output_paths)
 
         main(library_info_path=args.library_info_path,
              all_timepoints_clusters_input_path=args.all_timepoints_clusters_input_path,

@@ -33,6 +33,7 @@ Todo:
 """
 import zlib
 import _pickle as cpickle
+import os
 
 
 def limit_write(obj, out_path):

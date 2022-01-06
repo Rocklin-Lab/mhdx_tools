@@ -416,7 +416,7 @@ class PathOptimizer:
         if user_prefilter:
             self.thresholds = thresholds
             self.filters_from_user()
-        if pareto_prefilter:
+        if pareto_prefilter and len(self.all_tp_clusters) >= self.thresholds['min_timepoints']:
             self.prefiltered_ics = self.weak_pareto_dom_filter()
         else:
             self.prefiltered_ics = self.all_tp_clusters
