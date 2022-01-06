@@ -21,7 +21,7 @@ def main(delete_gz_mzml=False):
             os.remove(file)
     if delete_gz_mzml:
         for file in glob.glob('resources/2_mzml_gz/*gz'):
-            shutil.rmtree(file)
+            os.remove(file)
 
     print('Finished in: %0.2f s'%(time.time()-start))
 
