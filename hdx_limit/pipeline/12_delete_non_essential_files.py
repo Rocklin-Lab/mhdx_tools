@@ -14,8 +14,8 @@ def main(delete_gz_mzml=False):
     for file in files_to_delete:
         try:
             shutil.rmtree(file)
-        expect:
-            print('%s not deleted'%s)
+        except:
+            print('%s not deleted'%file)
     for file in glob.glob('resources/10_ic_time_series/*/*/*'):
         if os.path.getsize(file) == 0:
             os.remove(file)
@@ -23,7 +23,7 @@ def main(delete_gz_mzml=False):
         for file in glob.glob('resources/2_mzml_gz/*gz'):
             shutil.rmtree(file)
 
-    print('Finished in: %0.2f s'%time.time()-start)
+    print('Finished in: %0.2f s'%(time.time()-start))
 
 if __name__ == "__main__":
 
