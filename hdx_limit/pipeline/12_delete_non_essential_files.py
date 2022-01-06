@@ -12,7 +12,10 @@ def main(delete_gz_mzml=False):
                       glob.glob('resources/8_passing_tensors/*') + glob.glob('resources/9_subtensor_ics/*') +\
                       glob.glob('*out')
     for file in files_to_delete:
-        shutil.rmtree(file)
+        try:
+            shutil.rmtree(file)
+        expect:
+            print('%s not deleted'%s)
     for file in glob.glob('resources/10_ic_time_series/*/*/*'):
         if os.path.getsize(file) == 0:
             os.remove(file)
