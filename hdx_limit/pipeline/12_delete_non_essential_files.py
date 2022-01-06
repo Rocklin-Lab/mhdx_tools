@@ -9,7 +9,7 @@ def main(delete_gz_mzml=False):
 
     files_to_delete = glob.glob('resources/5_tensors/*') + glob.glob('resources/6_idotp_check/*') + \
                       glob.glob('resources/8_passing_tensors/*') + glob.glob('resources/9_subtensor_ics/*') +\
-                      glob.glob('*out') +
+                      glob.glob('*out')
     for file in files_to_delete:
         shutil.rmtree(file)
     for file in glob.glob('resources/10_ic_time_series/*/*/*'):
