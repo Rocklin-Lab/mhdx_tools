@@ -39,7 +39,7 @@ from matplotlib import pyplot as plt
 [ic for ic in validation_ics if ic.timepoint_idx == x.timepoint_idx ]
 
 
-def plot_gjr_(winner, undeut_grounds, output_path, validation_ics, prefix='winner_plot'):
+def plot_gjr_(winner, undeut_grounds, output_path, validation_ics=None, prefix='winner_plot'):
     """
     plot path output given the winner ic list and undeut grounds list
     :param winner: winner list
@@ -60,11 +60,12 @@ def plot_gjr_(winner, undeut_grounds, output_path, validation_ics, prefix='winne
         #
         ##########
 
-        validation_ic = [ic for ic in validation_ics if ic.timepoint_idx == x.timepoint_idx ]
-        if len(validation_ic) != 0:
-            validation_ic = validation_ic[0]
-        else:
-            validation_ic = None
+        if validation_ics is not None:
+            validation_ic = [ic for ic in validation_ics if ic.timepoint_idx == x.timepoint_idx]
+            if len(validation_ic) != 0:
+                validation_ic = validation_ic[0]
+            else:
+                validation_ic = None
 
         ax = plt.subplot(len(winner), 3, (3 * i) + 1)
         plt.plot(x.baseline_integrated_mz / max(x.baseline_integrated_mz), linewidth=1)
