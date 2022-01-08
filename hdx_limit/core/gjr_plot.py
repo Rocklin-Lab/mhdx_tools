@@ -237,7 +237,7 @@ def plot_gjr_(winner, undeut_grounds, output_path, validation_ics=None, prefix='
             color="red",
         )
         if validation_ic is not None:
-            plt.plot(validation_ic.rts / max(validation_ic.rts) /, ls='--', color='orange')
+            plt.plot(validation_ic.rts / max(validation_ic.rts), ls='--', color='orange')
         plt.yticks([])
         plt.xticks([0, len(x.rts) / 2, len(x.rts)])
         ax.tick_params(length=3, pad=3)
@@ -285,7 +285,7 @@ def plot_gjr_(winner, undeut_grounds, output_path, validation_ics=None, prefix='
             color="red",
         )
         if validation_ic is not None:
-            plt.plot(validation_ic.dts / max(validation_ic.dts) /, ls='--', color='orange')
+            plt.plot(validation_ic.dts / max(validation_ic.dts) , ls='--', color='orange')
 
         plt.xticks([0, len(x.dts) / 2, len(x.dts)])
         ax.tick_params(length=3, pad=3)
