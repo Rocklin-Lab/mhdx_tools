@@ -6,8 +6,9 @@ import pandas as pd
 from hdx_limit.core.io import limit_read, limit_write, check_for_create_dirs
 
 
-def optimize_paths_inputs(library_info_path, input_directory_path,
-                          rt_group_name, configfile):
+def optimize_paths_inputs(library_info_path,
+                          input_directory_path,
+                          configfile):
     """Generate explicit PathOptimizer input paths for one rt_group.
 
     Args:
