@@ -36,9 +36,6 @@ import numpy as np
 import _pickle as cpickle
 from matplotlib import pyplot as plt
 
-[ic for ic in validation_ics if ic.timepoint_idx == x.timepoint_idx ]
-
-
 def plot_gjr_(winner, undeut_grounds, output_path, validation_ics=None, prefix='winner_plot'):
     """
     plot path output given the winner ic list and undeut grounds list
