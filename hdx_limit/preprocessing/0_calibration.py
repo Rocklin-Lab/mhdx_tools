@@ -62,7 +62,13 @@ def get_mz_centers(m0, m1, lockmass_compound):
         exit()
 
 
-def generate_tensor(mzml_gz_path, ppm_radius, bins_per_isotope_peak, ms_resolution, m0, m1, lockmass_compound):
+def generate_tensor(mzml_gz_path,
+                    ppm_radius,
+                    bins_per_isotope_peak,
+                    ms_resolution,
+                    m0,
+                    m1,
+                    lockmass_compound):
 
     """
     Generate mz_bins and 2d tensor for lockmass
@@ -107,7 +113,8 @@ def generate_tensor(mzml_gz_path, ppm_radius, bins_per_isotope_peak, ms_resoluti
     return mz_bin_centers, tensor2_out
 
 
-def find_nearest(obs_mz, mz_centers):
+def find_nearest(obs_mz,
+                 mz_centers):
     """
     Find closes signal to center
     """
@@ -117,8 +124,14 @@ def find_nearest(obs_mz, mz_centers):
         mz_centers_subset.append(mz_centers[idx])
     return np.array(mz_centers_subset)
 
-def generate_lockmass_calibration_dict(mz_bins, tensor2_out, time_bins, polyfit_deg, m0, m1,
-                                       lockmass_compound, output_pk):
+def generate_lockmass_calibration_dict(mz_bins,
+                                       tensor2_out,
+                                       time_bins,
+                                       polyfit_deg,
+                                       m0,
+                                       m1,
+                                       lockmass_compound,
+                                       output_pk):
 
     mz_centers = get_mz_centers(m0, m1, lockmass_compound)
 
@@ -170,14 +183,29 @@ def generate_lockmass_calibration_dict(mz_bins, tensor2_out, time_bins, polyfit_
 
     return cal_dict
 
-def plot_degrees(mz_bins, tensor2_out, time_bins, m0, m1, lockmass_compound, runtime, output_pk, output_pdf):
+def plot_degrees(mz_bins,
+                 tensor2_out,
+                 time_bins,
+                 m0,
+                 m1,
+                 lockmass_compound,
+                 runtime,
+                 output_pk,
+                 output_pdf,
+                 polyfit_deg):
+
     sns.set_context('talk')
     fig, ax = plt.subplots(8, 1, figsize=(6, 30))
 
     for idx, deg in enumerate([1, 2, 3, 4, 5, 6, 7, 8]):
-        cal_dict = generate_lockmass_calibration_dict(mz_bins=mz_bins, tensor2_out=tensor2_out, time_bins=time_bins,
+        if deg == polyfit_deg:
+            cal_dict = generate_lockmass_calibration_dict(mz_bins=mz_bins, tensor2_out=tensor2_out, time_bins=time_bins,
                                                       m0=m0, m1=m1, lockmass_compound=lockmass_compound,
                                                       polyfit_deg=deg, output_pk=output_pk)
+        else:
+            cal_dict = generate_lockmass_calibration_dict(mz_bins=mz_bins, tensor2_out=tensor2_out, time_bins=time_bins,
+                                                          m0=m0, m1=m1, lockmass_compound=lockmass_compound,
+                                                          polyfit_deg=Ndeg, output_pk=None)
         delta = int(runtime / time_bins)
 
         t = 0
@@ -230,7 +258,8 @@ def main(mzml_gz_path=None,
 
     if lockmass_compound != 'GluFibPrecursor':
         plot_degrees(mz_bins=mz_bins, tensor2_out=tensor2_out, time_bins=time_bins, m0=m0, m1=m1,
-                     lockmass_compound=lockmass_compound, runtime=runtime, output_pk=output_pk, output_pdf=output_pdf)
+                     lockmass_compound=lockmass_compound, runtime=runtime, output_pk=output_pk, output_pdf=output_pdf,
+                     polyfit_deg=polyfit_deg)
     else:
         generate_lockmass_calibration_dict(mz_bins=mz_bins, tensor2_out=tensor2_out, time_bins=time_bins,
                                            polyfit_deg=polyfit_deg, m0=m0, m1=m1,
