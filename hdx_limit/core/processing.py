@@ -449,9 +449,9 @@ class PathOptimizer:
                                       'baseline_integrated_rmse'] and
                                   ic.baseline_integrated_mz_FWHM >= self.thresholds[
                                       'baseline_integrated_FWHM'] and
-                                  ic.nearest_neighbor_correlation >= self.thresholds[
-                                      'nearest_neighbor_correlation']) and not (any(validation in ic.tuple_info[0] for
-                                                                                    validation in self.validation))
+                                  ic.nearest_neighbor_correlation >= self.thresholds['nearest_neighbor_correlation'])
+             and not (any(validation in ic.tuple_info[0] for validation in self.validation))
+             and (ic.timepoint_idx in self.timepoints)
              ] for ics in self.all_tp_clusters[1:]]
         filtered_atc = np.array([undeut_list] + filtered_atc)
         filtered_indexes = np.array([True if len(ics) > 0 else False for ics in filtered_atc])
