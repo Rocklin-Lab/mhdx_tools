@@ -356,7 +356,6 @@ class PathOptimizer:
                  thresholds,
                  pareto_prefilter=True,
                  old_data_dir=None,
-                 validation=None,
                  **kwargs):
         """Initializes an instance of PathOptimizer, performs preprocessing of inputs so the returned object is ready for optimization.
 
@@ -414,10 +413,6 @@ class PathOptimizer:
         self.gather_old_data()
         self.select_undeuterated()
         self.precalculate_fit_to_ground()
-        if validation is None:
-            self.validation = []
-        else:
-            self.validation = validation
         if user_prefilter:
             self.thresholds = thresholds
             self.filters_from_user()
@@ -450,8 +445,6 @@ class PathOptimizer:
                                   ic.baseline_integrated_mz_FWHM >= self.thresholds[
                                       'baseline_integrated_FWHM'] and
                                   ic.nearest_neighbor_correlation >= self.thresholds['nearest_neighbor_correlation'])
-             and not (any(validation in ic.info_tuple[0] for validation in self.validation))
-             and (ic.timepoint_idx in self.timepoints)
              ] for ics in self.all_tp_clusters[1:]]
         filtered_atc = np.array([undeut_list] + filtered_atc)
         filtered_indexes = np.array([True if len(ics) > 0 else False for ics in filtered_atc])
@@ -491,55 +484,6 @@ class PathOptimizer:
                     tp_buffer.append(ic1)
             out.append(tp_buffer)
         return out
-
-    def best_ics_from_validation(self):
-        """ Creates a flat list of ics the subset of ics from validation runs (query_validation_ics) that also passes
-        the user filters. Extract the set of timepoints of those ics. Extract the ics of the winner path for these
-        timepoints. Select the closeset isotopic distribution to correspondent the winner ics (self.validation_ics)
-
-                Args:
-                    arg_name (type): Description of input variable.
-
-                Returns:
-                    out_name (type): Description of any returned objects.
-
-        """
-        query_validation_ics = [
-            ic for ics in self.all_tp_clusters for ic in ics if
-             (ic.baseline_peak_error <= self.thresholds['baseline_peak_error'] and
-              ic.dt_ground_err <= self.thresholds['dt_ground_err'] and
-              ic.dt_ground_fit >= self.thresholds['dt_ground_fit'] and
-              ic.rt_ground_err <= self.thresholds['rt_ground_err'] and
-              ic.rt_ground_fit >= self.thresholds['rt_ground_fit'] and
-              ic.baseline_integrated_mz_rmse <= self.thresholds['baseline_integrated_rmse'] and
-              ic.baseline_integrated_mz_FWHM >= self.thresholds['baseline_integrated_FWHM'] and
-              ic.nearest_neighbor_correlation >= self.thresholds['nearest_neighbor_correlation']) and
-             (any(validation in ic.info_tuple[0] for validation in self.validation))
-             ]
-
-        tps = set([ ic.timepoint_idx for ic in query_validation_ics ])
-        winner_ics = [ic for ic in self.winner if ic.timepoint_idx in tps]
-
-        if len(winner_ics) == 0 or len(tps) == 0:
-            self.validation_ics = None
-            return None
-
-        best_query_ics = []
-        for winner_ic in winner_ics:
-            rmse = 1e3
-            ic_tmp = None
-            for query_ic in query_validation_ics:
-                if query_ic.timepoint_idx == winner_ic.timepoint_idx and \
-                        query_ic.charge_states[0] == winner_ic.charge_states[0]:
-                    rmse_tmp = mean_squared_error(
-                        winner_ic.baseline_integrated_mz/max(winner_ic.baseline_integrated_mz),
-                        query_ic.baseline_integrated_mz/max(query.ic_baseline_integrated_mz))
-                    if rmse_tmp < rmse:
-                        rmse = rmse_tmp
-                        ic_tmp = query_ic
-            best_query_ics.append(ic_tmp)
-
-        self.validation_ics = best_query_ics
 
     def gather_old_data(self):
         """Description of function.

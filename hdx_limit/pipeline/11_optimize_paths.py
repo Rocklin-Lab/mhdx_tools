@@ -172,7 +172,6 @@ def main(library_info_path,
         pareto_filter=configfile["pareto_prefilter"],
         timepoints=configfile["timepoints"],
         n_undeut_runs=len(configfile[0]),
-        validation=configfile["validation"],
         old_data_dir=old_data_dir
     )
 
@@ -187,11 +186,6 @@ def main(library_info_path,
 
             p1.optimize_paths_mono()
 
-            if len(configfile['validation']) != 0:
-                p1.best_ics_from_validation()
-            else:
-                p1.validation_ics = None
-
             if monobody_return_flag is not False:
                 out_dict["monobody_winner"] = p1.winner
                 out_dict["monobody_runners"] = p1.runners
@@ -204,7 +198,6 @@ def main(library_info_path,
                 plot_gjr_(winner=p1.winner,
                           undeut_grounds=undeut_grounds,
                           output_path=mono_path_plot_out_path,
-                          validation_ics=p1.validation_ics,
                           prefix=name)
             if mono_html_plot_out_path is not None:
                 p1.bokeh_plot(mono_html_plot_out_path)
@@ -227,10 +220,6 @@ def main(library_info_path,
 
             p1.optimize_paths_multi()
 
-            if len(configfile['validation']) != 0:
-                p1.best_ics_from_validation()
-            else:
-                p1.validation_ics = None
 
             if multibody_return_flag is not False:
                 out_dict["multibody_winner"] = p1.winner
@@ -244,7 +233,6 @@ def main(library_info_path,
                 plot_gjr_(winner=p1.winner,
                           undeut_grounds=undeut_grounds,
                           output_path=multi_path_plot_out_path,
-                          validation_ics=p1.validation_ics,
                           prefix=name)
             if multi_html_plot_out_path is not None:
                  p1.bokeh_plot(multi_html_plot_out_path)

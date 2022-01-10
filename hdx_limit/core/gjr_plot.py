@@ -36,7 +36,7 @@ import numpy as np
 import _pickle as cpickle
 from matplotlib import pyplot as plt
 
-def plot_gjr_(winner, undeut_grounds, output_path, validation_ics=None, prefix='winner_plot'):
+def plot_gjr_(winner, undeut_grounds, output_path, prefix='winner_plot'):
     """
     plot path output given the winner ic list and undeut grounds list
     :param winner: winner list
@@ -57,21 +57,10 @@ def plot_gjr_(winner, undeut_grounds, output_path, validation_ics=None, prefix='
         #
         ##########
 
-        if validation_ics is not None:
-            validation_ic = [ic for ic in validation_ics if ic.timepoint_idx == x.timepoint_idx]
-            if len(validation_ic) != 0:
-                validation_ic = validation_ic[0]
-            else:
-                validation_ic = None
-        else:
-            validation_ic = None
 
         ax = plt.subplot(len(winner), 3, (3 * i) + 1)
         plt.plot(x.baseline_integrated_mz / max(x.baseline_integrated_mz), linewidth=1)
         plt.scatter(range(len(x.baseline_integrated_mz)), x.baseline_integrated_mz / max(x.baseline_integrated_mz), s=5)
-        if validation_ic is not None:
-            plt.plot(validation_ic.baseline_integrated_mz / max(validation_ic.baseline_integrated_mz), linewidth=1,
-                     ls='--', color='orange')
         plt.yticks([])
         plt.xticks(range(0, len(x.baseline_integrated_mz) + 5, 5))
         ax.set_xticklabels(range(0, len(x.baseline_integrated_mz) + 5, 5), fontsize=8)
@@ -235,8 +224,6 @@ def plot_gjr_(winner, undeut_grounds, output_path, validation_ics=None, prefix='
             / max(undeut_grounds[0][x.charge_states[0]].rts),
             color="red",
         )
-        if validation_ic is not None:
-            plt.plot(validation_ic.rts / max(validation_ic.rts), ls='--', color='orange')
         plt.yticks([])
         plt.xticks([0, len(x.rts) / 2, len(x.rts)])
         ax.tick_params(length=3, pad=3)
@@ -283,8 +270,6 @@ def plot_gjr_(winner, undeut_grounds, output_path, validation_ics=None, prefix='
             / max(undeut_grounds[0][x.charge_states[0]].dts),
             color="red",
         )
-        if validation_ic is not None:
-            plt.plot(validation_ic.dts / max(validation_ic.dts), ls='--', color='orange')
 
         plt.xticks([0, len(x.dts) / 2, len(x.dts)])
         ax.tick_params(length=3, pad=3)
