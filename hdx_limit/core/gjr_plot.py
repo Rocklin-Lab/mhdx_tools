@@ -63,6 +63,8 @@ def plot_gjr_(winner, undeut_grounds, output_path, validation_ics=None, prefix='
                 validation_ic = validation_ic[0]
             else:
                 validation_ic = None
+        else:
+            validation_ic = None
 
         ax = plt.subplot(len(winner), 3, (3 * i) + 1)
         plt.plot(x.baseline_integrated_mz / max(x.baseline_integrated_mz), linewidth=1)
