@@ -521,6 +521,7 @@ class PathOptimizer:
         winner_ics = [ic for ic in self.winner if ic.timepoint_idx in tps]
 
         if len(winner_ics) == 0 or len(tps) == 0:
+            self.validation_ics = None
             return None
 
         best_query_ics = []
