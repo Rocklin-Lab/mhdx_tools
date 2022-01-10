@@ -450,7 +450,7 @@ class PathOptimizer:
                                   ic.baseline_integrated_mz_FWHM >= self.thresholds[
                                       'baseline_integrated_FWHM'] and
                                   ic.nearest_neighbor_correlation >= self.thresholds['nearest_neighbor_correlation'])
-             and not (any(validation in ic.tuple_info[0] for validation in self.validation))
+             and not (any(validation in ic.info_tuple[0] for validation in self.validation))
              and (ic.timepoint_idx in self.timepoints)
              ] for ics in self.all_tp_clusters[1:]]
         filtered_atc = np.array([undeut_list] + filtered_atc)
@@ -514,7 +514,7 @@ class PathOptimizer:
               ic.baseline_integrated_mz_rmse <= self.thresholds['baseline_integrated_rmse'] and
               ic.baseline_integrated_mz_FWHM >= self.thresholds['baseline_integrated_FWHM'] and
               ic.nearest_neighbor_correlation >= self.thresholds['nearest_neighbor_correlation']) and
-             (any(validation in ic.tuple_info[0] for validation in self.validation))
+             (any(validation in ic.info_tuple[0] for validation in self.validation))
              for ic in ics ]
 
         tps = set([ ic.timepoint_idx for ic in query_validation_ics ])
