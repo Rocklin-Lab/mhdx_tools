@@ -505,7 +505,7 @@ class PathOptimizer:
 
         """
         query_validation_ics = [
-            ic for ics in self.all_tp_clusters for ic in ics if
+            ic for ics in self.all_tp_clusters for ic in ics  if
              (ic.baseline_peak_error <= self.thresholds['baseline_peak_error'] and
               ic.dt_ground_err <= self.thresholds['dt_ground_err'] and
               ic.dt_ground_fit >= self.thresholds['dt_ground_fit'] and
