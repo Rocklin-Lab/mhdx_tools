@@ -505,7 +505,7 @@ class PathOptimizer:
 
         """
         query_validation_ics = [
-            ic for ics in self.all_tp_clusters if
+            ic for ics in self.all_tp_clusters for ic in ics if
              (ic.baseline_peak_error <= self.thresholds['baseline_peak_error'] and
               ic.dt_ground_err <= self.thresholds['dt_ground_err'] and
               ic.dt_ground_fit >= self.thresholds['dt_ground_fit'] and
@@ -515,7 +515,7 @@ class PathOptimizer:
               ic.baseline_integrated_mz_FWHM >= self.thresholds['baseline_integrated_FWHM'] and
               ic.nearest_neighbor_correlation >= self.thresholds['nearest_neighbor_correlation']) and
              (any(validation in ic.info_tuple[0] for validation in self.validation))
-             for ic in ics ]
+             ]
 
         tps = set([ ic.timepoint_idx for ic in query_validation_ics ])
         winner_ics = [ic for ic in self.winner if ic.timepoint_idx in tps]
