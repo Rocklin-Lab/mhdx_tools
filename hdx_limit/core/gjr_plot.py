@@ -45,7 +45,7 @@ def plot_gjr_(winner, undeut_grounds, output_path, prefix='winner_plot'):
     :param prefix: used in plot title
     :return:
     """
-    fig = plt.figure(figsize=(20, 24))
+    fig = plt.figure(figsize=(20, len(winner)))
 
     protname = prefix  # 'EHEE_rd1_0284.pdb_5.73355'
     idotp = undeut_grounds[1][winner[0].charge_states[0]]
