@@ -318,7 +318,7 @@ if __name__ == "__main__":
         main(library_info_path=library_info_path,
              configfile=configfile,
              all_timepoints_clusters_input_path=all_timepoints_clusters_input_path,
-             old_data_dir = old_data_dir,
+             old_data_dir=old_data_dir,
              rt_group_name=rt_group_name,
              prefiltered_ics_out_path=prefiltered_ics_out_path,
              mono_path_plot_out_path=mono_path_plot_out_path,
