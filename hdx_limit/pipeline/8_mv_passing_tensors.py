@@ -61,13 +61,13 @@ if __name__ == "__main__":
 
     else:
         parser = argparse.ArgumentParser()
-        parser = add_argument("configfile", help="path/to/config.yaml")
+        parser.add_argument("configfile", help="path/to/config.yaml")
         parser.add_argument("library_info_path", help="path/to/checked_library_info.json")
-        parser.add_argument("input_dir_path",
-                            help="path/to/input_dir, inputs are globbed from this path, I don't work right now",
-                            default="resources/")
-        parser.add_argument("output_dir_path",
-                            help="path/to/output_dir, outputs are globbed from this path, I don't work right now")
+        # parser.add_argument("input_dir_path",
+        #                     help="path/to/input_dir, inputs are globbed from this path, I don't work right now",
+        #                     default="resources/")
+        # parser.add_argument("output_dir_path",
+        #                     help="path/to/output_dir, outputs are globbed from this path, I don't work right now")
         args = parser.parse_args()
 
         config = yaml.load(open(args.configfile, "rb").read(), Loader=yaml.Loader)
@@ -87,13 +87,13 @@ if __name__ == "__main__":
                 mv_passing_tensors_zippable_charges.append(charge)
                 mv_passing_tensors_zippable_undeut_mzmls.append(undeut_mzml)
 
-        input_paths = ["resources/5_tensors/" + name + "/" + name + "_charge" + charge + "_" + mzml + ".gz.cpickle.zlib"
+        input_paths = ["resources/5_tensors/" + name + "/" + name + "_charge" + str(charge) + "_" + mzml + ".gz.cpickle.zlib"
                        for (name, charge, mzml) in zip(mv_passing_tensors_zippable_names,
                                                        mv_passing_tensors_zippable_charges,
                                                        mv_passing_tensors_zippable_undeut_mzmls)
                        ]
 
-        output_paths = ["resources/8_passing_tensors/" + name + "/" + name + "_charge" + charge + "_" + mzml + ".gz.cpickle.zlib"
+        output_paths = ["resources/8_passing_tensors/" + name + "/" + name + "_charge" + str(charge) + "_" + mzml + ".gz.cpickle.zlib"
                        for (name, charge, mzml) in zip(mv_passing_tensors_zippable_names,
                                                        mv_passing_tensors_zippable_charges,
                                                        mv_passing_tensors_zippable_undeut_mzmls)
