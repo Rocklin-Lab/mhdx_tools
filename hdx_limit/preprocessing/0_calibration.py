@@ -233,6 +233,7 @@ def plot_degrees(mz_bins,
         ax[idx].set_xlabel('m/z')
         ax[idx].set_ylim(-ppm_radius, ppm_radius)
         ax[idx].legend(loc=1, fontsize=11)
+        ax[idx].grid()
 
     plt.tight_layout()
 
