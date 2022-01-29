@@ -192,7 +192,8 @@ def plot_degrees(mz_bins,
                  runtime,
                  output_pk,
                  output_pdf,
-                 polyfit_deg):
+                 polyfit_deg,
+                 ppm_radius):
 
     sns.set_context('talk')
     fig, ax = plt.subplots(8, 1, figsize=(6, 30))
@@ -230,7 +231,7 @@ def plot_degrees(mz_bins,
                         transform=ax[idx].transAxes, fontsize=12)
         ax[idx].set_ylabel('ppm error')
         ax[idx].set_xlabel('m/z')
-        ax[idx].set_ylim(-50, 50)
+        ax[idx].set_ylim(-ppm_radius, ppm_radius)
         ax[idx].legend(loc=1, fontsize=11)
 
     plt.tight_layout()
@@ -259,7 +260,7 @@ def main(mzml_gz_path=None,
     if lockmass_compound != 'GluFibPrecursor':
         plot_degrees(mz_bins=mz_bins, tensor2_out=tensor2_out, time_bins=time_bins, m0=m0, m1=m1,
                      lockmass_compound=lockmass_compound, runtime=runtime, output_pk=output_pk, output_pdf=output_pdf,
-                     polyfit_deg=polyfit_deg)
+                     polyfit_deg=polyfit_deg, ppm_radius=ppm_radius)
     else:
         generate_lockmass_calibration_dict(mz_bins=mz_bins, tensor2_out=tensor2_out, time_bins=time_bins,
                                            polyfit_deg=polyfit_deg, m0=m0, m1=m1,
