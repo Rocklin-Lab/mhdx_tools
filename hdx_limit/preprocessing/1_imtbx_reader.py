@@ -100,8 +100,8 @@ def kde_plot(sum_df, out_path):
     sns.distplot(sum_df["ppm"])
     plt.xlim([-50, 50])
     plt.axvline(0, ls='--', color='red')
-    plt.grid()
     plt.plot(xs, mykde(xs))
+    plt.grid(visible=True)
     plt.savefig(out_path)
 
 
@@ -725,7 +725,7 @@ def main(isotopes_path,
             delta = int(runtime/len(calib_dict))
             for i, rt in enumerate(range(0, runtime,delta)):
                 testq.loc[(testq['RT'] >= rt) & (testq['RT'] <= rt + delta), 'mz_mono_fix'] = \
-                    calib[i]['polyfit_coeffs'] * testq[ (testq['RT'] >= rt) &
+                    calib_dict[i]['polyfit_coeffs'] * testq[ (testq['RT'] >= rt) &
                                                          (testq['RT'] <= rt + delta)]['mz_mono'].values
         else:
             delta = int(runtime / len(calib_dict))
@@ -757,7 +757,7 @@ def main(isotopes_path,
     # Re-cluster on the adjusted MZ, same weights.
     apply_cluster_weights(testq, dt_weight=5.0, rt_weight=0.6, mz_weight=0.006)
 
-    db = DBSCAN();
+    db = DBSCAN()
     db.fit(testq[["cluster_im", "cluster_RT", "cluster_mz", "charge"]])
     clusters = db.fit_predict(
         testq[["cluster_im", "cluster_RT", "cluster_mz", "charge"]])
