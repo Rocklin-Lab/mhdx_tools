@@ -304,6 +304,45 @@ def gen_stretched_times(tic_file_list, stretched_times_plot_outpath=None):
 
     return stretched_ts1_times, stretched_ts2_times
 
+def rt_correlation_plot(intermediates, output_path):
+    fs = sorted(intermediates)
+
+    runs = {}
+    for i, f in enumerate(fs):
+        runs[i] = pd.read_csv(f)
+
+    unique_names = set(runs[0].name)
+    for i in runs.keys():
+        if i != 0:
+            unique_names = set(unique_names).intersection(runs[i].name)
+
+    df_rt = {}
+    for i in runs.keys():
+        df_rt[i] = []
+
+    for name in unique_names:
+        for i in runs.keys():
+            df_rt[i].append(runs[i][runs[i].name == name]['RT'].mean())
+
+    combinations = [subset for subset in itertools.combinations(runs.keys(), 2)]
+
+    fig, ax = plt.subplots(len(combinations), 2, figsize=(10,3.5*len(combinations)), dpi=300)
+
+    for i in range(len(combinations)):
+        ax[i][0].scatter(df_rt[combinations[i][0]], df_rt[combinations[i][1]],
+                         alpha=0.6, s=50,  edgecolors='black', lw=0.7)
+        sns.kdeplot(data=np.array(df_rt[combinations[i][0]])-np.array(df_rt[combinations[i][1]]), ax=ax[i][1])
+
+        ax[i][0].plot([i for i in range(30)], [i for i in range(30)], '--r', lw=1)
+        ax[i][1].axvline(0, ls='--', color='red')
+        ax[i][0].set_xlabel('RT_%i / min'%combinations[i][0])
+        ax[i][0].set_ylabel('RT_%i / min'%combinations[i][1])
+        ax[i][1].set_xlabel(r'$\Delta$RT/ min')
+        ax[i][1].set_xlim(-5,5)
+
+    plt.tight_layout()
+    plt.savefig(output_path, format='pdf', dpi=300)
+
 
 def main(names_and_seqs_path,
          undeut_mzml,
@@ -316,7 +355,8 @@ def main(names_and_seqs_path,
          rt_group_cutoff=0.2,
          stretched_times_plot_outpath=None,
          normalization_factors_outpath=None,
-         normalization_factors_plot_outpath=None):
+         normalization_factors_plot_outpath=None,
+         rt_correlation_plot_outpath=None):
     """Generates the master list of library_proteins identified in MS data: library_info.csv.
 
     Args:
@@ -489,6 +529,9 @@ def main(names_and_seqs_path,
         ax1.bar(range(len(normalization_factors["mzml"])), normalization_factors["normalization_factor"]) 
         ax1.set(xlabel="TIC .mzML Source", ylabel = "Normalization Factor Magnitude")
         plt.savefig(normalization_factors_plot_outpath)
+
+    if rt_correlation_plot_outpath is not None:
+        rt_correlation_plot(intermediates=intermediates, output_path=rt_correlation_plot_outpath)
     
     if return_flag is not None:
         return {"library_info": catdf.to_dict(), "normalization_factors": normalization_factors}
@@ -507,6 +550,7 @@ if __name__ == "__main__":
         stretched_times_plot_outpath = snakemake.output[1]
         normalization_factors_outpath = snakemake.output[2]
         normalization_factors_plot_outpath = snakemake.output[3]
+        rt_correlation_plot_outpath = snakemake.output[4]
 
         main(names_and_seqs_path=names_and_seqs_path,
              out_path=out_path,
@@ -517,7 +561,8 @@ if __name__ == "__main__":
              timepoints=open_timepoints,
              stretched_times_plot_outpath=stretched_times_plot_outpath,
              normalization_factors_outpath=normalization_factors_outpath,
-             normalization_factors_plot_outpath=normalization_factors_plot_outpath)
+             normalization_factors_plot_outpath=normalization_factors_plot_outpath,
+             rt_correlation_plot_outpath=rt_correlation_plot_outpath)
 
     else:
         parser = argparse.ArgumentParser(
@@ -585,6 +630,9 @@ if __name__ == "__main__":
         parser.add_argument("-l",
                             "--normalization_factors_plot_outpath",
                             help="path/to/normalization_factors_plot.png")
+        parser.add_argument("-r",
+                            "--rt_correlation_plot_outpath",
+                            help="path/to/rt_correlation_plot.pdf")
         args = parser.parse_args()
 
         # Generates explicit filenames and open timepoints .yaml.
@@ -609,4 +657,5 @@ if __name__ == "__main__":
              rt_group_cutoff=args.rt_group_cutoff,
              stretched_times_plot_outpath=args.stretched_times_plot_outpath,
              normalization_factors_outpath=args.normalization_factors_outpath,
-             normalization_factors_plot_outpath=args.normalization_factors_plot_outpath)
+             normalization_factors_plot_outpath=args.normalization_factors_plot_outpath,
+             rt_correlation_plot_outpath=args.rt_correlation_plot_outpath)

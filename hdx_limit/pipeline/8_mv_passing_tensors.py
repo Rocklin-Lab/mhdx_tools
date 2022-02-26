@@ -57,7 +57,37 @@ def main(input_paths, output_paths):
 if __name__ == "__main__":
 
     if "snakemake" in globals():
-        main(snakemake.input, snakemake.output)
+        config = yaml.load(open(snakemake.input[0], "rb").read(), Loader=yaml.Loader)
+        library_info = pd.read_json(snakemake.input[1])
+
+        # Makes two zippable lists that are used for extract_tensors: repeated rt_group_names and their corresponding charges in order.
+        zippable_names = list(library_info["name"].values)
+        zippable_charges = list(library_info["charge"].values)
+
+        # Creates three zippable lists that are used for mv_passing_tensors: rt-group names, charges, and undeut_mzmls.
+        mv_passing_tensors_zippable_names = []
+        mv_passing_tensors_zippable_charges = []
+        mv_passing_tensors_zippable_undeut_mzmls = []
+        for name, charge in zip(zippable_names, zippable_charges):
+            for undeut_mzml in config[0]:
+                mv_passing_tensors_zippable_names.append(name)
+                mv_passing_tensors_zippable_charges.append(charge)
+                mv_passing_tensors_zippable_undeut_mzmls.append(undeut_mzml)
+
+        input_paths = [
+            "resources/5_tensors/" + name + "/" + name + "_charge" + str(charge) + "_" + mzml + ".gz.cpickle.zlib"
+            for (name, charge, mzml) in zip(mv_passing_tensors_zippable_names,
+                                            mv_passing_tensors_zippable_charges,
+                                            mv_passing_tensors_zippable_undeut_mzmls)
+            ]
+
+        output_paths = ["resources/8_passing_tensors/" + name + "/" + name + "_charge" + str(
+            charge) + "_" + mzml + ".gz.cpickle.zlib"
+                        for (name, charge, mzml) in zip(mv_passing_tensors_zippable_names,
+                                                        mv_passing_tensors_zippable_charges,
+                                                        mv_passing_tensors_zippable_undeut_mzmls)
+                        ]
+        main(input_paths, output_paths)
 
     else:
         parser = argparse.ArgumentParser()
