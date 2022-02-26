@@ -44,6 +44,7 @@ import matplotlib
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import itertools
 from fastdtw import fastdtw
 from collections import OrderedDict
 from scipy.signal import find_peaks
