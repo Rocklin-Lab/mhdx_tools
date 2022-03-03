@@ -151,6 +151,7 @@ class DataTensor:
                                                      self.integrated_mz_limits,
                                                      self.bins_per_isotope_peak )
             self.full_gauss_grids = self.gauss(self.full_grid_out)
+            self.tensor_auc = (np.sum(self.full_grid_out) / self.normalization_factor)[0]
 
         # Handle concatenated tensor case, check for required inputs TODO: Remove? Deprecated, but Gabe has said to keep this before, ask again.
         else:
@@ -345,6 +346,7 @@ class DataTensor:
                     bins_per_isotope_peak = self.bins_per_isotope_peak,
                     n_concatenated=self.n_concatenated,
                     concat_dt_idxs=concat_dt_idxs,
+                    tensor_auc=self.tensor_auc,
                     normalization_factor=self.normalization_factor
                 ))
             pmem(str(n_itr) + " End Factor " + str(i))
@@ -581,6 +583,7 @@ class Factor:
         bins_per_isotope_peak,
         n_concatenated,
         concat_dt_idxs,
+        tensor_auc,
         normalization_factor
     ):
         """Creates an instance of the Factor class from one factor of a PARAFAC run.
@@ -617,6 +620,7 @@ class Factor:
         self.drift_labels = drift_labels
         self.mz_labels = mz_labels
         self.auc = sum(mz_data)
+        self.tensor_auc = tensor_auc
         self.factor_idx = factor_idx
         self.n_factors = n_factors
         self.bins_per_isotope_peak = bins_per_isotope_peak
@@ -674,6 +678,10 @@ class Factor:
 
         self.max_rtdt = max(rt_fac) * max(dt_fac)
         self.outer_rtdt = sum(sum(np.outer(rt_fac, dt_fac)))
+
+        # calculate factor auc with and without gauss extrapolated data
+        self.factor_auc = (sum(self.mz_data) * self.outer_rtdt_old / self.normalization_factor)[0]
+        self.factor_auc_with_gauss_extrapol = (sum(self.mz_data) * self.outer_rtdt / self.normalization_factor)[0]
 
         # assign mean rt and dt values
         self.rt_mean = np.mean(np.arange(len(self.rts)))
@@ -799,7 +807,10 @@ class Factor:
                     outer_rtdt_old=self.outer_rtdt_old,
                     n_concatenated=self.n_concatenated,
                     concat_dt_idxs=self.concat_dt_idxs,
-                    normalization_factor=self.normalization_factor
+                    normalization_factor=self.normalization_factor,
+                    tensor_auc=self.tensor_auc,
+                    factor_auc=self.factor_auc,
+                    factor_auc_with_gauss_extrapol=self.factor_auc_with_gauss_extrapol
                 )
                 if (newIC.baseline_peak_error / newIC.baseline_auc <
                         0.2):  # TODO: HARDCODE
@@ -898,7 +909,10 @@ class IsotopeCluster:
         outer_rtdt_old,
         n_concatenated,
         concat_dt_idxs,
-        normalization_factor
+        normalization_factor,
+            tensor_auc,
+            factor_auc,
+            factor_auc_with_gauss_extrapol
     ):
         """Creates an instance of the IsotopeCluster class from a portion of Factor.mz_data.
 
@@ -1051,6 +1065,9 @@ class IsotopeCluster:
         self.n_concatenated = n_concatenated
         self.concat_dt_idxs = concat_dt_idxs
         self.normalization_factor = normalization_factor
+        self.tensor_auc = tensor_auc
+        self.factor_auc = factor_auc
+        self.factor_auc_with_gauss_extrapol = factor_auc_with_gauss_extrapol
 
         # Prune factor_mz to get window around cluster that is consistent between charge-states.
         self.cluster_mz_data = copy.deepcopy(self.factor_mz_data)
@@ -1059,6 +1076,10 @@ class IsotopeCluster:
 
         # Integrate area of IC and normalize according the TIC counts.
         self.auc = sum(self.cluster_mz_data) * self.outer_rtdt / self.normalization_factor
+
+        # todo: we could replace the above auc to be a float number rather than an array
+        self.ic_auc = (sum(self.cluster_mz_data) * self.outer_rtdt / self.normalization_factor)[0]
+        self.ic_auc_without_gauss_extrapol = (sum(self.cluster_mz_data) * self.outer_rtdt_old / self.normalization_factor)[0]
 
         # Reshape cluster m/Z data by expected number of bins per isotope.
         isotope_peak_array = np.reshape(self.cluster_mz_data, (-1, self.bins_per_isotope_peak))
