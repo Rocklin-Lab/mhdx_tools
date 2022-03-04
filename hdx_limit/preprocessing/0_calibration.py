@@ -130,7 +130,12 @@ def get_closest_peaks(mz_thr, mzs, exp_spec, ppm_radius=100, min_intensity=1e3):
     for mz in mz_thr:
         mz_low, mz_high = mz - mz * ppm_radius / 1e6, mz + mz * ppm_radius / 1e6
         mask = (mzs >= mz_low) & (mzs <= mz_high)
-        H, A, x0, sigma = gauss_fit(mzs[mask], exp_spec[mask])
+        try:
+            H, A, x0, sigma = gauss_fit(mzs[mask], exp_spec[mask])
+        except:
+            print('Parameters not found!')
+            x0 = mz
+            A = 0
         if abs((x0 - mz) * 1e6 / mz) <= ppm_radius and A >= min_intensity:
             thr_peaks.append(mz)
             exp_peaks.append(x0)
