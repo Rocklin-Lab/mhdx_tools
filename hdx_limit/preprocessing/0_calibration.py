@@ -190,7 +190,11 @@ def generate_thr_exp_pairs(scan_times,
                 mz_high = mz_thr + mz_thr * ppm_radius / 1e6
                 mask = (mzs >= mz_low) & (mzs <= mz_high)
                 ax[j][i].plot(mzs[mask], np.sum(tensor[keep], axis=0)[mask], c='orange')
-                H, A, x0, sigma = gauss_fit(mzs[mask], obs_spec[mask])
+                try:
+                    H, A, x0, sigma = gauss_fit(mzs[mask], obs_spec[mask])
+                except:
+                    x0 = mz_thr
+                    A = 0
                 ax[j][i].plot(np.linspace(mzs[mask][0], mzs[mask][-1], 50),
                               gaussian_function(np.linspace(mzs[mask][0], mzs[mask][-1], 50), H, A, x0, sigma),
                               c='blue')
