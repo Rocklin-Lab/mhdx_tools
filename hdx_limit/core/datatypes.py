@@ -1078,8 +1078,8 @@ class IsotopeCluster:
         self.auc = sum(self.cluster_mz_data) * self.outer_rtdt / self.normalization_factor
 
         # todo: we could replace the above auc to be a float number rather than an array
-        self.ic_auc = (sum(self.cluster_mz_data) * self.outer_rtdt / self.normalization_factor)[0]
-        self.ic_auc_without_gauss_extrapol = (sum(self.cluster_mz_data) * self.outer_rtdt_old / self.normalization_factor)[0]
+        self.ic_auc = (sum(self.cluster_mz_data) * self.outer_rtdt_old / self.normalization_factor)[0]
+        self.ic_auc_with_gauss_extrapol = (sum(self.cluster_mz_data) * self.outer_rtdt / self.normalization_factor)[0]
 
         # Reshape cluster m/Z data by expected number of bins per isotope.
         isotope_peak_array = np.reshape(self.cluster_mz_data, (-1, self.bins_per_isotope_peak))
