@@ -283,6 +283,7 @@ def plot_degrees(thr_exp_pairs,
                  lockmass_compound,
                  runtime,
                  time_bins,
+                 ppm_radius,
                  output_pk=None,
                  output_degrees=None):
     fig, ax = plt.subplots(8, 1, figsize=(6, 30))
@@ -360,17 +361,20 @@ def main(mzml_gz_path,
                                            ppm_radius=ppm_radius,
                                            output_extracted_signals=output_extracted_signals)
 
-    plot_degrees(thr_exp_pairs,
-                 polyfit_deg=polyfit_deg,
-                 lockmass_compound=lockmass_compound,
-                 runtime=runtime,
-                 time_bins=time_bins,
-                 output_pk=output_pk,
-                 output_degrees=output_degrees)
+    if lockmass_compound != 'GluFibPrecursor':
+        plot_degrees(thr_exp_pairs,
+                     polyfit_deg=polyfit_deg,
+                     lockmass_compound=lockmass_compound,
+                     runtime=runtime,
+                     time_bins=time_bins,
+                     ppm_radius=ppm_radius,
+                     output_pk=output_pk,
+                     output_degrees=output_degrees)
 
-    generate_lockmass_calibration_dict(thr_exp_pairs,
+    else:
+        generate_lockmass_calibration_dict(thr_exp_pairs,
                                        polyfit_deg=polyfit_deg,
-                                       lockmass_compound='SodiumFormate',
+                                       lockmass_compound=lockmass_compound,
                                        output_pk=output_pk)
 
 if __name__ == "__main__":
