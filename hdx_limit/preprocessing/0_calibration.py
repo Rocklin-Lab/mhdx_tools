@@ -128,7 +128,7 @@ def get_closest_peaks(mz_thr, mzs, exp_spec, ppm_radius=100, min_intensity=1e3):
     '''
     thr_peaks, exp_peaks = [], []
     for mz in mz_thr:
-        mz_low, mz_high = mz - mz * ppm_window / 1e6, mz + mz * ppm_window / 1e6
+        mz_low, mz_high = mz - mz * ppm_radius / 1e6, mz + mz * ppm_radius / 1e6
         mask = (mzs >= mz_low) & (mzs <= mz_high)
         H, A, x0, sigma = gauss_fit(mzs[mask], exp_spec[mask])
         if abs((x0 - mz) * 1e6 / mz) <= ppm_radius and A >= min_intensity:
@@ -181,8 +181,8 @@ def generate_thr_exp_pairs(scan_times,
 
         if output_extracted_signals is not None:
             for j, mz_thr in enumerate(mzs_thr):
-                mz_low = mz_thr - mz_thr * ppm_window / 1e6
-                mz_high = mz_thr + mz_thr * ppm_window / 1e6
+                mz_low = mz_thr - mz_thr * ppm_radius / 1e6
+                mz_high = mz_thr + mz_thr * ppm_radius / 1e6
                 mask = (mzs >= mz_low) & (mzs <= mz_high)
                 ax[j][i].plot(mzs[mask], np.sum(tensor[keep], axis=0)[mask], c='orange')
                 H, A, x0, sigma = gauss_fit(mzs[mask], obs_spec[mask])
