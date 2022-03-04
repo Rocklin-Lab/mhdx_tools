@@ -251,7 +251,7 @@ def generate_lockmass_calibration_dict(thr_exp_pairs, polyfit_deg, lockmass_comp
 
         # TO BE REMOVED LATER - AF
         for key in cal_dict.keys():
-            sns.kdeplot(cal_dict[key]['ppm_error_before_corr'], label='%i-$%i min'%int(key))
+            sns.kdeplot(cal_dict[key]['ppm_error_before_corr'], label='%i-$%i min'%(key, key))
         plt.legend(loc=2)
         plt.xlabel('ppm error')
         plt.savefig('results/plots/0_calibration/' + output_pk.split('/')[-1].split('_')[0] + '_ppm_kde.pdf', dpi=200,
