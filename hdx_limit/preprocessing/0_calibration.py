@@ -441,7 +441,7 @@ if __name__ == "__main__":
         )
         parser.add_argument(
             "-ppm_lockmass_radius",
-            "--ppm__lockmass_radius",
+            "--ppm_lockmass_radius",
             default=50,
             help=
             "ppm window to reprofile peak"
