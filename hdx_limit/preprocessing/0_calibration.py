@@ -232,7 +232,6 @@ def generate_thr_exp_pairs(scan_times,
     if output_extracted_signals is not None:
         fig.tight_layout()
         fig.savefig(output_extracted_signals, dpi=300, format='pdf')
-        fig.close()
 
     return thr_exp_pairs
 
@@ -265,7 +264,6 @@ def generate_lockmass_calibration_dict(thr_exp_pairs, polyfit_deg, lockmass_comp
             ax_kde.legend(loc=2)
             ax_kde.set_xlabel('ppm error')
             fig_kde.savefig(output_kde, dpi=200, format='pdf')
-            fig_kde.close()
         return cal_dict
 
     else:
@@ -343,7 +341,6 @@ def plot_degrees(thr_exp_pairs,
 
     if output_degrees is not None:
         fig.savefig(output_degrees, dpi=300, format='pdf')
-        fig.close()
     else:
         plt.show()
 
