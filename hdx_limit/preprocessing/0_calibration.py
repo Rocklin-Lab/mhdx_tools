@@ -333,7 +333,7 @@ def plot_degrees(thr_exp_pairs,
     plt.tight_layout()
 
     if output_degrees is not None:
-        plt.savefig(output_pdf, dpi=300, format='pdf')
+        plt.savefig(output_degrees, dpi=300, format='pdf')
     else:
         plt.show()
 
