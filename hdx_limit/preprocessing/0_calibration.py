@@ -225,6 +225,7 @@ def generate_thr_exp_pairs(scan_times,
 
     if output_extracted_signals is not None:
         plt.tight_layout()
+        plt.savefig(output_extracted_signals, dpi=300, format='pdf')
 
     return thr_exp_pairs
 
@@ -255,10 +256,10 @@ def generate_lockmass_calibration_dict(thr_exp_pairs, polyfit_deg, lockmass_comp
                 sns.kdeplot(cal_dict[key]['ppm_error_before_corr'], label='%i-$%i min'%(key, key))
             plt.legend(loc=2)
             plt.xlabel('ppm error')
-            plt.savefig('results/plots/0_calibration/' + output_pk.split('/')[-1].split('_')[0] + '_ppm_kde.pdf', dpi=200,
-                        format='pdf')
-
+            plt.savefig('results/plots/0_calibration/' + output_pk.split('/')[-1].split('_')[0] + '_ppm_kde.pdf',
+                        dpi=200, format='pdf')
         return cal_dict
+
     else:
         for idx in thr_exp_pairs.keys():
             thr_mz, obs_mz = np.arran(thr_exp_pairs[idx])
@@ -286,6 +287,7 @@ def plot_degrees(thr_exp_pairs,
                  ppm_radius,
                  output_pk=None,
                  output_degrees=None):
+
     fig, ax = plt.subplots(8, 1, figsize=(6, 30))
 
     for idx, deg in enumerate([1, 2, 3, 4, 5, 6, 7, 8]):
