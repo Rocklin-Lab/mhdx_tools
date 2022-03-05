@@ -16,6 +16,12 @@ from sklearn.metrics import mean_squared_error
 import glob as glob
 import argparse
 
+def check_dir(path):
+    '''
+    Create directory from path if doesn't exist
+    '''
+    if not os.path.isdir(os.path.dirname(path)):
+        os.makedirs(os.path.dirname(path))
 
 def save_pickle_object(obj, fpath):
     """
@@ -231,7 +237,7 @@ def generate_thr_exp_pairs(scan_times,
 
 
 def generate_lockmass_calibration_dict(thr_exp_pairs, polyfit_deg, lockmass_compound,
-                                       output_pk=None):
+                                       output_pk=None, output_kde=None):
     cal_dict = {}
 
     if lockmass_compound != 'GluFibPrecursor':
@@ -251,13 +257,12 @@ def generate_lockmass_calibration_dict(thr_exp_pairs, polyfit_deg, lockmass_comp
             save_pickle_object(cal_dict, output_pk)
 
         # TO BE REMOVED LATER - AF
-        if output_pk is not None:
+        if output_kde is not None:
             for key in cal_dict.keys():
                 sns.kdeplot(cal_dict[key]['ppm_error_before_corr'], label='%i-$%i min'%(key, key))
             plt.legend(loc=2)
             plt.xlabel('ppm error')
-            plt.savefig('results/plots/0_calibration/' + output_pk.split('/')[-1].split('_')[0] + '_ppm_kde.pdf',
-                        dpi=200, format='pdf')
+            plt.savefig(output_kde, dpi=200, format='pdf')
         return cal_dict
 
     else:
@@ -286,7 +291,8 @@ def plot_degrees(thr_exp_pairs,
                  time_bins,
                  ppm_radius,
                  output_pk=None,
-                 output_degrees=None):
+                 output_degrees=None,
+                 output_kde=None):
 
     fig, ax = plt.subplots(8, 1, figsize=(6, 30))
 
@@ -295,12 +301,12 @@ def plot_degrees(thr_exp_pairs,
             cal_dict = generate_lockmass_calibration_dict(thr_exp_pairs,
                                                           polyfit_deg=deg,
                                                           lockmass_compound=lockmass_compound,
-                                                          output_pk=output_pk)
+                                                          output_pk=output_pk, output_kde=output_kde)
         else:
             cal_dict = generate_lockmass_calibration_dict(thr_exp_pairs,
                                                           polyfit_deg=deg,
                                                           lockmass_compound=lockmass_compound,
-                                                          output_pk=None)
+                                                          output_pk=None, output_kde=None)
 
         time_step = int(runtime / time_bins)
 
@@ -348,7 +354,16 @@ def main(mzml_gz_path,
          output_extracted_signals=None,
          output_pk=None,
          output_degrees=None,
+         output_kde=None,
          ):
+
+    if output_pk is not None:
+        check_dir(output_pk)
+    if output_degrees is not None:
+        check_dir(output_degrees)
+    if output_kde is not None:
+        check_dir(output_kde)
+
     scan_times, mzs, tensor = generate_tensor(mzml_gz_path=mzml_gz_path)
 
     mzs_thr = get_mzs_thr(lockmass_compound=lockmass_compound)
@@ -371,13 +386,14 @@ def main(mzml_gz_path,
                      time_bins=time_bins,
                      ppm_radius=ppm_radius,
                      output_pk=output_pk,
-                     output_degrees=output_degrees)
+                     output_degrees=output_degrees,
+                     output_kde=output_kde)
 
     else:
         generate_lockmass_calibration_dict(thr_exp_pairs,
                                        polyfit_deg=polyfit_deg,
                                        lockmass_compound=lockmass_compound,
-                                       output_pk=output_pk)
+                                       output_pk=output_pk, output_kde=None)
 
 if __name__ == "__main__":
     # If the snakemake global object is present, save expected arguments from snakemake to be passed to main().
@@ -387,6 +403,7 @@ if __name__ == "__main__":
         output_pk = snakemake.output[0]
         output_extracted_signals = snakemake.output[1]
         output_degrees = snakemake.output[2]
+        output_kde = snakemake.output[3]
 
         if configfile['runtime'] is not None:
             runtime = int(configfile['runtime'])
@@ -409,7 +426,8 @@ if __name__ == "__main__":
              polyfit_deg=polyfit_deg,
              output_extracted_signals=output_extracted_signals,
              output_pk=output_pk,
-             output_degrees=output_degrees
+             output_degrees=output_degrees,
+             output_kde=output_kde
              )
 
     else:
@@ -481,6 +499,13 @@ if __name__ == "__main__":
             help=
             "Output name for pdf file containing fit analysis"
         )
+        parser.add_argument(
+            "-k",
+            "--output_kde",
+            default=None,
+            help=
+            "Output name for pdf file containing kde error distribution"
+        )
 
 
         args = parser.parse_args()
@@ -505,5 +530,6 @@ if __name__ == "__main__":
              polyfit_deg=args.polyfit_deg,
              output_extracted_signals=args.output_extracted_signals,
              output_pk=args.output_pk,
-             output_degrees=args.output_degrees
+             output_degrees=args.output_degrees,
+             output_kde=args.output_kde
              )
