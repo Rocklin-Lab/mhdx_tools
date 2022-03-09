@@ -612,7 +612,8 @@ def main(isotopes_path,
          return_flag=None,
          original_mz_kde_path=None,
          adjusted_mz_kde_path=None,
-         calibration_outpath=None,
+         protein_calibration_outpath=None,
+         protein_polyfit=False,
          polyfit_deg=1,
          ppm_tolerance=50,
          intensity_tolerance=10000,
@@ -701,40 +702,50 @@ def main(isotopes_path,
     sum_df = cluster_df(testq, allseq, ppm=50)
 
     # Check mz_error kde plotting flags.
-    if original_mz_kde_path is not None and adjusted_mz_kde_path is not None:
+    if original_mz_kde_path is not None:
         # Generate plot of KDE before ppm correction.
         kde_plot(sum_df, original_mz_kde_path)
 
-    if calibration_outpath is not None:
-        # Apply polyfit mz calibration.
-        calib_dict = gen_mz_error_calib_output(
-            testq=testq,
-            allseq=allseq,
-            calib_pk_fpath=calibration_outpath,
-            polyfit_degree=polyfit_deg,
-            ppm_tol=ppm_tolerance,
-            int_tol=intensity_tolerance,
-            cluster_corr_tol=cluster_corr_tolerance)
-        testq["mz_mono_fix"] = apply_polyfit_cal_mz(
-            polyfit_coeffs=calib_dict["polyfit_coeffs"], mz=df["mz_mono"])
-        testq["mz_mono_fix_round"] = np.round(testq["mz_mono_fix"].values, 3)
-    elif lockmass_calibration_dict is not None:
-        calib_dict = load_pickle_file(lockmass_calibration_dict)
+    if lockmass_calibration_dict is not None:
+        calib_dict_lockmass = load_pickle_file(lockmass_calibration_dict)
         testq['mz_mono_fix'] = 0
-        if calib_dict[0]['polyfit_deg'] == 0:
-            delta = int(runtime/len(calib_dict))
-            for i, rt in enumerate(range(0, runtime,delta)):
+        if calib_dict_lockmass[0]['polyfit_deg'] == 0:
+            delta = int(runtime / len(calib_dict_lockmass))
+            for i, rt in enumerate(range(0, runtime, delta)):
                 testq.loc[(testq['RT'] >= rt) & (testq['RT'] <= rt + delta), 'mz_mono_fix'] = \
-                    calib_dict[i]['polyfit_coeffs'] * testq[ (testq['RT'] >= rt) &
-                                                         (testq['RT'] <= rt + delta)]['mz_mono'].values
+                    calib_dict_lockmass[i]['polyfit_coeffs'] * testq[(testq['RT'] >= rt) &
+                                                            (testq['RT'] <= rt + delta)]['mz_mono'].values
         else:
-            delta = int(runtime / len(calib_dict))
-            for i, rt in enumerate(range(0, runtime,delta)):
+            delta = int(runtime / len(calib_dict_lockmass))
+            for i, rt in enumerate(range(0, runtime, delta)):
                 testq.loc[(testq['RT'] >= rt) & (testq['RT'] <= rt + delta), 'mz_mono_fix'] = np.polyval(
-                        calib_dict[i]['polyfit_coeffs'], testq[(testq['RT'] >= rt) &
-                                                    (testq['RT'] <= rt + delta)]['mz_mono'].values)
-
+                    calib_dict_lockmass[i]['polyfit_coeffs'], testq[(testq['RT'] >= rt) &
+                                                           (testq['RT'] <= rt + delta)]['mz_mono'].values)
         testq['mz_mono_fix_round'] = np.round(testq['mz_mono_fix'].values, 3)
+        if protein_polyfit and protein_calibration_outpath is not None:
+            calib_dict_protein_polyfit = gen_mz_error_calib_output(
+                testq=testq,
+                allseq=allseq,
+                calib_pk_fpath=protein_calibration_outpath,
+                polyfit_degree=polyfit_deg,
+                ppm_tol=ppm_tolerance,
+                int_tol=intensity_tolerance,
+                cluster_corr_tol=cluster_corr_tolerance)
+            testq["mz_mono_fix"] = apply_polyfit_cal_mz(
+                polyfit_coeffs=calib_dict_protein_polyfit["polyfit_coeffs"], mz=df["mz_mono_fix"])
+            testq["mz_mono_fix_round"] = np.round(testq["mz_mono_fix"].values, 3)
+    elif protein_polyfit and protein_calibration_outpath is not None:
+            calib_dict_protein_polyfit = gen_mz_error_calib_output(
+                testq=testq,
+                allseq=allseq,
+                calib_pk_fpath=calibration_outpath,
+                polyfit_degree=polyfit_deg,
+                ppm_tol=ppm_tolerance,
+                int_tol=intensity_tolerance,
+                cluster_corr_tol=cluster_corr_tolerance)
+            testq["mz_mono_fix"] = apply_polyfit_cal_mz(
+                polyfit_coeffs=calib_dict_protein_polyfit["polyfit_coeffs"], mz=df["mz_mono"])
+            testq["mz_mono_fix_round"] = np.round(testq["mz_mono_fix"].values, 3)
     else:
         # This is what is initially implemented for mz correction.
         # Identify major peak of abs_ppm_error clusters, apply correction to all monoisotopic mz values.
@@ -766,7 +777,7 @@ def main(isotopes_path,
     # Re-average clusters to single lines, check for duplicate RTs, save sum_df to outfile.
     sum_df = cluster_df(testq, allseq, ppm=ppm_refilter, adjusted=True)
 
-    if original_mz_kde_path is not None and adjusted_mz_kde_path is not None:
+    if adjusted_mz_kde_path is not None:
         # Plot adjusted_mz KDE.
         kde_plot(sum_df, adjusted_mz_kde_path)
 
@@ -788,30 +799,32 @@ if __name__ == "__main__":
 
     # Checks if script is being executed within Snakemake.
     if "snakemake" in globals():
-        isotopes_path = snakemake.input[0]
-        names_and_seqs_path = snakemake.input[1]
+        configfile = yaml.load(open(snakemake.input[0], "rb").read(), Loader=yaml.Loader)
+        isotopes_path = snakemake.input[1]
+        names_and_seqs_path = snakemake.input[2]
         out_path = snakemake.output[0]
         original_mz_kde_path = snakemake.output[1]
         adjusted_mz_kde_path = snakemake.output[2]
-        calibration_outpath = None
-        polyfit_deg = None
-        runtime = None
-        if len(snakemake.input) == 3:
-            lockmass_calibration_dict = snakemake.input[2]
-            runtime = snakemake.params.runtime
-        if len(snakemake.output) == 4:
-            calibration_outpath = snakemake.output[3]
-            if "polyfit_deg" not in snakemake.params:
-                polyfit_deg = 5
-            else:
-                polyfit_deg = snakemake.params.polyfit_deg
+        protein_calibration_outpath = snakemake.output[3]
+        polyfit_deg = configfile['polyfit_deg']
+        if configfile['lockmass']:
+            lockmass_calibration_dict = snakemake.input[3]
+            runtime = configfile['runtime']
+        else:
+            lockmass_calibration_dict = None
+            runtime = None
+        if configfile['protein_polyfit']:
+            protein_polyfit = True
+        else:
+            protein_polyfit = False
 
         main(isotopes_path,
              names_and_seqs_path,
              out_path=out_path,
              original_mz_kde_path=original_mz_kde_path,
              adjusted_mz_kde_path=adjusted_mz_kde_path,
-             calibration_outpath=calibration_outpath,
+             protein_calibration_outpath=protein_calibration_outpath,
+             protein_polyfit=protein_polyfit,
              polyfit_deg=polyfit_deg,
              lockmass_calibration_dict=lockmass_calibration_dict,
              runtime=runtime)
@@ -849,7 +862,14 @@ if __name__ == "__main__":
             help="/path/to/file to save adjusted mz-error kde plots, use with -o")
         parser.add_argument(
             "-c",
-            "--calibration_outpath",
+            "--protein_calibration_outpath",
+            help=
+            "/path/to/file for polyfit-calibration output, determines use of polyfit calibration"
+        )
+        parser.add_argument(
+            "-protein_polyfit",
+            "--protein_polyfit",
+            default=True,
             help=
             "/path/to/file for polyfit-calibration output, determines use of polyfit calibration"
         )
@@ -888,7 +908,8 @@ if __name__ == "__main__":
             default=10)
         parser.add_argument(
             "-lockmass_dict",
-            "--lockmass_dict",
+            "--lockmass_calibration_dict",
+            default=None,
             help=
             "path/to/lockmass_calibration_dictionary"
         )
@@ -918,15 +939,14 @@ if __name__ == "__main__":
                     )
                     sys.exit()
 
-        if calibration_outpath is not None and args.polyfit_deg == 1:
-            args.polyfit_deg = 3
 
         main(args.isotopes_path,
              args.names_and_seqs_path,
              out_path=args.out_path,
              original_mz_kde_path=args.original_mz_kde_path,
              adjusted_mz_kde_path=args.adjusted_mz_kde_path,
-             calibration_outpath=args.calibration_outpath,
+             calibration_outpath=args.protein_calibration_outpath,
+             protein_polyfit=args.protein_polyfit,
              polyfit_deg=args.polyfit_deg,
              ppm_tolerance=args.ppm_tolerance,
              intensity_tolerance=args.intensity_tolerance,
