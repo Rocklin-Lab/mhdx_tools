@@ -733,7 +733,7 @@ def main(isotopes_path,
                 int_tol=intensity_tolerance,
                 cluster_corr_tol=cluster_corr_tolerance)
             testq["mz_mono_fix"] = apply_polyfit_cal_mz(
-                polyfit_coeffs=calib_dict_protein_polyfit["polyfit_coeffs"], mz=df["mz_mono_fix"])
+                polyfit_coeffs=calib_dict_protein_polyfit["polyfit_coeffs"], mz=testq["mz_mono_fix"])
             testq["mz_mono_fix_round"] = np.round(testq["mz_mono_fix"].values, 3)
     elif protein_polyfit and protein_calibration_outpath is not None:
         calib_dict_protein_polyfit = gen_mz_error_calib_output(
@@ -745,7 +745,7 @@ def main(isotopes_path,
                 int_tol=intensity_tolerance,
                 cluster_corr_tol=cluster_corr_tolerance)
         testq["mz_mono_fix"] = apply_polyfit_cal_mz(
-                polyfit_coeffs=calib_dict_protein_polyfit["polyfit_coeffs"], mz=df["mz_mono"])
+                polyfit_coeffs=calib_dict_protein_polyfit["polyfit_coeffs"], mz=testq["mz_mono"])
         testq["mz_mono_fix_round"] = np.round(testq["mz_mono_fix"].values, 3)
     else:
         # This is what is initially implemented for mz correction.
