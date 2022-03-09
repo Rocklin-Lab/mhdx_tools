@@ -377,6 +377,10 @@ if __name__ == "__main__":
         output_path = snakemake.output[0]
         factor_output_path_list = [item for item in snakemake.output if item.endswith(".factor")]
         factor_plot_output_path_list = [item for item in snakemake.output if item.endswith(".factor.pdf")]
+        if factor_plot_output_path_list == []:
+            factor_plot_output_path_list = None
+        if factor_output_path_list == []:
+            factor_output_path_list = None
         filter_factors = config_dict["filter_factor"]
         factor_rt_r2_cutoff = config_dict["factor_rt_r2_cutoff"]
         factor_dt_r2_cutoff = config_dict["factor_dt_r2_cutoff"]
