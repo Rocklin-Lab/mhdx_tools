@@ -82,7 +82,7 @@ def main(library_info_path,
          mzml_gz_path,
          timepoints_dict,
          outputs=None,
-         use_time_warping=True,
+         use_time_warping=False,
          return_flag=False,
          low_mass_margin=10,
          high_mass_margin=17,
@@ -371,7 +371,7 @@ if __name__ == "__main__":
         lockmass_calibration_dict = None
         indices = None
         open_timepoints = yaml.load(open(snakemake.input[2], "rb").read(), Loader=yaml.Loader)
-        use_time_warping = open_timepoints['time_warping']
+        use_time_warping = open_timepoints['use_time_warping']
         # Check for optional arguments.
         if len(snakemake.input) > 3:
             if ".pk" in snakemake.input[3]:
@@ -463,6 +463,13 @@ if __name__ == "__main__":
             help=
             "path/to/lockmass_calibration_dictionary"
         )
+        parser.add_argument(
+            "-use_time_warping",
+            "--use_time_warping",
+            default=False,
+            help=
+            "path/to/lockmass_calibration_dictionary"
+        )
         args = parser.parse_args()
         
         # Handle implicit arguments.
@@ -507,6 +514,7 @@ if __name__ == "__main__":
              mzml_gz_path=args.mzml_gz_path,
              timepoints_dict=open_timepoints,
              outputs=args.outputs,
+             use_time_warping=args.use_time_warping,
              low_mass_margin=args.low_mass_margin,
              high_mass_margin=args.high_mass_margin,
              rt_radius=args.rt_radius,
