@@ -82,6 +82,7 @@ def main(library_info_path,
          mzml_gz_path,
          timepoints_dict,
          outputs=None,
+         use_time_warping=True,
          return_flag=False,
          low_mass_margin=10,
          high_mass_margin=17,
@@ -140,10 +141,15 @@ def main(library_info_path,
     # 13.78116 is a hardcoded average IMS pulse time TODO: This should be exposed to argument layer with default as well
     library_info["Drift Time MS1"] = (library_info["im_mono"] / 200.0 *
                                       13.781163434903)
-    ret_ubounds = (library_info["rt_group_mean_RT_%d_%d" %
-                                (tp, n_replicate)].values + rt_radius)
-    ret_lbounds = (library_info["rt_group_mean_RT_%d_%d" %
-                                (tp, n_replicate)].values - rt_radius)
+    if use_time_warping:
+        ret_ubounds = (library_info["rt_group_mean_RT_%d_%d" %
+                                    (tp, n_replicate)].values + rt_radius)
+        ret_lbounds = (library_info["rt_group_mean_RT_%d_%d" %
+                                    (tp, n_replicate)].values - rt_radius)
+    else:
+        ret_ubounds = (library_info["RT"].values + rt_radius)
+        ret_lbounds = (library_info["RT"].values - rt_radius)
+
     dt_ubounds = library_info["Drift Time MS1"].values * (1 + dt_radius_scale)
     dt_lbounds = library_info["Drift Time MS1"].values * (1 - dt_radius_scale)
 
@@ -365,6 +371,7 @@ if __name__ == "__main__":
         lockmass_calibration_dict = None
         indices = None
         open_timepoints = yaml.load(open(snakemake.input[2], "rb").read(), Loader=yaml.Loader)
+        use_time_warping = open_timepoints['time_warping']
         # Check for optional arguments.
         if len(snakemake.input) > 3:
             if ".pk" in snakemake.input[3]:
@@ -387,6 +394,7 @@ if __name__ == "__main__":
              mzml_gz_path=snakemake.input[1],
              timepoints_dict=open_timepoints,
              outputs=snakemake.output,
+             use_time_warping=use_time_warping,
              rt_radius = config_rt_radius,
              dt_radius_scale = config_dt_radius_scale,
              polyfit_calibration_dict=polyfit_calibration_dict,
