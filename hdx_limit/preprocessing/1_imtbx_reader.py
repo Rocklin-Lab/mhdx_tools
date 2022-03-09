@@ -44,6 +44,7 @@ import scipy as sp
 import matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
+import yaml
 from Bio.PDB import *
 from Bio.SeqUtils import ProtParam
 from scipy import signal
