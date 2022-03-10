@@ -39,6 +39,7 @@ from pathlib import Path
 from hdx_limit.core.io import limit_read, limit_write, check_for_create_dirs
 from hdx_limit.core.processing import PathOptimizer
 from hdx_limit.core.gjr_plot import plot_gjr_
+from hdx_limit.core.ajf_plot import plot_ajf_
 
 
 def write_baseline_integrated_mz_to_csv(path_object_list, output_path, norm_dist=True, return_flag=False):
@@ -96,7 +97,9 @@ def main(library_info_path,
          multi_undeut_ground_out_path=None,
          multi_winner_scores_out_path=None,
          multi_rtdt_com_cvs_out_path=None,
-         multi_winner_csv_out_path=None):
+         multi_winner_csv_out_path=None,
+         ajf_plot_out_atc=None,
+         ajf_plot_out_prefiltered=None):
     """Uses PathOptimzier class to generate best-estimate hdx-timeseries of IsotopeClusters for a given library protein.
 
     Args:
@@ -148,6 +151,8 @@ def main(library_info_path,
                                     multi_winner_scores_out_path, 
                                     multi_rtdt_com_cvs_out_path,
                                     multi_winner_csv_out_path,
+                                    ajf_plot_out_atc,
+                                    ajf_plot_out_prefiltered,
                                 ]
 
     check_for_create_dirs(monobody_path_arguments)
@@ -234,6 +239,16 @@ def main(library_info_path,
                           undeut_grounds=undeut_grounds,
                           output_path=multi_path_plot_out_path,
                           prefix=name)
+            if ajf_plot_out_atc is not None:
+                plot_ajf_(configfile=configfile,
+                          atc=atc,
+                          winner=p1.winner,
+                          output_path=ajf_plot_out_atc)
+            if ajf_plot_out_prefiltered is not None:
+                plot_ajf_(configfile=configfile,
+                          atc=atc,
+                          winner=p1.prefiltered_ics,
+                          output_path=ajf_plot_out_prefiltered)
             if multi_html_plot_out_path is not None:
                  p1.bokeh_plot(multi_html_plot_out_path)
             if multi_winner_out_path is not None:
@@ -285,6 +300,10 @@ def main(library_info_path,
             Path(multi_rtdt_com_cvs_out_path).touch()
         if multi_winner_csv_out_path is not None:
             Path(multi_winner_csv_out_path).touch()
+        if ajf_plot_out_atc is not None:
+            Path(ajf_plot_out_atc).touch()
+        if ajf_plot_out_prefiltered is not None:
+            Path(ajf_plot_out_prefiltered).touch()
 
 
 if __name__ == "__main__":
@@ -314,6 +333,8 @@ if __name__ == "__main__":
         multi_winner_scores_out_path = snakemake.output[12]
         multi_rtdt_com_cvs_out_path = snakemake.output[13]
         multi_winner_csv_out_path = snakemake.output[14]
+        ajf_plot_out_atc = snakemake.output[15]
+        ajf_plot_out_prefiltered = snakemake.output[16]
 
         main(library_info_path=library_info_path,
              configfile=configfile,
@@ -336,7 +357,9 @@ if __name__ == "__main__":
              multi_undeut_ground_out_path=multi_undeut_ground_out_path,
              multi_winner_scores_out_path=multi_winner_scores_out_path,
              multi_rtdt_com_cvs_out_path=multi_rtdt_com_cvs_out_path,
-             multi_winner_csv_out_path=multi_winner_csv_out_path)
+             multi_winner_csv_out_path=multi_winner_csv_out_path,
+             ajf_plot_out_atc=ajf_plot_out_atc,
+             ajf_plot_out_prefiltered=ajf_plot_out_prefiltered)
 
     else:
 
@@ -424,6 +447,10 @@ if __name__ == "__main__":
                             help="path/to/file to save path plot .pdf")
         parser.add_argument("--multi_winner_csv_out_path",
                             help="path/to/file to save path to .csv file")
+        parser.add_argument("--ajf_plot_out_atc",
+                            help="path/to/file ajf_plot atc version")
+        parser.add_argument("--ajf_plot_out_prefiltered",
+                            help="path/to/file ajf_plot prefiltered version")
         
         args = parser.parse_args()
 
@@ -460,4 +487,6 @@ if __name__ == "__main__":
              multi_undeut_ground_out_path=args.multi_undeut_ground_out_path,
              multi_winner_scores_out_path=args.multi_winner_scores_out_path,
              multi_rtdt_com_cvs_out_path=args.multi_rtdt_com_cvs_out_path,
-             multi_winner_csv_out_path=args.multi_winner_cvs_out_path)
+             multi_winner_csv_out_path=args.multi_winner_cvs_out_path,
+             ajf_plot_out_atc=args.ajf_plot_out_atc,
+             ajf_plot_out_prefiltered=args.ajf_plot_out_prefiltered)
