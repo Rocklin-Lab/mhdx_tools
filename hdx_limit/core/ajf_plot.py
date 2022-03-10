@@ -286,7 +286,7 @@ def ajf_plot(df, tps, output):
 def plot_ajf_(configfile, atc, winner, output_path):
 
     df = create_df_and_clusterize(atc, winner, tps=configfile['timepoints'])
-    ajf_plot(df, tps=config['timepoints'], output=output_path)
+    ajf_plot(df, tps=configfile['timepoints'], output=output_path)
 
 
 if __name__ == '__main__':
