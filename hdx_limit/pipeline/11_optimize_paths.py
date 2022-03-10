@@ -246,8 +246,8 @@ def main(library_info_path,
                           output_path=ajf_plot_out_atc)
             if ajf_plot_out_prefiltered is not None:
                 plot_ajf_(configfile=configfile,
-                          atc=atc,
-                          winner=p1.prefiltered_ics,
+                          atc=p1.prefiltered_ics,
+                          winner=p1.winner,
                           output_path=ajf_plot_out_prefiltered)
             if multi_html_plot_out_path is not None:
                  p1.bokeh_plot(multi_html_plot_out_path)
