@@ -370,7 +370,7 @@ def gen_mz_error_calib_output(
 
     # generate calibration dictionary
     calib_dict = gen_mz_ppm_error_calib_polyfit(
-        obs_mz=cluster_hq_df["obz_mz"].values,
+        obs_mz=cluster_hq_df["obs_mz"].values,
         thr_mz=cluster_hq_df["expect_mz"].values,
         polyfit_deg=polyfit_degree,
     )
