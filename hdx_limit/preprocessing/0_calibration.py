@@ -258,9 +258,12 @@ def generate_lockmass_calibration_dict(thr_exp_pairs, polyfit_deg, lockmass_comp
 
         # TO BE REMOVED LATER - AF
         if output_kde is not None:
+            colors = ['black', 'red', 'blue', 'green', 'orange', 'green', 'cyan', 'yellow']
             fig_kde, ax_kde = plt.subplots(1,1)
-            for key in cal_dict.keys():
-                sns.kdeplot(cal_dict[key]['ppm_error_before_corr'], label='%i-%imin'%(6*key, 6*key+6), ax=ax_kde)
+            for i, key in enumerate(cal_dict.keys()):
+                sns.kdeplot(cal_dict[key]['ppm_error_before_corr'], label='%i-%imin'%(6*key, 6*key+6), ax=ax_kde,
+                            colors=colors[i])
+                sns.kdeplot(cal_dict[key]['ppm_error_after_corr'], ax=ax_kde, ls='--', colors=colors[i])
             ax_kde.legend(loc=2)
             ax_kde.set_xlabel('ppm error')
             fig_kde.savefig(output_kde, dpi=200, format='pdf')
