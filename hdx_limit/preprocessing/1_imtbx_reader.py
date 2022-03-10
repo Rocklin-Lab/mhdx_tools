@@ -339,6 +339,8 @@ def gen_mz_error_calib_output(
     ppm_tol=50,
     int_tol=1e4,
     cluster_corr_tol=0.99,
+    mass_to_correct='obs_mz'
+
 ):
     """Generate calibration using the dataframe from imtbx.
 
@@ -366,7 +368,7 @@ def gen_mz_error_calib_output(
 
     # generate calibration dictionary
     calib_dict = gen_mz_ppm_error_calib_polyfit(
-        obs_mz=cluster_hq_df["obs_mz"].values,
+        obs_mz=cluster_hq_df[mass_to_correct].values,
         thr_mz=cluster_hq_df["expect_mz"].values,
         polyfit_deg=polyfit_degree,
     )
@@ -731,7 +733,8 @@ def main(isotopes_path,
                 polyfit_degree=polyfit_deg,
                 ppm_tol=ppm_tolerance,
                 int_tol=intensity_tolerance,
-                cluster_corr_tol=cluster_corr_tolerance)
+                cluster_corr_tol=cluster_corr_tolerance,
+                mass_to_correct='mz_mono_fix')
             testq["mz_mono_fix"] = apply_polyfit_cal_mz(
                 polyfit_coeffs=calib_dict_protein_polyfit["polyfit_coeffs"], mz=testq["mz_mono_fix"])
             testq["mz_mono_fix_round"] = np.round(testq["mz_mono_fix"].values, 3)
@@ -743,7 +746,8 @@ def main(isotopes_path,
                 polyfit_degree=polyfit_deg,
                 ppm_tol=ppm_tolerance,
                 int_tol=intensity_tolerance,
-                cluster_corr_tol=cluster_corr_tolerance)
+                cluster_corr_tol=cluster_corr_tolerance,
+                mass_to_correct='obs_mz')
         testq["mz_mono_fix"] = apply_polyfit_cal_mz(
                 polyfit_coeffs=calib_dict_protein_polyfit["polyfit_coeffs"], mz=testq["mz_mono"])
         testq["mz_mono_fix_round"] = np.round(testq["mz_mono_fix"].values, 3)
