@@ -169,6 +169,7 @@ def cluster_df_hq_signals(testq,
                           ppm=50,
                           intensity_threshold=1e4,
                           cluster_correlation=0.99,
+                          mass_to_correct="mz_mono",
                           adjusted=False):
     """Cluster high quality mz signals based on intensities and cluster correlation, applies cluster lables to the input DF.
 
@@ -191,7 +192,7 @@ def cluster_df_hq_signals(testq,
 
         cluster_df = hq_dataframe[hq_dataframe["cluster"] == c]
 
-        if (len(cluster_df["mz_mono"]) >
+        if (len(cluster_df[mass_to_correct]) >
                 1):  # ask Wes why isn't this set to greater than 1?
 
             charge = np.median(cluster_df["charge"])
@@ -201,7 +202,7 @@ def cluster_df_hq_signals(testq,
                     weights=cluster_df["ab_cluster_total"],
                 )
             else:
-                mz = np.average(cluster_df["mz_mono"],
+                mz = np.average(cluster_df[mass_to_correct],
                                 weights=cluster_df["ab_cluster_total"])
             RT = np.average(cluster_df["RT"],
                             weights=cluster_df["ab_cluster_total"])
@@ -339,7 +340,7 @@ def gen_mz_error_calib_output(
     ppm_tol=50,
     int_tol=1e4,
     cluster_corr_tol=0.99,
-    mass_to_correct='obs_mz'
+    mass_to_correct="mz_mono",
 
 ):
     """Generate calibration using the dataframe from imtbx.
@@ -364,11 +365,12 @@ def gen_mz_error_calib_output(
         ppm=ppm_tol,
         intensity_threshold=int_tol,
         cluster_correlation=cluster_corr_tol,
+        mass_to_correct=mass_to_correct,
     )
 
     # generate calibration dictionary
     calib_dict = gen_mz_ppm_error_calib_polyfit(
-        obs_mz=cluster_hq_df[mass_to_correct].values,
+        obs_mz=cluster_hq_df["obz_mz"].values,
         thr_mz=cluster_hq_df["expect_mz"].values,
         polyfit_deg=polyfit_degree,
     )
@@ -734,7 +736,7 @@ def main(isotopes_path,
                 ppm_tol=ppm_tolerance,
                 int_tol=intensity_tolerance,
                 cluster_corr_tol=cluster_corr_tolerance,
-                mass_to_correct='mz_mono_fix')
+                mass_to_correct="mz_mono_fix")
             testq["mz_mono_fix"] = apply_polyfit_cal_mz(
                 polyfit_coeffs=calib_dict_protein_polyfit["polyfit_coeffs"], mz=testq["mz_mono_fix"])
             testq["mz_mono_fix_round"] = np.round(testq["mz_mono_fix"].values, 3)
@@ -747,7 +749,7 @@ def main(isotopes_path,
                 ppm_tol=ppm_tolerance,
                 int_tol=intensity_tolerance,
                 cluster_corr_tol=cluster_corr_tolerance,
-                mass_to_correct='obs_mz')
+                mass_to_correct="mz_mono")
         testq["mz_mono_fix"] = apply_polyfit_cal_mz(
                 polyfit_coeffs=calib_dict_protein_polyfit["polyfit_coeffs"], mz=testq["mz_mono"])
         testq["mz_mono_fix_round"] = np.round(testq["mz_mono_fix"].values, 3)
