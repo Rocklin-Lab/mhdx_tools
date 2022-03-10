@@ -88,8 +88,8 @@ def main(library_info_path,
          high_mass_margin=17,
          rt_radius=0.4,
          dt_radius_scale=0.06,
-         polyfit_calibration_dict=None,
-         lockmass_calibration_dict=None,
+         protein_polyfit_calibration_dict_path=None,
+         lockmass_polyfit_calibration_dict_path=None,
          indices=None):
     """Reads through .mzML file and extracts subtensors whose dimensions are defined in 
        library_info.json, optionally saves individual tensors or returns all as a dictionary.
@@ -229,10 +229,14 @@ def main(library_info_path,
     print("N Scans: " + str(len(relevant_scans)))
 
     # Perform polyfit calibration if adjustment dict passed.
-    if polyfit_calibration_dict is not None:
-        protein_calib_dict = load_pickle_file(polyfit_calibration_dict)
-    if lockmass_calibration_dict is not None:
-        lockmass_calib_dict = load_pickle_file(lockmass_calibration_dict)
+    if protein_polyfit_calibration_dict_path is not None:
+        protein_polyfit_calib_dict = load_pickle_file(protein_polyfit_calibration_dict_path)
+    else:
+        protein_polyfit_calib_dict = None
+    if lockmass_polyfit_calibration_dict_path is not None:
+        lockmass_polyfit_calib_dict = load_pickle_file(lockmass_polyfit_calibration_dict_path)
+    else:
+        lockmass_polyfit_calib_dict = None
 
     # No need to read msrun again - AF
     # print(process.memory_info().rss)
@@ -265,16 +269,16 @@ def main(library_info_path,
                 spectrum = scan.peaks("raw").astype(np.float32)
             spectrum = spectrum[spectrum[:, 1] > 10]
             # Apply calibration to mz values if calibration dict passed.
-            if lockmass_calibration_dict is not None:
-                idx = int((len(calib_dict)*scan_number/len(scan_times))//1)
-                if lockmass_calib_dict[idx]['polyfit_deg'] != 0:
-                    spectrum[:, 0] = apply_polyfit_cal_mz(polyfit_coeffs=lockmass_calib_dict[idx]["polyfit_coeffs"],
+            if lockmass_polyfit_calib_dict is not None:
+                idx = int((len(lockmass_polyfit_calib_dict)*scan_number/len(scan_times))//1)
+                if lockmass_polyfit_calib_dict[idx]['polyfit_deg'] != 0:
+                    spectrum[:, 0] = apply_polyfit_cal_mz(polyfit_coeffs=lockmass_polyfit_calib_dict[idx]["polyfit_coeffs"],
                                                           mz=spectrum[:, 0])
                 else:
-                    spectrum[:, 0] = lockmass_calib_dict[idx]["polyfit_coeffs"]*spectrum[:, 0]
-            if polyfit_calibration_dict is not None:
+                    spectrum[:, 0] = lockmass_polyfit_calib_dict[idx]["polyfit_coeffs"]*spectrum[:, 0]
+            if protein_polyfit_calib_dict is not None:
                 spectrum[:, 0] = apply_polyfit_cal_mz(
-                    polyfit_coeffs=protein_calib_dict["polyfit_coeffs"],
+                    polyfit_coeffs=protein_polyfit_calib_dict["polyfit_coeffs"],
                     mz=spectrum[:, 0])
 
 
@@ -371,16 +375,16 @@ if __name__ == "__main__":
         configfile = yaml.load(open(snakemake.input[2], "rb").read(), Loader=yaml.Loader)
         use_time_warping = configfile['use_time_warping']
         if configfile['lockmass']:
-            lockmass_calibration_dict = [f for f in snakemake.input if '0_calibration' in f][0]
-            print('Loading lockmass calibration dict %s'%lockmass_calibration_dict)
+            lockmass_polyfit_calibration_dict_path = [f for f in snakemake.input if '0_calibration' in f][0]
+            print('Loading lockmass calibration dict %s'%lockmass_polyfit_calibration_dict_path)
         else:
-            lockmass_calibration_dict = None
+            lockmass_polyfit_calibration_dict_path = None
         file_name = snakemake.input[1].split('/')[-1]
         if configfile['protein_polyfit'] and file_name in configfile[0]:
-            polyfit_calibration_dict = [f for f in snakemake.input if '1_imtbx' in f][0]
-            print('Loading protein polyfit calibration dict %s'%polyfit_calibration_dict)
+            protein_polyfit_calibration_dict_path = [f for f in snakemake.input if '1_imtbx' in f][0]
+            print('Loading protein polyfit calibration dict %s'%protein_polyfit_calibration_dict_path)
         else:
-            polyfit_calibration_dict = None
+            protein_polyfit_calibration_dict_path = None
 
         indices = None
 
@@ -395,8 +399,8 @@ if __name__ == "__main__":
              use_time_warping=use_time_warping,
              rt_radius=config_rt_radius,
              dt_radius_scale=config_dt_radius_scale,
-             polyfit_calibration_dict=polyfit_calibration_dict,
-             lockmass_calibration_dict=lockmass_calibration_dict,
+             protein_polyfit_calibration_dict_path=protein_polyfit_calibration_dict_path,
+             lockmass_polyfit_calibration_dict_path=lockmass_polyfit_calibration_dict_path,
              indices=indices)
     else:
         # CLI context, set expected arguments with argparse module.
@@ -437,7 +441,7 @@ if __name__ == "__main__":
         )
         parser.add_argument(
             "-c",
-            "--polyfit_calibration_dict",
+            "--protein_polyfit_calibration_dict",
             default=None,
             help=
             "path/to/file_mz_calib_dict.pk, provide if using polyfit mz recalibration"
@@ -459,7 +463,7 @@ if __name__ == "__main__":
         )
         parser.add_argument(
             "-lockmass_dict",
-            "--lockmass_dict",
+            "--lockmass_polyfit_calibration_dict",
             default=None,
             help=
             "path/to/lockmass_calibration_dictionary"
@@ -520,6 +524,6 @@ if __name__ == "__main__":
              high_mass_margin=args.high_mass_margin,
              rt_radius=args.rt_radius,
              dt_radius_scale=args.dt_radius_scale,
-             polyfit_calibration_dict=args.polyfit_calibration_dict,
-             lockmass_calibration_dict=args.lockmass_calibration_dict,
+             protein_polyfit_calibration_dict_path=args.protein_polyfit_calibration_dict,
+             lockmass_polyfit_calibration_dict_path=args.lockmass_polyfit_calibration_dict,
              indices=args.indices)
