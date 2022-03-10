@@ -125,7 +125,7 @@ def create_df_and_clusterize(prefiltered_ics, winner, tps, cluster_radius=0.75, 
 
     return df
 
-def ajf_plot(df, tps, output):
+def ajf_plot(df, winner, tps, output):
 
     pal = sns.color_palette('bright')
     n_cols = 3*len(set(df.charge)) + 4
@@ -286,7 +286,7 @@ def ajf_plot(df, tps, output):
 def plot_ajf_(configfile, atc, winner, output_path):
 
     df = create_df_and_clusterize(atc, winner, tps=configfile['timepoints'])
-    ajf_plot(df, tps=configfile['timepoints'], output=output_path)
+    ajf_plot(df, winner=winner, tps=configfile['timepoints'], output=output_path)
 
 
 if __name__ == '__main__':
