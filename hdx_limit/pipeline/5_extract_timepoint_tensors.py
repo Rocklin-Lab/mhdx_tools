@@ -265,10 +265,6 @@ def main(library_info_path,
                 spectrum = scan.peaks("raw").astype(np.float32)
             spectrum = spectrum[spectrum[:, 1] > 10]
             # Apply calibration to mz values if calibration dict passed.
-            if polyfit_calibration_dict is not None:
-                spectrum[:, 0] = apply_polyfit_cal_mz(
-                    polyfit_coeffs=calib_dict["polyfit_coeffs"],
-                    mz=spectrum[:, 0])
             if lockmass_calibration_dict is not None:
                 idx = int((len(calib_dict)*scan_number/len(scan_times))//1)
                 if calib_dict[idx]['polyfit_deg'] != 0:
@@ -276,6 +272,11 @@ def main(library_info_path,
                                                           mz=spectrum[:, 0])
                 else:
                     spectrum[:, 0] = calib_dict[idx]["polyfit_coeffs"]*spectrum[:, 0]
+            if polyfit_calibration_dict is not None:
+                spectrum[:, 0] = apply_polyfit_cal_mz(
+                    polyfit_coeffs=calib_dict["polyfit_coeffs"],
+                    mz=spectrum[:, 0])
+
 
             # Iterate over each library_info index that needs to read the scan.
             for i in scan_to_lines[scan_number]:  
@@ -367,36 +368,33 @@ if __name__ == "__main__":
 
     # If the snakemake global object is present, save expected arguments from snakemake to be passed to main().
     if "snakemake" in globals():
-        polyfit_calibration_dict = None
-        lockmass_calibration_dict = None
+        configfile = yaml.load(open(snakemake.input[2], "rb").read(), Loader=yaml.Loader)
+        use_time_warping = configfile['use_time_warping']
+        if configfile['lockmass']:
+            lockmass_calibration_dict = [f for f in snakemake.input if '0_calibration' in f][0]
+            print('Loading lockmass calibration dict %s'%lockmass_calibration_dict)
+        else:
+            lockmass_calibration_dict = None
+        file_name = snakemake.input[1].split('/')[-1]
+        if configfile['polyfit_calibration_dict'] and file_name in configfile[0]:
+            polyfit_calibration_dict = [f for f in snakemake.input if '1_imtbx' in f][0]
+            print('Loading polyfit calibration dict %s'%polyfit_calibration_dict)
+        else:
+            polyfit_calibration_dict = None
+
         indices = None
-        open_timepoints = yaml.load(open(snakemake.input[2], "rb").read(), Loader=yaml.Loader)
-        use_time_warping = open_timepoints['use_time_warping']
-        # Check for optional arguments.
-        if len(snakemake.input) > 3:
-            if ".pk" in snakemake.input[3]:
-                if snakemake.params.lockmass_calibration:
-                    print("Getting lockmass calibration file")
-                    lockmass_calibration_dict = snakemake.input[3]
-                elif snakemake.params.polyfit_calibration:
-                    print("Getting polyfit calibration file")
-                    polyfit_calibration_dict = snakemake.input[3]
-                if len(snakemake.input) > 4:
-                    indices = pd.read_csv(snakemake.input[4])['index'].values
-            else:
-                indices = pd.read_csv(snakemake.input[3])['index'].values
 
         # Obtain dt and rt radius from config file.
-        config_rt_radius = open_timepoints["rt_radius"]
-        config_dt_radius_scale = open_timepoints["dt_radius_scale"]
+        config_rt_radius = configfile["rt_radius"]
+        config_dt_radius_scale = configfile["dt_radius_scale"]
 
         main(library_info_path=snakemake.input[0],
              mzml_gz_path=snakemake.input[1],
-             timepoints_dict=open_timepoints,
+             timepoints_dict=configfile,
              outputs=snakemake.output,
              use_time_warping=use_time_warping,
-             rt_radius = config_rt_radius,
-             dt_radius_scale = config_dt_radius_scale,
+             rt_radius=config_rt_radius,
+             dt_radius_scale=config_dt_radius_scale,
              polyfit_calibration_dict=polyfit_calibration_dict,
              lockmass_calibration_dict=lockmass_calibration_dict,
              indices=indices)
@@ -440,6 +438,7 @@ if __name__ == "__main__":
         parser.add_argument(
             "-c",
             "--polyfit_calibration_dict",
+            default=None,
             help=
             "path/to/file_mz_calib_dict.pk, provide if using polyfit mz recalibration"
         )
@@ -450,6 +449,7 @@ if __name__ == "__main__":
         parser.add_argument(
             "-i",
             "--indices_csv",
+            default=None,
             help="filter_passing_indices.csv with 'index' argument, subset of library_info to extract tensors for, use with -o or -t")
         parser.add_argument(
             "-t",
@@ -460,6 +460,7 @@ if __name__ == "__main__":
         parser.add_argument(
             "-lockmass_dict",
             "--lockmass_dict",
+            default=None,
             help=
             "path/to/lockmass_calibration_dictionary"
         )
@@ -502,17 +503,17 @@ if __name__ == "__main__":
                         for i in range(len(library_info))
                     ]
 
-        open_timepoints = yaml.load(open(args.timepoints_yaml, "rb").read(), Loader=yaml.Loader)
+        configfile = yaml.load(open(args.timepoints_yaml, "rb").read(), Loader=yaml.Loader)
 
         # Obtain dt and rt radius from config file if not passed to argparse.
         if args.rt_radius is None:
-            args.rt_radius = open_timepoints["rt_radius"]
+            args.rt_radius = configfile["rt_radius"]
         if args.dt_radius_scale is None:
-            args.dt_radius_scale = open_timepoints["dt_radius_scale"]
+            args.dt_radius_scale = configfile["dt_radius_scale"]
 
         main(library_info_path=args.library_info_path,
              mzml_gz_path=args.mzml_gz_path,
-             timepoints_dict=open_timepoints,
+             timepoints_dict=configfile,
              outputs=args.outputs,
              use_time_warping=args.use_time_warping,
              low_mass_margin=args.low_mass_margin,
