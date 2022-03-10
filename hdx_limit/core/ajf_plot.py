@@ -28,9 +28,10 @@ def create_df_and_clusterize(prefiltered_ics, winner, tps, cluster_radius=0.75, 
     winner: bool if belongs to winner ics set
     maxint: max intensity amoung ics of same charge state
     '''
-    df = pd.DataFrame(columns=['ic', 'tp_idx', 'com', 'rt', 'dt', 'charge', 'auc', 'winner', 'maxint', 'tensor_auc',
-                               'factor_auc', 'ic_auc'])
-    cols = df.columns
+
+    cols=['ic', 'tp_idx', 'com', 'rt', 'dt', 'charge', 'auc', 'winner', 'maxint', 'tensor_auc', 'factor_auc', 'ic_auc']
+
+    tmp = []
     for tp in prefiltered_ics:
         for ic in tp:
             tp_idx = tps.index(ic.timepoint_idx)
@@ -41,19 +42,7 @@ def create_df_and_clusterize(prefiltered_ics, winner, tps, cluster_radius=0.75, 
             auc = ic.auc[0]
             win = 0
             maxint = max(ic.baseline_integrated_mz)
-            df_tmp = pd.Series({cols[0]:ic,
-                                cols[1]:tp_idx,
-                                cols[2]:com,
-                                cols[3]:rt,
-                                cols[4]:dt,
-                                cols[5]: charge,
-                               cols[6]: auc,
-                               cols[7]: win,
-                               cols[8]: maxint,
-                               cols[9]: ic.tensor_auc,
-                               cols[10]: ic.factor_auc,
-                               cols[11]: ic.ic_auc})
-            df = df.append(df_tmp, ignore_index=True)
+            tmp.append([ic, tp_idx, com, rt, dt, charge, auc, win, maxint, ic.tensor_auc, ic.factor_auc, ic.ic_auc])
     for ic in winner:
         tp_idx = tps.index(ic.timepoint_idx)
         com = ic.baseline_integrated_mz_com
@@ -63,19 +52,8 @@ def create_df_and_clusterize(prefiltered_ics, winner, tps, cluster_radius=0.75, 
         auc = ic.auc[0]
         win = 1
         maxint = max(ic.baseline_integrated_mz)
-        df_tmp = pd.Series({cols[0]:ic,
-                            cols[1]:tp_idx,
-                            cols[2]:com,
-                            cols[3]:rt,
-                            cols[4]:dt,
-                            cols[5]: charge,
-                           cols[6]: auc,
-                           cols[7]: win,
-                           cols[8]: maxint,
-                           cols[9]: ic.tensor_auc,
-                           cols[10]: ic.factor_auc,
-                           cols[11]: ic.ic_auc})
-        df = df.append(df_tmp, ignore_index=True)
+        tmp.append([ic, tp_idx, com, rt, dt, charge, auc, win, maxint, ic.tensor_auc, ic.factor_auc, ic.ic_auc])
+    df = pd.DataFrame(tmp, columns=cols)
 
     # Normlize auc relative to max intensity of ics with same charge
     df['auc_size'] = 0
