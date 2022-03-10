@@ -379,7 +379,7 @@ if __name__ == "__main__":
             print('Loading lockmass calibration dict %s'%lockmass_polyfit_calibration_dict_path)
         else:
             lockmass_polyfit_calibration_dict_path = None
-        file_name = snakemake.input[1].split('/')[-1]
+        file_name = snakemake.input[1].split('/')[-1].replace('.gz','')
         if configfile['protein_polyfit'] and any(file_name in undeut_files for undeut_files in configfile[0]):
             protein_polyfit_calibration_dict_path = [f for f in snakemake.input if '1_imtbx' in f][0]
             print('Loading protein polyfit calibration dict %s'%protein_polyfit_calibration_dict_path)
