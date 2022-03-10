@@ -97,7 +97,7 @@ def pred_time(rt, stretched_times, lo_time, hi_time, n_lc_timepoints):
             (hi_time - lo_time)) + lo_time
 
 
-def rt_cluster(df, name_dict, key, rt_group_cutoff):
+def rt_cluster(df, name_dict, key, rt_group_cutoff, rt_key="pred_RT"):
     """Groups and filters identified charged-species by rt-distance.
 
     Parameters:
@@ -112,8 +112,8 @@ def rt_cluster(df, name_dict, key, rt_group_cutoff):
     n_df = df.loc[df["name"] == key]
     clusters = [[
         j for j in n_df["idx"].values if
-        abs(n_df.loc[n_df["idx"] == i]["pred_RT"].values[0] -
-            n_df.loc[n_df["idx"] == j]["pred_RT"].values[0]) < rt_group_cutoff
+        abs(n_df.loc[n_df["idx"] == i][rt_key].values[0] -
+            n_df.loc[n_df["idx"] == j][rt_key].values[0]) < rt_group_cutoff
     ] for i in n_df["idx"].values]
     no_dups = []
     [no_dups.append(lst) for lst in clusters if lst not in no_dups]
@@ -358,7 +358,8 @@ def main(names_and_seqs_path,
          stretched_times_plot_outpath=None,
          normalization_factors_outpath=None,
          normalization_factors_plot_outpath=None,
-         rt_correlation_plot_outpath=None):
+         rt_correlation_plot_outpath=None,
+         use_time_warping=True):
     """Generates the master list of library_proteins identified in MS data: library_info.csv.
 
     Args:
@@ -402,21 +403,26 @@ def main(names_and_seqs_path,
     # Combines undfs and sort.
     catdf = pd.concat(undfs)
     catdf = catdf[catdf['im_mono'] > 10] # Remove unresonable DT-based signals
-    catdf = catdf.sort_values(["name", "charge", "pred_RT", "abs_ppm"])
+    catdf = catdf.sort_values(["name", "charge", "RT", "pred_RT", "abs_ppm"])
     catdf.index = range(len(catdf))
 
+    if use_time_warping:
+        rt_key = "pred_RT"
+    else:
+        rt_key = "RT"
     # Clears duplicate charges close in RT.
     dups = [False]
     for i in range(1, len(catdf)):
         if ((catdf["name"].values[i] == catdf["name"].values[i - 1]) and
             (catdf["charge"].values[i] == catdf["charge"].values[i - 1]) and
-            (abs(catdf["pred_RT"].values[i] - catdf["pred_RT"].values[i - 1]) <
+            (abs(catdf[rt_key].values[i] - catdf[rt_key].values[i - 1]) <
              rt_group_cutoff)):
             dups.append(True)
         else:
             dups.append(False)
     catdf["dup"] = dups
     catdf = catdf.query("dup == False")
+
 
     # Adds sequences to dataframe.
     catdf["sequence"] = [
@@ -430,13 +436,13 @@ def main(names_and_seqs_path,
     # Clusters RT values and renames.
     name_dict = OrderedDict.fromkeys(catdf["name"].values)
     [
-        rt_cluster(catdf, name_dict, key, rt_group_cutoff)
+        rt_cluster(catdf, name_dict, key, rt_group_cutoff, rt_key=rt_key)
         for key in name_dict.keys()
     ]  # TODO possibly automate rt_group cutoff determination in the future
 
     for key in name_dict.keys():
         for cluster in name_dict[key]:
-            mean = np.mean(catdf.iloc[list(cluster)]["pred_RT"].values)
+            mean = np.mean(catdf.iloc[list(cluster)][rt_key].values)
             for line in list(cluster):
                 catdf.iat[line, 0] = catdf.iloc[line]["name"] + "_" + str(
                     round(mean, 5))
@@ -449,7 +455,7 @@ def main(names_and_seqs_path,
     weighted_avgs = {}
     for name in set(catdf["name"].values):
         weighted_avgs[name] = np.average(
-            catdf.loc[catdf["name"]==name]["pred_RT"].values,
+            catdf.loc[catdf["name"]==name][rt_key].values,
             weights=catdf.loc[catdf["name"]==name]["ab_cluster_total"])
     
     # Applies weighted avg to all rt-group members.
@@ -553,6 +559,7 @@ if __name__ == "__main__":
         normalization_factors_outpath = snakemake.output[2]
         normalization_factors_plot_outpath = snakemake.output[3]
         rt_correlation_plot_outpath = snakemake.output[4]
+        use_time_warping = open_timepoints['use_time_warping']
 
         main(names_and_seqs_path=names_and_seqs_path,
              out_path=out_path,
@@ -564,7 +571,8 @@ if __name__ == "__main__":
              stretched_times_plot_outpath=stretched_times_plot_outpath,
              normalization_factors_outpath=normalization_factors_outpath,
              normalization_factors_plot_outpath=normalization_factors_plot_outpath,
-             rt_correlation_plot_outpath=rt_correlation_plot_outpath)
+             rt_correlation_plot_outpath=rt_correlation_plot_outpath,
+             use_time_warping=use_time_warping)
 
     else:
         parser = argparse.ArgumentParser(
@@ -635,6 +643,10 @@ if __name__ == "__main__":
         parser.add_argument("-r",
                             "--rt_correlation_plot_outpath",
                             help="path/to/rt_correlation_plot.pdf")
+        parser.add_argument("-u",
+                            "--use_time_warping",
+                            default=True,
+                            help="Use time warping to clusterize data")
         args = parser.parse_args()
 
         # Generates explicit filenames and open timepoints .yaml.
@@ -660,4 +672,5 @@ if __name__ == "__main__":
              stretched_times_plot_outpath=args.stretched_times_plot_outpath,
              normalization_factors_outpath=args.normalization_factors_outpath,
              normalization_factors_plot_outpath=args.normalization_factors_plot_outpath,
-             rt_correlation_plot_outpath=args.rt_correlation_plot_outpath)
+             rt_correlation_plot_outpath=args.rt_correlation_plot_outpath,
+             use_time_warping=args.use_time_warping)
