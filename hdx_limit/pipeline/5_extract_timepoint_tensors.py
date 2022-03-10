@@ -230,9 +230,9 @@ def main(library_info_path,
 
     # Perform polyfit calibration if adjustment dict passed.
     if polyfit_calibration_dict is not None:
-        calib_dict = load_pickle_file(polyfit_calibration_dict)
+        protein_calib_dict = load_pickle_file(polyfit_calibration_dict)
     if lockmass_calibration_dict is not None:
-        calib_dict = load_pickle_file(lockmass_calibration_dict)
+        lockmass_calib_dict = load_pickle_file(lockmass_calibration_dict)
 
     # No need to read msrun again - AF
     # print(process.memory_info().rss)
@@ -267,14 +267,14 @@ def main(library_info_path,
             # Apply calibration to mz values if calibration dict passed.
             if lockmass_calibration_dict is not None:
                 idx = int((len(calib_dict)*scan_number/len(scan_times))//1)
-                if calib_dict[idx]['polyfit_deg'] != 0:
-                    spectrum[:, 0] = apply_polyfit_cal_mz(polyfit_coeffs=calib_dict[idx]["polyfit_coeffs"],
+                if lockmass_calib_dict[idx]['polyfit_deg'] != 0:
+                    spectrum[:, 0] = apply_polyfit_cal_mz(polyfit_coeffs=lockmass_calib_dict[idx]["polyfit_coeffs"],
                                                           mz=spectrum[:, 0])
                 else:
-                    spectrum[:, 0] = calib_dict[idx]["polyfit_coeffs"]*spectrum[:, 0]
+                    spectrum[:, 0] = lockmass_calib_dict[idx]["polyfit_coeffs"]*spectrum[:, 0]
             if polyfit_calibration_dict is not None:
                 spectrum[:, 0] = apply_polyfit_cal_mz(
-                    polyfit_coeffs=calib_dict["polyfit_coeffs"],
+                    polyfit_coeffs=protein_calib_dict["polyfit_coeffs"],
                     mz=spectrum[:, 0])
 
 
@@ -376,9 +376,9 @@ if __name__ == "__main__":
         else:
             lockmass_calibration_dict = None
         file_name = snakemake.input[1].split('/')[-1]
-        if configfile['polyfit_calibration_dict'] and file_name in configfile[0]:
+        if configfile['protein_polyfit'] and file_name in configfile[0]:
             polyfit_calibration_dict = [f for f in snakemake.input if '1_imtbx' in f][0]
-            print('Loading polyfit calibration dict %s'%polyfit_calibration_dict)
+            print('Loading protein polyfit calibration dict %s'%polyfit_calibration_dict)
         else:
             polyfit_calibration_dict = None
 
