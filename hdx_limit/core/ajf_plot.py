@@ -125,7 +125,7 @@ def create_df_and_clusterize(prefiltered_ics, winner, tps, cluster_radius=0.75, 
 
     return df
 
-def ajf_plot(df, winner, tps, output):
+def ajf_plot(df, winner, tps, output_path):
 
     pal = sns.color_palette('bright')
     n_cols = 3*len(set(df.charge)) + 4
@@ -180,7 +180,7 @@ def ajf_plot(df, winner, tps, output):
     ax_win = fig.add_subplot(gs1[:2])
     for ic in winner:
         tp_idx = tps.index(ic.timepoint_idx)
-        color_index = int(df[df['ic'] == ic]['clusters'] + 1)
+        color_index = int(df[(df['ic'] == ic) & (df['winner'] == 1)]['clusters'] + 1)
         ax_win.plot(ic.baseline_integrated_mz/max(ic.baseline_integrated_mz)-tp_idx, c=pal[color_index])
         ax_win.text(0.02, 0.8-tp_idx,'tp_idx=%i'%int(tp_idx), horizontalalignment='left', verticalalignment='center',
                     fontsize=12)
@@ -268,7 +268,7 @@ def ajf_plot(df, winner, tps, output):
                                                  hue=df['clusters']-min_clust, palette='bright',
                             s=5*(df[(df['charge'] == charge) & (df['tp_idx'] == j)]['auc_size']), alpha=0.7,
                             ax=ax_charge_states_scatter[i+j])
-            ax_charge_states_scatter[i+j].text(float(df[(df['charge'] == charge) & (df['tp_idx'] == 0) & (df['winner'] == 0)]['dt'].values),
+            ax_charge_states_scatter[i+j].text(float(df[(df['charge'] == charge) & (df['tp_idx'] == 0) & (df['winner'] == 0)].sort_values(by='idotp')['dt'].values),
                                                float(df[(df['charge'] == charge) & (df['tp_idx'] == 0) & (df['winner'] == 0)]['rt_corr'].values),
                                                     'x', fontsize=10, color='black', ha='center', va='center')
             ax_charge_states_scatter[i+j].set(xlabel=None,ylabel=None)
@@ -278,7 +278,7 @@ def ajf_plot(df, winner, tps, output):
             ax_charge_states_scatter[i+j].set_ylim(-0.4, 0.4)
             ax_charge_states_scatter[i+j].set_xlim(df[df['charge'] == charge]['dt'].min()-0.05, df[df['charge'] == charge]['dt'].max()+0.05)
 
-    plt.savefig(output, dpi=300, bbox_inches='tight')
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
 
     plt.close('all')
 
@@ -286,7 +286,7 @@ def ajf_plot(df, winner, tps, output):
 def plot_ajf_(configfile, atc, winner, output_path):
 
     df = create_df_and_clusterize(atc, winner, tps=configfile['timepoints'])
-    ajf_plot(df, winner=winner, tps=configfile['timepoints'], output=output_path)
+    ajf_plot(df, winner=winner, tps=configfile['timepoints'], output_path=output_path)
 
 
 if __name__ == '__main__':
