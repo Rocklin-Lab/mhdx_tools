@@ -268,7 +268,9 @@ def ajf_plot(df, winner, tps, output_path):
                                                  hue=df['clusters']-min_clust, palette='bright',
                             s=5*(df[(df['charge'] == charge) & (df['tp_idx'] == j)]['auc_size']), alpha=0.7,
                             ax=ax_charge_states_scatter[i+j])
-            ax_charge_states_scatter[i+j].text(float(df[(df['charge'] == charge) & (df['tp_idx'] == 0) & (df['winner'] == 0)].sort_values(by='idotp')['dt'].values),
+            #  Temporary way to handle atc having many ics for tp=0 / charge state
+            if len(df[(df['charge'] == charge) & (df['tp_idx'] == 0) & (df['winner'] == 0)]['dt'].values) == 1:
+                ax_charge_states_scatter[i+j].text(float(df[(df['charge'] == charge) & (df['tp_idx'] == 0) & (df['winner'] == 0)]['dt'].values),
                                                float(df[(df['charge'] == charge) & (df['tp_idx'] == 0) & (df['winner'] == 0)]['rt_corr'].values),
                                                     'x', fontsize=10, color='black', ha='center', va='center')
             ax_charge_states_scatter[i+j].set(xlabel=None,ylabel=None)
