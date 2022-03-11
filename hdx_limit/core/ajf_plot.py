@@ -12,6 +12,7 @@ import yaml
 import math
 import argparse
 
+sys.path.append(os.getcwd() + '/workflow/scripts/hdx_limit/')
 from hdx_limit.core.io import limit_read, check_for_create_dirs
 
 
