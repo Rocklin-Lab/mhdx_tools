@@ -369,11 +369,9 @@ def ajf_plot(df, winner, tps, output_path):
             ax_charge_states_scatter_prefiltered[i+j].set_xlim(df[df['charge'] == charge]['dt'].min()-0.05, df[df['charge'] == charge]['dt'].max()+0.05)
 
 
-#     plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
 
-#     plt.close('all')
-
-    plt.show()
+    plt.close('all')
 
 
 def plot_ajf_(configfile, atc, prefiltered_ics, winner, output_path):
