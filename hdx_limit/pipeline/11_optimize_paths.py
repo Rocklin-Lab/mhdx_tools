@@ -98,7 +98,6 @@ def main(library_info_path,
          multi_winner_scores_out_path=None,
          multi_rtdt_com_cvs_out_path=None,
          multi_winner_csv_out_path=None,
-         ajf_plot_out=None
          ):
     """Uses PathOptimzier class to generate best-estimate hdx-timeseries of IsotopeClusters for a given library protein.
 
@@ -151,7 +150,6 @@ def main(library_info_path,
                                     multi_winner_scores_out_path, 
                                     multi_rtdt_com_cvs_out_path,
                                     multi_winner_csv_out_path,
-                                    ajf_plot_out,
                                 ]
 
     check_for_create_dirs(monobody_path_arguments)
@@ -238,12 +236,6 @@ def main(library_info_path,
                           undeut_grounds=undeut_grounds,
                           output_path=multi_path_plot_out_path,
                           prefix=name)
-            if ajf_plot_out is not None:
-                plot_ajf_(configfile=configfile,
-                          atc=atc,
-                          prefiltered_ics=p1.prefiltered_ics,
-                          winner=p1.winner,
-                          output_path=ajf_plot_out)
             if multi_html_plot_out_path is not None:
                  p1.bokeh_plot(multi_html_plot_out_path)
             if multi_winner_out_path is not None:
@@ -326,7 +318,6 @@ if __name__ == "__main__":
         multi_winner_scores_out_path = snakemake.output[12]
         multi_rtdt_com_cvs_out_path = snakemake.output[13]
         multi_winner_csv_out_path = snakemake.output[14]
-        ajf_plot_out = snakemake.output[15]
 
         main(library_info_path=library_info_path,
              configfile=configfile,
@@ -350,7 +341,6 @@ if __name__ == "__main__":
              multi_winner_scores_out_path=multi_winner_scores_out_path,
              multi_rtdt_com_cvs_out_path=multi_rtdt_com_cvs_out_path,
              multi_winner_csv_out_path=multi_winner_csv_out_path,
-             ajf_plot_out=ajf_plot_out,
              )
 
     else:
@@ -439,8 +429,6 @@ if __name__ == "__main__":
                             help="path/to/file to save path plot .pdf")
         parser.add_argument("--multi_winner_csv_out_path",
                             help="path/to/file to save path to .csv file")
-        parser.add_argument("--ajf_plot_out",
-                            help="path/to/file ajf_plot")
 
         args = parser.parse_args()
 
@@ -478,5 +466,4 @@ if __name__ == "__main__":
              multi_winner_scores_out_path=args.multi_winner_scores_out_path,
              multi_rtdt_com_cvs_out_path=args.multi_rtdt_com_cvs_out_path,
              multi_winner_csv_out_path=args.multi_winner_cvs_out_path,
-             ajf_plot_out=args.ajf_plot_out
              )
