@@ -348,6 +348,7 @@ def plot_gjr_(winner, undeut_grounds, output_path, prefix='winner_plot'):
 
     plt.subplots_adjust(hspace=0.5, wspace=0.1, top=0.95)
     plt.savefig(output_path, bbox_inches="tight")
+    plt.close()
 
 
 def plot_gjr_from_files(winner_path_fpath, undeut_grounds_fpath, output_path, prefix='winner_plot'):
