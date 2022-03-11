@@ -12,7 +12,7 @@ import yaml
 import math
 import argparse
 
-from hdx_limit.core.io import limit_read
+from hdx_limit.core.io import limit_read, check_for_create_dirs
 
 
 def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, cluster_radius=0.75, output=None):
@@ -375,6 +375,9 @@ def ajf_plot(df, winner, tps, output_path):
 
 
 def plot_ajf_(configfile, atc, prefiltered_ics, winner, output_path):
+
+    check_for_create_dirs([output_path])
+
 
     df = create_df_and_clusterize(atc, prefiltered_ics, winner, tps=configfile['timepoints'])
     ajf_plot(df, winner=winner, tps=configfile['timepoints'], output_path=output_path)
