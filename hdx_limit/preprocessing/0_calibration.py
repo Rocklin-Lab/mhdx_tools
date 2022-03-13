@@ -267,7 +267,7 @@ def generate_lockmass_calibration_dict(thr_exp_pairs, polyfit_deg, lockmass_comp
             ax_kde.legend(loc=2)
             ax_kde.set_xlabel('ppm error')
             fig_kde.savefig(output_kde, dpi=200, format='pdf')
-            fig_kde.close()
+            plt.close()
         return cal_dict
 
     else:
