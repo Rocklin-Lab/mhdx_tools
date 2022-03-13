@@ -409,6 +409,14 @@ if __name__ == "__main__":
         output_degrees = snakemake.output[2]
         output_kde = snakemake.output[3]
 
+        if os.path.isdir(os.path.dirname(output_extracted_signals)) is not None:
+            os.makedirs(os.path.dirname(output_extracted_signals))
+        if os.path.isdir(os.path.dirname(output_degrees)) is not None:
+            os.makedirs(os.path.dirname(output_degrees))
+        if os.path.isdir(os.path.dirname(output_kde)) is not None:
+            os.makedirs(os.path.dirname(output_kde))
+
+
         if configfile['runtime'] is not None:
             runtime = int(configfile['runtime'])
         if configfile['time_bins'] is not None:
@@ -524,6 +532,14 @@ if __name__ == "__main__":
             args.ppm_lockmass_radius = int(args.ppm_lockmass_radius)
         if args.polyfit_deg is not None:
             args.polyfit_deg = int(args.polyfit_deg)
+
+        if os.path.isdir(os.path.dirname(args.output_extracted_signals)) is not None:
+            os.makedirs(os.path.dirname(args.output_extracted_signals))
+        if os.path.isdir(os.path.dirname(args.output_degrees)) is not None:
+            os.makedirs(os.path.dirname(args.output_degrees))
+        if os.path.isdir(os.path.dirname(args.output_kde)) is not None:
+            os.makedirs(os.path.dirname(args.output_kde))
+
 
         main(mzml_gz_path=args.mzml_gz_path,
              lockmass_compound=args.lockmass_compound,
