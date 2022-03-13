@@ -328,10 +328,11 @@ def ajf_plot(df, winner, tps, output_path):
         ax_charge_states_ics_atc[i].text(x_max, 0.9,
                                          'max_auc=%.1e' % df[df['charge'] == charge]['auc'].max(),
                                          horizontalalignment='right', verticalalignment='center', fontsize=12)
-        ax_charge_states_ics_atc[i].text(x_max, 0.7,
-                                         'idotp=%.3f' % df[(df['charge'] == charge) & (df['tp_idx'] == 0)]['ic'].values[
-                                             0].undeut_ground_dot_product,
-                                         horizontalalignment='right', verticalalignment='center', fontsize=12)
+        if prefiltered_ics is not None:
+            ax_charge_states_ics_atc[i].text(x_max, 0.7,
+                                             'idotp=%.3f' % df[(df['charge'] == charge) & (df['tp_idx'] == 0)]['ic'].values[
+                                                 0].undeut_ground_dot_product,
+                                             horizontalalignment='right', verticalalignment='center', fontsize=12)
         ax_charge_states_ics_atc[i].set_ylim(-len(tps) + 0.95, 1.05)
         ax_charge_states_ics_atc[i].set_yticks([])
         ax_charge_states_ics_atc[i].set_xticks(np.arange(0, x_max + 1, 10))
