@@ -409,11 +409,13 @@ if __name__ == "__main__":
         output_degrees = snakemake.output[2]
         output_kde = snakemake.output[3]
 
-        if os.path.isdir(os.path.dirname(output_extracted_signals)) is not None:
+        if not os.path.isdir(os.path.dirname(output_pk)) and output_pk is not None:
+            os.makedirs(os.path.dirname(output_pk))
+        if not os.path.isdir(os.path.dirname(output_extracted_signals)) and output_extracted_signals is not None:
             os.makedirs(os.path.dirname(output_extracted_signals))
-        if os.path.isdir(os.path.dirname(output_degrees)) is not None:
+        if not os.path.isdir(os.path.dirname(output_degrees)) and output_degrees is not None:
             os.makedirs(os.path.dirname(output_degrees))
-        if os.path.isdir(os.path.dirname(output_kde)) is not None:
+        if not os.path.isdir(os.path.dirname(output_kde)) and output_kde is not None:
             os.makedirs(os.path.dirname(output_kde))
 
 
@@ -533,11 +535,14 @@ if __name__ == "__main__":
         if args.polyfit_deg is not None:
             args.polyfit_deg = int(args.polyfit_deg)
 
-        if os.path.isdir(os.path.dirname(args.output_extracted_signals)) is not None:
+        if not os.path.isdir(
+                os.path.dirname(args.output_pk)) and args.output_pk is not None:
+            os.makedirs(os.path.dirname(args.output_pk))
+        if not os.path.isdir(os.path.dirname(args.output_extracted_signals)) and args.output_extracted_signals is not None:
             os.makedirs(os.path.dirname(args.output_extracted_signals))
-        if os.path.isdir(os.path.dirname(args.output_degrees)) is not None:
+        if not os.path.isdir(os.path.dirname(args.output_degrees)) and args.output_degrees is not None:
             os.makedirs(os.path.dirname(args.output_degrees))
-        if os.path.isdir(os.path.dirname(args.output_kde)) is not None:
+        if not os.path.isdir(os.path.dirname(args.output_kde)) and args.output_kde is not None:
             os.makedirs(os.path.dirname(args.output_kde))
 
 
