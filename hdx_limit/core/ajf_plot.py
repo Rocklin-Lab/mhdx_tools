@@ -504,14 +504,17 @@ if __name__ == '__main__':
         atc = limit_read(args.atc)
     else:
         atc = None
-    if not not os.stat(args.prefiltered_ics).st_size == 0:
+        print('ATC is NONE')
+    if not os.stat(args.prefiltered_ics).st_size == 0:
         prefiltered_ics = limit_read(args.prefiltered_ics)
     else:
         prefiltered_ics = None
+        print('PREFILTERED IS NONE')
     if not os.stat(args.winner).st_size == 0:
         winner = limit_read(args.winner)
     else:
         winner = None
+        print('WINNER IS NONE')
 
     plot_ajf_(configfile=configfile,
              atc=atc,
