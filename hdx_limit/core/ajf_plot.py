@@ -140,6 +140,21 @@ def ajf_plot(df, winner, tps, output_path):
     ax_clean = fig.add_subplot(gs0[:7])
     ax_clean.axis('off')
 
+    # Add information if files are present
+    if atc is not None:
+        ax_clean.text(0, 0.9, 'ATC is present', fontsize=12, weight='bold', ha='left')
+    else:
+        ax_clean.text(0, 0.9, 'ATC is NONE', fontsize=12, weight='bold', ha='left')
+    if prefiltered_ics is not None:
+        ax_clean.text(0, 0.7, 'PREFILTERED is present', fontsize=12, weight='bold', ha='left')
+    else:
+        ax_clean.text(0, 0.7, 'PREFILTEREDis NONE', fontsize=12, weight='bold', ha='left')
+    if prefiltered_ics is not None:
+        ax_clean.text(0, 0.5, 'WINNER is present', fontsize=12, weight='bold', ha='left')
+    else:
+        ax_clean.text(0, 0.5, 'WINNER is NONE', fontsize=12, weight='bold', ha='left')
+
+
     charge_states = sorted(np.unique(df.charge.values))
     # Define top RT/DT scatter plots for ATC
     ax_scatter_atc = {}
@@ -187,18 +202,18 @@ def ajf_plot(df, winner, tps, output_path):
             ax_scatter_prefiltered[i].set_ylabel('RT', fontsize=10)
             ax_scatter_prefiltered[i].grid()
             ax_scatter_prefiltered[i].legend('', frameon=False)
-    if winner is not None:
-        # Label winners and undeuterated ics on scatter plots
-        for ic in winner:
-            tp_idx = tps.index(ic.timepoint_idx)
-            charge = ic.charge_states[0]
-            rt = df[df['ic'] == ic]['rt_corr']
-            dt = df[df['ic'] == ic]['dt']
-            ax_scatter_prefiltered[charge_states.index(int(charge))].text(dt, rt, str(tp_idx), fontsize=8)
-        for i, line in df[df['tp_idx'] == 0].iterrows():
-            ax_scatter_prefiltered[charge_states.index(int(line['charge']))].text(float(line['dt']),
-                                                                                  float(line['rt_corr']), 'x',
-                                                                                  fontsize=10, color='black', )
+        if winner is not None:
+            # Label winners and undeuterated ics on scatter plots
+            for ic in winner:
+                tp_idx = tps.index(ic.timepoint_idx)
+                charge = ic.charge_states[0]
+                rt = df[df['ic'] == ic]['rt_corr']
+                dt = df[df['ic'] == ic]['dt']
+                ax_scatter_prefiltered[charge_states.index(int(charge))].text(dt, rt, str(tp_idx), fontsize=8)
+            for i, line in df[df['tp_idx'] == 0].iterrows():
+                ax_scatter_prefiltered[charge_states.index(int(line['charge']))].text(float(line['dt']),
+                                                                                      float(line['rt_corr']), 'x',
+                                                                                      fontsize=10, color='black', )
 
     # Add legend for cluster information
     legend_elements = [Circle(1, label='cluster %i' % i,
@@ -206,6 +221,7 @@ def ajf_plot(df, winner, tps, output_path):
     ax_clean.legend(handles=legend_elements, prop={'size': 12}, loc='right',
                     bbox_to_anchor=(0.85, 0.5), bbox_transform=ax_clean.transAxes, borderpad=0.02, columnspacing=0.4,
                     handletextpad=0.3, frameon=False)
+
 
     gs1 = gridspec.GridSpecFromSubplotSpec(1, n_cols, subplot_spec=gs[1], wspace=0.3, hspace=0.0)
 
