@@ -740,6 +740,16 @@ def main(isotopes_path,
             testq["mz_mono_fix"] = apply_polyfit_cal_mz(
                 polyfit_coeffs=calib_dict_protein_polyfit["polyfit_coeffs"], mz=testq["mz_mono_fix"])
             testq["mz_mono_fix_round"] = np.round(testq["mz_mono_fix"].values, 3)
+        elif protein_calibration_outpath is not None:
+            gen_mz_error_calib_output(
+                testq=testq,
+                allseq=allseq,
+                calib_pk_fpath=protein_calibration_outpath,
+                polyfit_degree=polyfit_deg,
+                ppm_tol=ppm_tolerance,
+                int_tol=intensity_tolerance,
+                cluster_corr_tol=cluster_corr_tolerance,
+                mass_to_correct="mz_mono_fix")
     elif protein_polyfit and protein_calibration_outpath is not None:
         calib_dict_protein_polyfit = gen_mz_error_calib_output(
                 testq=testq,
@@ -754,6 +764,16 @@ def main(isotopes_path,
                 polyfit_coeffs=calib_dict_protein_polyfit["polyfit_coeffs"], mz=testq["mz_mono"])
         testq["mz_mono_fix_round"] = np.round(testq["mz_mono_fix"].values, 3)
     else:
+        if protein_calibration_outpath is not None:
+            gen_mz_error_calib_output(
+                testq=testq,
+                allseq=allseq,
+                calib_pk_fpath=protein_calibration_outpath,
+                polyfit_degree=polyfit_deg,
+                ppm_tol=ppm_tolerance,
+                int_tol=intensity_tolerance,
+                cluster_corr_tol=cluster_corr_tolerance,
+                mass_to_correct="mz_mono")
         # This is what is initially implemented for mz correction.
         # Identify major peak of abs_ppm_error clusters, apply correction to all monoisotopic mz values.
         offset, offset_peak_width = find_offset(sum_df)
