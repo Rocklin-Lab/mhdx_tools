@@ -815,14 +815,18 @@ if __name__ == "__main__":
         protein_calibration_outpath = snakemake.output[3]
         polyfit_deg = configfile['polyfit_deg']
         if configfile['lockmass']:
+            print('Lockmass polyfit True')
             lockmass_calibration_dict = snakemake.input[3]
             runtime = configfile['runtime']
         else:
+            print('Lockmass polyfit False')
             lockmass_calibration_dict = None
             runtime = None
         if configfile['protein_polyfit']:
+            print('Protein polyfit True')
             protein_polyfit = True
         else:
+            print('Protein polyfit False')
             protein_polyfit = False
 
         main(isotopes_path,
