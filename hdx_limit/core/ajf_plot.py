@@ -128,6 +128,8 @@ def ajf_plot(df, winner, tps, output_path):
     n_cols = 6 * len(set(df.charge)) + 6
     min_clust = min(df['clusters'])
 
+    x_max = len(df.iloc[0]['ic'].baseline_integrated_mz)
+
     fig = plt.figure(figsize=(2. * n_cols, 40))
 
     gs = gridspec.GridSpec(2, 1, height_ratios=[1, 15], wspace=0., hspace=0.05)
@@ -221,7 +223,7 @@ def ajf_plot(df, winner, tps, output_path):
             ax_win.text(0.02, 0.55 - tp_idx, 'tp=%is' % int(tps[tp_idx]), horizontalalignment='left',
                         verticalalignment='center',
                         fontsize=12)
-            ax_win.text(len(ic.baseline_integrated_mz), 0.8 - tp_idx, 'charge=%i+' % int(ic.charge_states[0]),
+            ax_win.text(x_max, 0.8 - tp_idx, 'charge=%i+' % int(ic.charge_states[0]),
                         horizontalalignment='right', verticalalignment='center', fontsize=12)
             if tp_idx == 0:
                 ax_win.text(0.02, 1.001, 'winner path',
@@ -231,7 +233,7 @@ def ajf_plot(df, winner, tps, output_path):
                             fontsize=12, weight='bold')
         ax_win.set_ylim(-len(tps) + 0.95, 1.05)
         ax_win.set_yticks([])
-        ax_win.set_xticks(np.arange(0, len(ic.baseline_integrated_mz) + 1, 10))
+        ax_win.set_xticks(np.arange(0, x_max + 1, 10))
 
     # Plot alternatives charge states all together 2nd column ATC
     ax_alt_atc = fig.add_subplot(gs1[2:4])
@@ -241,7 +243,7 @@ def ajf_plot(df, winner, tps, output_path):
                         c=pal[charge_states.index(int(line['charge']))])
     ax_alt_atc.set_ylim(-len(tps) + 0.95, 1.05)
     ax_alt_atc.set_yticks([])
-    ax_alt_atc.set_xticks(np.arange(0, len(line['ic'].baseline_integrated_mz) + 1, 10))
+    ax_alt_atc.set_xticks(np.arange(0, x_max + 1, 10))
     ax_alt_atc.text(0.5, 0.995, 'All ATC', transform=ax_alt_atc.transAxes, ha='center', weight='bold')
 
 
@@ -254,7 +256,7 @@ def ajf_plot(df, winner, tps, output_path):
                                     c=pal[charge_states.index(int(line['charge']))])
         ax_alt_prefiltered.set_ylim(-len(tps) + 0.95, 1.05)
         ax_alt_prefiltered.set_yticks([])
-        ax_alt_prefiltered.set_xticks(np.arange(0, len(ic.baseline_integrated_mz) + 1, 10))
+        ax_alt_prefiltered.set_xticks(np.arange(0, x_max + 1, 10))
         ax_alt_prefiltered.text(0.5, 0.995, 'All PREFILTERED', transform=ax_alt_prefiltered.transAxes, ha='center',
                                 weight='bold')
 
@@ -313,26 +315,26 @@ def ajf_plot(df, winner, tps, output_path):
                             df['prefiltered'] == 0)]['ic_auc']) / \
                                   df[(df['charge'] == charge) & (df['tp_idx'] == tp) & (df['prefiltered'] == 0)][
                                       'tensor_auc'].values[0]
-                ax_charge_states_ics_atc[i].text(len(ic.baseline_integrated_mz), 0.8 - tp,
+                ax_charge_states_ics_atc[i].text(x_max, 0.8 - tp,
                                                  'f|t=%.2f' % (factor_tensor_frac), horizontalalignment='right',
                                                  verticalalignment='center', fontsize=10)
-                ax_charge_states_ics_atc[i].text(len(ic.baseline_integrated_mz), 0.6 - tp,
+                ax_charge_states_ics_atc[i].text(x_max, 0.6 - tp,
                                                  'i|t=%.2f' % (ics_tensor_frac), horizontalalignment='right',
                                                  verticalalignment='center', fontsize=10)
         ax_charge_states_ics_atc[i].grid()
         ax_charge_states_ics_atc[i].text(0, 1.1, 'ATC charge=%i+' % int(charge),
                                          horizontalalignment='left', verticalalignment='baseline', fontsize=12,
                                          weight='bold')
-        ax_charge_states_ics_atc[i].text(len(ic.baseline_integrated_mz), 0.9,
+        ax_charge_states_ics_atc[i].text(x_max, 0.9,
                                          'max_auc=%.1e' % df[df['charge'] == charge]['auc'].max(),
                                          horizontalalignment='right', verticalalignment='center', fontsize=12)
-        ax_charge_states_ics_atc[i].text(len(ic.baseline_integrated_mz), 0.7,
+        ax_charge_states_ics_atc[i].text(x_max, 0.7,
                                          'idotp=%.3f' % df[(df['charge'] == charge) & (df['tp_idx'] == 0)]['ic'].values[
                                              0].undeut_ground_dot_product,
                                          horizontalalignment='right', verticalalignment='center', fontsize=12)
         ax_charge_states_ics_atc[i].set_ylim(-len(tps) + 0.95, 1.05)
         ax_charge_states_ics_atc[i].set_yticks([])
-        ax_charge_states_ics_atc[i].set_xticks(np.arange(0, len(ic.baseline_integrated_mz) + 1, 10))
+        ax_charge_states_ics_atc[i].set_xticks(np.arange(0, x_max + 1, 10))
 
     # Define grids per charge state and plot ics (A and B) PREFILTERED
     if prefiltered_ics is not None:
@@ -366,26 +368,26 @@ def ajf_plot(df, winner, tps, output_path):
                                 df['prefiltered'] == 1)]['ic_auc']) / \
                                       df[(df['charge'] == charge) & (df['tp_idx'] == tp) & (df['prefiltered'] == 1)][
                                           'tensor_auc'].values[0]
-                    ax_charge_states_ics_prefiltered[i].text(len(ic.baseline_integrated_mz), 0.8 - tp,
+                    ax_charge_states_ics_prefiltered[i].text(x_max, 0.8 - tp,
                                                              'f|t=%.2f' % (factor_tensor_frac), horizontalalignment='right',
                                                              verticalalignment='center', fontsize=10)
-                    ax_charge_states_ics_prefiltered[i].text(len(ic.baseline_integrated_mz), 0.6 - tp,
+                    ax_charge_states_ics_prefiltered[i].text(x_max, 0.6 - tp,
                                                              'i|t=%.2f' % (ics_tensor_frac), horizontalalignment='right',
                                                              verticalalignment='center', fontsize=10)
             ax_charge_states_ics_prefiltered[i].grid()
             ax_charge_states_ics_prefiltered[i].text(0, 1.1, 'PREFILTERED charge=%i+' % int(charge),
                                                      horizontalalignment='left', verticalalignment='baseline', fontsize=12,
                                                      weight='bold')
-            ax_charge_states_ics_prefiltered[i].text(len(ic.baseline_integrated_mz), 0.9,
+            ax_charge_states_ics_prefiltered[i].text(x_max, 0.9,
                                                      'max_auc=%.1e' % df[df['charge'] == charge]['auc'].max(),
                                                      horizontalalignment='right', verticalalignment='center', fontsize=12)
-            ax_charge_states_ics_prefiltered[i].text(len(ic.baseline_integrated_mz), 0.7, 'idotp=%.3f' %
+            ax_charge_states_ics_prefiltered[i].text(x_max, 0.7, 'idotp=%.3f' %
                                                      df[(df['charge'] == charge) & (df['tp_idx'] == 0)]['ic'].values[
                                                          0].undeut_ground_dot_product,
                                                      horizontalalignment='right', verticalalignment='center', fontsize=12)
             ax_charge_states_ics_prefiltered[i].set_ylim(-len(tps) + 0.95, 1.05)
             ax_charge_states_ics_prefiltered[i].set_yticks([])
-            ax_charge_states_ics_prefiltered[i].set_xticks(np.arange(0, len(ic.baseline_integrated_mz) + 1, 10))
+            ax_charge_states_ics_prefiltered[i].set_xticks(np.arange(0, x_max + 1, 10))
 
     # Plot rt/dt scatter plots ATC
     for i, charge in enumerate(charge_states):
