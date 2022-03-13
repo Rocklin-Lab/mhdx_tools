@@ -326,7 +326,7 @@ if __name__ == "__main__":
         multi_winner_scores_out_path = snakemake.output[12]
         multi_rtdt_com_cvs_out_path = snakemake.output[13]
         multi_winner_csv_out_path = snakemake.output[14]
-        ajf_plot_out_path = snakemake.output[15]
+        ajf_plot_out_path = None
 
 
         main(library_info_path=library_info_path,
@@ -351,7 +351,7 @@ if __name__ == "__main__":
              multi_winner_scores_out_path=multi_winner_scores_out_path,
              multi_rtdt_com_cvs_out_path=multi_rtdt_com_cvs_out_path,
              multi_winner_csv_out_path=multi_winner_csv_out_path,
-             ajf_plot_out_path=ajf_plot_out_path,
+             ajf_plot_out_path=None,
              )
 
     else:
@@ -441,6 +441,7 @@ if __name__ == "__main__":
         parser.add_argument("--multi_winner_csv_out_path",
                             help="path/to/file to save path to .csv file")
         parser.add_argument("--ajf_plot_out_path",
+                            default=None,
                             help="path/to/ajf_plot file")
 
         args = parser.parse_args()
