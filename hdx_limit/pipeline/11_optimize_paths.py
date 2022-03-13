@@ -326,7 +326,7 @@ if __name__ == "__main__":
         multi_winner_scores_out_path = snakemake.output[12]
         multi_rtdt_com_cvs_out_path = snakemake.output[13]
         multi_winner_csv_out_path = snakemake.output[14]
-        ajr_plot_out_path = snakemake.output[15]
+        ajf_plot_out_path = snakemake.output[15]
 
 
         main(library_info_path=library_info_path,
