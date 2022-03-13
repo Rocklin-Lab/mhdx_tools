@@ -241,7 +241,7 @@ def ajf_plot(df, winner, tps, output_path):
                         c=pal[charge_states.index(int(line['charge']))])
     ax_alt_atc.set_ylim(-len(tps) + 0.95, 1.05)
     ax_alt_atc.set_yticks([])
-    ax_alt_atc.set_xticks(np.arange(0, len(ic.baseline_integrated_mz) + 1, 10))
+    ax_alt_atc.set_xticks(np.arange(0, len(line['ic'].baseline_integrated_mz) + 1, 10))
     ax_alt_atc.text(0.5, 0.995, 'All ATC', transform=ax_alt_atc.transAxes, ha='center', weight='bold')
 
 
