@@ -257,6 +257,9 @@ def ajf_plot(df, winner, tps, output_path):
         ax_win.set_ylim(-len(tps) + 0.95, 1.05)
         ax_win.set_yticks([])
         ax_win.set_xticks(np.arange(0, x_max + 1, 10))
+    else:
+        ax_win.set_yticks([])
+        ax_win.set_xticks([])
 
     # Plot alternatives charge states all together 2nd column ATC
     ax_alt_atc = fig.add_subplot(gs1[2:4])
@@ -439,6 +442,16 @@ def ajf_plot(df, winner, tps, output_path):
     for i, charge in enumerate(charge_states):
         for j in range(len(tps)):
             ax_charge_states_scatter_atc[i + j] = fig.add_subplot(ax_charge_states_atc[i][j, 2])
+            if prefiltered_ics is not None and j == 0:
+                sns.scatterplot(data=df[(df['charge'] == charge) & (df['tp_idx'] == j) & (df['prefiltered'] == 1)],
+                                x='dt',
+                                y='rt_corr',
+                                hue=df['clusters'] - min_clust, palette='bright',
+                                s=5 * (
+                                    df[(df['charge'] == charge) & (df['tp_idx'] == j) & (df['prefiltered'] == 1)][
+                                        'auc_size']),
+                                alpha=0.7,
+                                ax=ax_charge_states_scatter_atc[i + j])
             sns.scatterplot(data=df[(df['charge'] == charge) & (df['tp_idx'] == j) & (df['prefiltered'] == 0)], x='dt',
                             y='rt_corr',
                             hue=df['clusters'] - min_clust, palette='bright',
@@ -447,15 +460,6 @@ def ajf_plot(df, winner, tps, output_path):
                                     'auc_size']),
                             alpha=0.7,
                             ax=ax_charge_states_scatter_atc[i + j])
-            if prefiltered_ics is not None and len(df[(df['charge'] == charge) & (df['tp_idx'] == 0) & (
-                    df['winner'] == 0) & (df['prefiltered'] == 1)]) > 0:
-                ax_charge_states_scatter_atc[i + j].text(float(
-                    df[(df['charge'] == charge) & (df['tp_idx'] == 0) & (df['winner'] == 0) & (df['prefiltered'] == 1)][
-                        'dt'].values),
-                    float(df[(df['charge'] == charge) & (df['tp_idx'] == 0) & (
-                            df['winner'] == 0) & (df['prefiltered'] == 1)][
-                              'rt_corr'].values),
-                    'x', fontsize=10, color='black', ha='center', va='center')
             ax_charge_states_scatter_atc[i + j].set(xlabel=None, ylabel=None)
             ax_charge_states_scatter_atc[i + j].set_yticks([])
             ax_charge_states_scatter_atc[i + j].set_xticks([])
@@ -463,16 +467,6 @@ def ajf_plot(df, winner, tps, output_path):
             ax_charge_states_scatter_atc[i + j].set_ylim(-0.4, 0.4)
             ax_charge_states_scatter_atc[i + j].set_xlim(df[df['charge'] == charge]['dt'].min() - 0.05,
                                                          df[df['charge'] == charge]['dt'].max() + 0.05)
-        if prefiltered_ics is not None:
-            j = 0
-            sns.scatterplot(data=df[(df['charge'] == charge) & (df['tp_idx'] == j) & (df['prefiltered'] == 1)], x='dt',
-                            y='rt_corr',
-                            hue=df['clusters'] - min_clust, palette='bright',
-                            s=5 * (
-                                df[(df['charge'] == charge) & (df['tp_idx'] == j) & (df['prefiltered'] == 1)][
-                                    'auc_size']),
-                            alpha=0.7,
-                            ax=ax_charge_states_scatter_atc[i + j])
 
     if prefiltered_ics is not None:
         # Plot rt/dt scatter plots PREFILTERED
@@ -489,7 +483,7 @@ def ajf_plot(df, winner, tps, output_path):
                                 alpha=0.7,
                                 ax=ax_charge_states_scatter_prefiltered[i + j])
                 if len(df[(df['charge'] == charge) & (df['tp_idx'] == 0) & (df['winner'] == 0) & (
-                        df['prefiltered'] == 1)]) > 0:
+                        df['prefiltered'] == 1)]) == 1:
                     ax_charge_states_scatter_prefiltered[i + j].text(float(
                         df[(df['charge'] == charge) & (df['tp_idx'] == 0) & (df['winner'] == 0) & (
                                     df['prefiltered'] == 1)][
