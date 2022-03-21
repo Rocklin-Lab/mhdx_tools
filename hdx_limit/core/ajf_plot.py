@@ -448,7 +448,7 @@ def ajf_plot(df, winner, tps, output_path):
                             alpha=0.7,
                             ax=ax_charge_states_scatter_atc[i + j])
             if prefiltered_ics is not None and len(df[(df['charge'] == charge) & (df['tp_idx'] == 0) & (
-                    df['winner'] == 0) & (df['prefiltered'] == 1)]):
+                    df['winner'] == 0) & (df['prefiltered'] == 1)]) > 0:
                 ax_charge_states_scatter_atc[i + j].text(float(
                     df[(df['charge'] == charge) & (df['tp_idx'] == 0) & (df['winner'] == 0) & (df['prefiltered'] == 1)][
                         'dt'].values),
