@@ -99,6 +99,9 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, cluster_radius=0
     # z-score rt
     df['rt_norm'] = (df['rt_corr'] - df['rt_corr'].mean()) / df['rt_corr'].std()
 
+    # Remove lines with NAN values. This is pretty rare!
+    df.dropna(inplace=True)
+
     # Clusterize based on rt and dt
     # db = DBSCAN(eps=cluster_radius)
     # db.fit(df[['rt_norm', 'dt_norm']])
