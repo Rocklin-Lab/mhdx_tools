@@ -6,7 +6,7 @@ import matplotlib.gridspec as gridspec
 from matplotlib.patches import Circle
 import seaborn as sns
 import numpy as np
-from sklearn.cluster import DBSCAN
+from sklearn.cluster import KMeans
 import glob as glob
 import yaml
 import math
@@ -97,10 +97,15 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, cluster_radius=0
     df['rt_norm'] = (df['rt_corr'] - df['rt_corr'].mean())/df['rt_corr'].std()
 
     # Clusterize based on rt and dt
-    db = DBSCAN(eps=cluster_radius)
-    db.fit(df[['rt_norm', 'dt_norm']])
-    clusters = db.fit_predict(df[['rt_norm', 'dt_norm']])
-    df['clusters'] = clusters
+    # db = DBSCAN(eps=cluster_radius)
+    # db.fit(df[['rt_norm', 'dt_norm']])
+    # clusters = db.fit_predict(df[['rt_norm', 'dt_norm']])
+    # df['clusters'] = clusters
+    n = df[df['prefiltered'] == 0].groupby(by='tp_idx', sort=True).count().max()[0]
+    if n > 9:
+        n = 9
+    kmeans = KMeans(n_clusters=n)
+    df['clusters'] = kmeans.fit_predict(df[['rt_norm', 'dt_norm']])
 
     if output is not None:
         #Plot rt/dt scatter plot coloring dots according to charge or cluster id
@@ -231,7 +236,7 @@ def ajf_plot(df, winner, tps, output_path):
     if winner is not None:
         for ic in winner:
             tp_idx = tps.index(ic.timepoint_idx)
-            color_index = int(df[(df['ic'] == ic) & (df['winner'] == 1)]['clusters'] + 1)
+            color_index = int(df[(df['ic'] == ic) & (df['winner'] == 1)]['clusters'] - min_clust)
             ax_win.plot(ic.baseline_integrated_mz / max(ic.baseline_integrated_mz) - tp_idx, c=pal[color_index])
             ax_win.text(0.02, 0.8 - tp_idx, 'tp_idx=%i' % int(tp_idx), horizontalalignment='left',
                         verticalalignment='center',
@@ -257,6 +262,11 @@ def ajf_plot(df, winner, tps, output_path):
         ax_alt_atc.plot((line['ic'].baseline_integrated_mz / max(line['ic'].baseline_integrated_mz)) * (
                     np.log2(line['auc']) / np.log2(df['auc'].max())) - int(line['tp_idx']),
                         c=pal[charge_states.index(int(line['charge']))])
+    if prefiltered_ics is not None:
+        for i, line in df[(df['prefiltered'] == 1) & (df['tp_idx'] == 0)].iterrows():
+            ax_alt_atc.plot((line['ic'].baseline_integrated_mz / max(line['ic'].baseline_integrated_mz)) * (
+                    np.log2(line['auc']) / np.log2(df['auc'].max())) - int(line['tp_idx']),
+                            c=pal[charge_states.index(int(line['charge']))])
     ax_alt_atc.set_ylim(-len(tps) + 0.95, 1.05)
     ax_alt_atc.set_yticks([])
     ax_alt_atc.set_xticks(np.arange(0, x_max + 1, 10))
@@ -313,6 +323,13 @@ def ajf_plot(df, winner, tps, output_path):
                             np.log2(line['auc']) / np.log2(df[(df['charge'] == line['charge'])]['auc'].max())) - int(
                     line['tp_idx']),
                 c=pal[int(line['clusters']) - min_clust])
+        if prefiltered_ics is not None:
+            for _, line in df[(df['charge'] == charge) & (df['prefiltered'] == 1) & (df['tp_idx'] == 0)].iterrows():
+                ax_charge_states_ics_atc[i].plot(
+                    (line['ic'].baseline_integrated_mz / max(line['ic'].baseline_integrated_mz)) * (
+                            np.log2(line['auc']) / np.log2(df[(df['charge'] == line['charge'])]['auc'].max())) - int(
+                        line['tp_idx']),
+                    c=pal[int(line['clusters']) - min_clust])
         if winner is not None:
             for _, line in df[(df['charge'] == charge) & (df['winner'] == 1)].iterrows():
                 ax_charge_states_ics_atc[i].plot(
@@ -425,6 +442,16 @@ def ajf_plot(df, winner, tps, output_path):
                                                                      df['winner'] == 0) & (df['prefiltered'] == 1)][
                                                                    'rt_corr'].values),
                                                          'x', fontsize=10, color='black', ha='center', va='center')
+        if prefiltered_ics is not None:
+            j = 0
+            sns.scatterplot(data=df[(df['charge'] == charge) & (df['tp_idx'] == j) & (df['prefiltered'] == 1)], x='dt',
+                            y='rt_corr',
+                            hue=df['clusters'] - min_clust, palette='bright',
+                            s=5 * (
+                                df[(df['charge'] == charge) & (df['tp_idx'] == j) & (df['prefiltered'] == 1)][
+                                    'auc_size']),
+                            alpha=0.7,
+                            ax=ax_charge_states_scatter_atc[i + j])
             ax_charge_states_scatter_atc[i + j].set(xlabel=None, ylabel=None)
             ax_charge_states_scatter_atc[i + j].set_yticks([])
             ax_charge_states_scatter_atc[i + j].set_xticks([])
