@@ -364,7 +364,7 @@ def ajf_plot(df, winner, tps, output_path):
         ax_charge_states_ics_atc[i].text(x_max, 0.9,
                                          'max_auc=%.1e' % df[df['charge'] == charge]['auc'].max(),
                                          horizontalalignment='right', verticalalignment='center', fontsize=12)
-        if prefiltered_ics is not None and len(df[(df['charge'] == charge) & (df['tp_idx'] == 0)] > 0):
+        if prefiltered_ics is not None and len(df[(df['charge'] == charge) & (df['tp_idx'] == 0)]) > 0:
             ax_charge_states_ics_atc[i].text(x_max, 0.7,
                                              'idotp=%.3f' %
                                              df[(df['charge'] == charge) & (df['tp_idx'] == 0)]['ic'].values[
