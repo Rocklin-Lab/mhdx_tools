@@ -77,6 +77,9 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, cluster_radius=0
                         prefiltered])
     df = pd.DataFrame(tmp, columns=cols)
 
+    # Remove lines with NAN values. This is pretty rare!
+    df.dropna(inplace=True)
+
     # Normlize auc relative to max intensity of ics with same charge
     df['auc_size'] = 0
     for i, line in df.iterrows():
@@ -98,9 +101,6 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, cluster_radius=0
         df.loc[i, 'rt_corr'] = line['rt'] - line['ic'].retention_labels[int(len(line['ic'].retention_labels) / 2)]
     # z-score rt
     df['rt_norm'] = (df['rt_corr'] - df['rt_corr'].mean()) / df['rt_corr'].std()
-
-    # Remove lines with NAN values. This is pretty rare!
-    df.dropna(inplace=True)
 
     # Clusterize based on rt and dt
     # db = DBSCAN(eps=cluster_radius)
