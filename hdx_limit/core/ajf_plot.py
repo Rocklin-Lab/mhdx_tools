@@ -455,6 +455,9 @@ def ajf_plot(df, winner, tps, output_path):
                                         'auc_size']),
                                 alpha=0.7,
                                 ax=ax_charge_states_scatter_atc[i + j])
+            for _, line in df[(df['charge'] == charge) & (df['tp_idx'] == 0)].iterrows():
+                ax_charge_states_scatter_atc[i + j].text(float(line['dt']), float(line['rt_corr']),
+                                                         'x', fontsize=10, color='black', ha='center', va='center')
             sns.scatterplot(data=df[(df['charge'] == charge) & (df['tp_idx'] == j) & (df['prefiltered'] == 0)], x='dt',
                             y='rt_corr',
                             hue=df['clusters'] - min_clust, palette='bright',
