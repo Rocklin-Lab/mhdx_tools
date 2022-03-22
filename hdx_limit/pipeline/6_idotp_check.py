@@ -383,7 +383,7 @@ if __name__ == "__main__":
         print(my_mzml)
         normalization_factor = normalization_factors.loc[normalization_factors["mzml"]==my_mzml]["normalization_factor"].values
         output_path = snakemake.output[0]
-        all_clusters_output = snamake.output[1]
+        all_clusters_output = snakemake.output[1]
         factor_output_path_list = [item for item in snakemake.output if item.endswith(".factor")]
         factor_plot_output_path_list = [item for item in snakemake.output if item.endswith(".factor.pdf")]
         if factor_plot_output_path_list == []:
