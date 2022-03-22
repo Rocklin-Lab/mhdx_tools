@@ -469,6 +469,10 @@ def ajf_plot(df, winner, tps, output_path):
             ax_charge_states_scatter_atc[i + j].set(xlabel=None, ylabel=None)
             ax_charge_states_scatter_atc[i + j].set_yticks([])
             ax_charge_states_scatter_atc[i + j].set_xticks([])
+            ax_charge_states_scatter_atc[i + j].axvline(
+                (df[df['charge'] == charge]['dt'].max() + df[df['charge'] == charge]['dt'].min()) / 2, lw=0.5,
+                alpha=0.5, color='black')
+            ax_charge_states_scatter_atc[i + j].axhline(0, lw=0.5, alpha=0.5, c='black')
             ax_charge_states_scatter_atc[i + j].legend('', frameon=False)
             ax_charge_states_scatter_atc[i + j].set_ylim(-0.4, 0.4)
             ax_charge_states_scatter_atc[i + j].set_xlim(df[df['charge'] == charge]['dt'].min() - 0.05,
@@ -500,6 +504,10 @@ def ajf_plot(df, winner, tps, output_path):
                 ax_charge_states_scatter_prefiltered[i + j].set(xlabel=None, ylabel=None)
                 ax_charge_states_scatter_prefiltered[i + j].set_yticks([])
                 ax_charge_states_scatter_prefiltered[i + j].set_xticks([])
+                ax_charge_states_scatter_prefiltered[i + j].axvline(
+                    (df[df['charge'] == charge]['dt'].max() + df[df['charge'] == charge]['dt'].min()) / 2, lw=0.5,
+                    alpha=0.5, color='black')
+                ax_charge_states_scatter_prefiltered[i + j].axhline(0, lw=0.5, alpha=0.5, c='black')
                 ax_charge_states_scatter_prefiltered[i + j].legend('', frameon=False)
                 ax_charge_states_scatter_prefiltered[i + j].set_ylim(-0.4, 0.4)
                 ax_charge_states_scatter_prefiltered[i + j].set_xlim(df[df['charge'] == charge]['dt'].min() - 0.05,
