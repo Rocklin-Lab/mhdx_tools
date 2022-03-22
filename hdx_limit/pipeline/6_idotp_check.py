@@ -53,6 +53,7 @@ from scipy.signal import find_peaks
 from collections import defaultdict as ddict
 from scipy.ndimage.filters import gaussian_filter
 from hdx_limit.core.processing import TensorGenerator, generate_tensor_factors
+from hdx_limit.core.io import limit_write
 
 def cum_peak_gaps_from_sequence(sequence):
     """Determine expected cumulative mass distances between isotopes of a given protein sequence. 
@@ -267,6 +268,7 @@ def main(library_info_path,
          factor_output_path_list=None,
          factor_plot_output_path_list=None,
          output_path=None,
+         all_clusters_output=None,
          return_flag=None,
          n_factors=15,
          gauss_params=(3, 1),
@@ -344,7 +346,13 @@ def main(library_info_path,
         int_mz_width = np.array(integt_mz_width_list)[max_idotp_idx]
     else: 
         max_idotp = 0
-        int_mz_width = 0 
+        int_mz_width = 0
+
+    if all_clusters_output is not None:
+        for ic in iso_clusters_list:
+            ic.undeut_ground_dot_product = calculate_isotope_dist_dot_product(sequence=prot_seq,
+                                                undeut_integrated_mz_array=ic.baseline_integrated_mz)[0]
+        limit_write(iso_clusters_list, all_clusters_output)
 
     if output_path is not None:
         pd.DataFrame({
@@ -375,6 +383,7 @@ if __name__ == "__main__":
         print(my_mzml)
         normalization_factor = normalization_factors.loc[normalization_factors["mzml"]==my_mzml]["normalization_factor"].values
         output_path = snakemake.output[0]
+        all_clusters_output = snamake.output[1]
         factor_output_path_list = [item for item in snakemake.output if item.endswith(".factor")]
         factor_plot_output_path_list = [item for item in snakemake.output if item.endswith(".factor.pdf")]
         if factor_plot_output_path_list == []:
@@ -403,7 +412,8 @@ if __name__ == "__main__":
              ic_peak_width=ic_peak_width,
              ic_rel_height_filter=ic_rel_ht_filter,
              ic_rel_height_filter_baseline=ic_rel_ht_baseline,
-             ic_rel_height_threshold=ic_rel_ht_threshold)
+             ic_rel_height_threshold=ic_rel_ht_threshold,
+             all_clusters_output=all_clusters_output)
 
     else:
         parser = argparse.ArgumentParser(
@@ -437,6 +447,11 @@ if __name__ == "__main__":
             type=tuple,
             default=(3, 1),
             help="parameters for smoothing rt and dt dimensions"
+        )
+        parser.add_argument(
+            "-a",
+            "--all_clusters_output",
+            help="all isotopic clusters for specific ic"
         )
         args = parser.parse_args()
         if args.undeut_tensor_path_list is None:
@@ -475,4 +490,5 @@ if __name__ == "__main__":
              ic_peak_width=ic_peak_width,
              ic_rel_height_filter=ic_rel_ht_filter,
              ic_rel_height_filter_baseline=ic_rel_ht_baseline,
-             ic_rel_height_threshold=ic_rel_ht_threshold)
+             ic_rel_height_threshold=ic_rel_ht_threshold,
+             all_clusters_output=args.all_clusters_output)
