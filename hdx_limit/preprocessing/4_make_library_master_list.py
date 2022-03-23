@@ -544,7 +544,7 @@ def main(names_and_seqs_path,
             rt_correlation_plot(intermediates=intermediates, output_path=rt_correlation_plot_outpath)
         else:
             #touch empty file if only one run is present
-            Path(rt_correlation_plot).touch()
+            Path(rt_correlation_plot_outpath).touch()
     
     if return_flag is not None:
         return {"library_info": catdf.to_dict(), "normalization_factors": normalization_factors}
