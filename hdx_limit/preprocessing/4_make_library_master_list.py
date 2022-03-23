@@ -540,7 +540,7 @@ def main(names_and_seqs_path,
         plt.savefig(normalization_factors_plot_outpath)
 
     if rt_correlation_plot_outpath is not None:
-        if len(intermetiates) > 1:
+        if len(intermediates) > 1:
             rt_correlation_plot(intermediates=intermediates, output_path=rt_correlation_plot_outpath)
         else:
             #touch empty file if only one run is present
