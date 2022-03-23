@@ -754,7 +754,7 @@ def main(isotopes_path,
         calib_dict_protein_polyfit = gen_mz_error_calib_output(
                 testq=testq,
                 allseq=allseq,
-                calib_pk_fpath=calibration_outpath,
+                calib_pk_fpath=protein_calibration_outpath,
                 polyfit_degree=polyfit_deg,
                 ppm_tol=ppm_tolerance,
                 int_tol=intensity_tolerance,
