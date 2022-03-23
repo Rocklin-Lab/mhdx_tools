@@ -543,6 +543,7 @@ def main(names_and_seqs_path,
         if len(intermetiates) > 1:
             rt_correlation_plot(intermediates=intermediates, output_path=rt_correlation_plot_outpath)
         else:
+            #touch empty file if only one run is present
             Path(rt_correlation_plot).touch()
     
     if return_flag is not None:
