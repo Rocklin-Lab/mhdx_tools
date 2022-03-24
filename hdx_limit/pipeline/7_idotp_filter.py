@@ -48,7 +48,6 @@ mpl.use("Agg")
 def generate_dataframe_ics(configfile,
                            all_ics_inputs,
                            idotp_cutoff=0.99):
-
     # Create dictionary containing all ics passing idotp_cutoff
     protein_ics = {}
     for f in all_ics_inputs:
@@ -166,8 +165,11 @@ def generate_dataframe_ics(configfile,
             ax[j + 1].set_xlabel('DT')
             ax[j + 1].set_ylabel('RT')
 
+        name_recentered = '_'.join(name.split('_')[:-1]) + '_' + str(
+            round(df[(df['name'] == name)]['RT_weighted_avg'].values[0], 3))
+
         plt.tight_layout()
-        plt.savefig('results/plots/tensor-recenter/' + name + '.pdf', format='pdf', dpi=200)
+        plt.savefig('results/plots/tensor-recenter/' + name_recentered + '.pdf', format='pdf', dpi=200)
         plt.close('all')
 
     return df
@@ -205,7 +207,7 @@ def main(configfile,
                                 idotp_cutoff=idotp_cutoff)
 
     cols_idotp = ['idotp', 'integrated_mz_width', 'mz_centers', 'theor_mz_dist']
-    cols_ics_recenter = ['RT_weighted_avg', 'DT_weighted_avg_bins']
+    cols_ics_recenter = ['RT_weighted_avg', 'DT_weighted_avg_bins', 'DT_weighted_avg']
 
     out_df = pd.DataFrame(columns=list(library_info.columns) + cols_idotp + cols_ics_recenter + ['name_recentered'])
 
