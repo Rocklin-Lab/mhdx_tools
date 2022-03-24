@@ -97,7 +97,7 @@ def generate_dataframe_ics(configfile,
     # 5_extract_timepoint_tensor code
     df['DT_weighted_avg_bins'] = df['DT_weighted_avg'] * 200.0 / 13.781163434903
 
-    # Plot scatter plot for each protein
+    # Scatter plot for each protein
     # Create folder to save pdf files
     if not os.path.isdir('results/plots/tensor-recenter/'):
         os.makedirs('results/plots/tensor-recenter/')
@@ -134,6 +134,15 @@ def generate_dataframe_ics(configfile,
             ax[j + 1].set_xlim(df[(df['name'] == name) & (df['charge'] == charge)]['DT_weighted_avg'].mean() * 0.94,
                                df[(df['name'] == name) & (df['charge'] == charge)]['DT_weighted_avg'].mean() * 1.06)
             ax[j + 1].axhline(df[df['name'] == name]['RT_weighted_avg'].mean(), color='black', alpha=0.5, lw=0.5)
+
+            # Plot horizontal and vertical lines corresponding to initial RT and DT centers used to extract tensors
+            retention_label_center = \
+            df[(df['name'] == name) & (df['charge'] == charge)]['ic'].values[0].retention_labels[
+                len(df[(df['name'] == name) & (df['charge'] == charge)]['ic'].values[0].retention_labels) // 2]
+            ax[j + 1].axhline(retention_label_center, color='red', alpha=0.5, lw=0.5)
+            drift_label_center = df[(df['name'] == name) & (df['charge'] == charge)]['ic'].values[0].drift_labels[
+                len(df[(df['name'] == name) & (df['charge'] == charge)]['ic'].values[0].drift_labels) // 2]
+            ax[j + 1].axvline(drift_label_center, color='red', alpha=0.5, lw=0.5)
 
             ax[0].scatter(df[(df['name'] == name) & (df['charge'] == charge)]['DT_weighted_avg'].mean(),
                           (sum(df[(df['name'] == name) & (df['charge'] == charge)]['rt'] *
