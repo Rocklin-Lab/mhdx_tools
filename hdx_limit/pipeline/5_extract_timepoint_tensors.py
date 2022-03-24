@@ -411,7 +411,7 @@ if __name__ == "__main__":
         config_rt_radius = configfile["rt_radius"]
         config_dt_radius_scale = configfile["dt_radius_scale"]
 
-        use_rtdt_recenter = configfile['use_rtdt_recenter']
+        use_rtdt_recenter = snakemake.params['use_rtdt_recenter']
         # Check condition to rerun extract tensor for undeuterated files
         if use_rtdt_recenter and mzml_gz_path.split('/')[-1].replace('.gz','') in configfile[0]:
             Path(snakemake.output.pop(-1)).touch()
