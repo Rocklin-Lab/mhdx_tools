@@ -48,6 +48,7 @@ import _pickle as cpickle
 import pickle as pk
 from collections import Counter
 from collections import OrderedDict
+from pathlib import Path
 
 def load_pickle_file(pickle_fpath):    
     """Loads a pickle file.
@@ -83,6 +84,7 @@ def main(library_info_path,
          timepoints_dict,
          outputs=None,
          use_time_warping=False,
+         use_rtdt_recenter=False,
          return_flag=False,
          low_mass_margin=10,
          high_mass_margin=17,
@@ -114,12 +116,20 @@ def main(library_info_path,
     out_dict = {}
     library_info = pd.read_json(library_info_path)
 
-    # Makes nested dictionary where rt-group-name is the outermost key and returns a dictionary 
-    # mapping charge states of that rt-group to their library_info indices.
-    names = list(OrderedDict.fromkeys(library_info["name"].values).keys()) # This is the Python-native version of an ordered set operation.
-    name_charge_idx = {name: {charge: library_info.loc[(library_info["name"]==name) & (library_info["charge"]==charge)].index 
-                            for charge in library_info.loc[library_info["name"]==name]["charge"].values} 
-                            for name in names}
+    if use_rtdt_recenter:
+        names = list(OrderedDict.fromkeys(
+            library_info["name_recentered"].values).keys())  # This is the Python-native version of an ordered set operation.
+        name_charge_idx = {
+            name: {charge: library_info.loc[(library_info["name_recentered"] == name) & (library_info["charge"] == charge)].index
+                   for charge in library_info.loc[library_info["name_recentered"] == name]["charge"].values}
+            for name in names}
+    else:
+        # Makes nested dictionary where rt-group-name is the outermost key and returns a dictionary
+        # mapping charge states of that rt-group to their library_info indices.
+        names = list(OrderedDict.fromkeys(library_info["name"].values).keys()) # This is the Python-native version of an ordered set operation.
+        name_charge_idx = {name: {charge: library_info.loc[(library_info["name"]==name) & (library_info["charge"]==charge)].index
+                                for charge in library_info.loc[library_info["name"]==name]["charge"].values}
+                                for name in names}
 
     mzml = mzml_gz_path.split("/")[-1][:-3] # Strip '.gz' from input filename to match config timepoint values.
 
@@ -141,17 +151,26 @@ def main(library_info_path,
     # 13.78116 is a hardcoded average IMS pulse time TODO: This should be exposed to argument layer with default as well
     library_info["Drift Time MS1"] = (library_info["im_mono"] / 200.0 *
                                       13.781163434903)
+
+    # Decide which RT / DT use for tensor extraction
     if use_time_warping:
         ret_ubounds = (library_info["rt_group_mean_RT_%d_%d" %
                                     (tp, n_replicate)].values + rt_radius)
         ret_lbounds = (library_info["rt_group_mean_RT_%d_%d" %
                                     (tp, n_replicate)].values - rt_radius)
+    elif use_rtdt_recenter:
+        ret_ubounds = (library_info["RT_weighted_avg"].values + rt_radius)
+        ret_lbounds = (library_info["RT_weighted_avg"].values - rt_radius)
     else:
         ret_ubounds = (library_info["RT"].values + rt_radius)
         ret_lbounds = (library_info["RT"].values - rt_radius)
 
-    dt_ubounds = library_info["Drift Time MS1"].values * (1 + dt_radius_scale)
-    dt_lbounds = library_info["Drift Time MS1"].values * (1 - dt_radius_scale)
+    if use_rtdt_recenter:
+        dt_ubounds = library_info["DT_weighted_avg"].values * (1 + dt_radius_scale)
+        dt_lbounds = library_info["DT_weighted_avg"].values * (1 - dt_radius_scale)
+    else:
+        dt_ubounds = library_info["Drift Time MS1"].values * (1 + dt_radius_scale)
+        dt_lbounds = library_info["Drift Time MS1"].values * (1 - dt_radius_scale)
 
     drift_times = []
 
@@ -392,16 +411,23 @@ if __name__ == "__main__":
         config_rt_radius = configfile["rt_radius"]
         config_dt_radius_scale = configfile["dt_radius_scale"]
 
+        use_rtdt_recenter = configfile['use_rtdt_recenter']
+        # Check condition to rerun extract tensor for undeuterated files
+        if use_rtdt_recenter and mzml_gz_path.split('/')[-1].replace('.gz','') in configfile[0]:
+            Path(snakemake.output.pop(-1)).touch()
+
         main(library_info_path=snakemake.input[0],
              mzml_gz_path=snakemake.input[1],
              timepoints_dict=configfile,
              outputs=snakemake.output,
              use_time_warping=use_time_warping,
+             use_rtdt_recenter=use_rtdt_recenter,
              rt_radius=config_rt_radius,
              dt_radius_scale=config_dt_radius_scale,
              protein_polyfit_calibration_dict_path=protein_polyfit_calibration_dict_path,
              lockmass_polyfit_calibration_dict_path=lockmass_polyfit_calibration_dict_path,
-             indices=indices)
+             indices=indices,
+             )
     else:
         # CLI context, set expected arguments with argparse module.
         parser = argparse.ArgumentParser()
@@ -473,7 +499,14 @@ if __name__ == "__main__":
             "--use_time_warping",
             default=False,
             help=
-            "path/to/lockmass_calibration_dictionary"
+            "use time warping to correct signals rts"
+        )
+        parser.add_argument(
+            "-use_rtdt_recenter",
+            "--use_rtdt_recenter",
+            default=False,
+            help=
+            "use rtdt recenter coming from first tensor extraction"
         )
         args = parser.parse_args()
         
@@ -520,10 +553,12 @@ if __name__ == "__main__":
              timepoints_dict=configfile,
              outputs=args.outputs,
              use_time_warping=args.use_time_warping,
+             use_rtdt_recenter=args.use_rtdt_recenter,
              low_mass_margin=args.low_mass_margin,
              high_mass_margin=args.high_mass_margin,
              rt_radius=args.rt_radius,
              dt_radius_scale=args.dt_radius_scale,
              protein_polyfit_calibration_dict_path=args.protein_polyfit_calibration_dict,
              lockmass_polyfit_calibration_dict_path=args.lockmass_polyfit_calibration_dict,
-             indices=args.indices)
+             indices=args.indices,
+             )
