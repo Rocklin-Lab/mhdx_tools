@@ -73,7 +73,7 @@ def generate_dataframe_ics(configfile,
             dt = ic.drift_labels[0] + (ic.drift_labels[1] - ic.drift_labels[0]) * ic.dt_coms
             auc = ic.ic_auc_with_gauss_extrapol
             charge = ic.charge_states[0]
-            file_index = config_dict[0].index([i for i in configfile[0] if '_'.join(
+            file_index = configfile[0].index([i for i in configfile[0] if '_'.join(
                 ic.info_tuple[0].split('/')[-1].split('.')[-5:-4][0].split('_')[-4:]) in i][0])
             idotp = ic.undeut_ground_dot_product
 
