@@ -211,7 +211,7 @@ def main(configfile,
         open_idotp_f = pd.read_json([i for i in all_idotp_inputs if '%s' % (name + '_charge' + str(charge)) in i][0])
         my_row = library_info.loc[(library_info["name"] == name) & (library_info["charge"] == charge)].copy()
         my_row[cols_idotp] = open_idotp_f[cols_idotp].values
-        my_row[cols_corr] = \
+        my_row[cols_ics_recenter] = \
         df[(df['name'] == name) & (df['charge'] == charge)].sort_values(by='idotp', ascending=False)[
             cols_ics_recenter].values[0]
         my_row['name_recentered'] = '_'.join(name.split('_')[:-1]) + '_' + str(
