@@ -52,7 +52,7 @@ def generate_dataframe_ics(configfile,
     # Create dictionary containing all ics passing idotp_cutoff
     protein_ics = {}
     for f in all_ics_inputs:
-        if f.split('/')[[-2:-1]] not in protein_ics:
+        if f.split('/')[-2:-1] not in protein_ics:
             ics = [ic for ic in limit_read(f) if ic.undeut_ground_dot_product >= idotp_cutoff]
             if len(ics) > 0:
                 protein_ics[f.split('/')[-2:-1]] = [ics]
