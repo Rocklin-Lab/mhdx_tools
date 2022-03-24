@@ -134,6 +134,8 @@ def generate_dataframe_ics(configfile,
             ax[j + 1].set_xlim(df[(df['name'] == name) & (df['charge'] == charge)]['DT_weighted_avg'].mean() * 0.94,
                                df[(df['name'] == name) & (df['charge'] == charge)]['DT_weighted_avg'].mean() * 1.06)
             ax[j + 1].axhline(df[df['name'] == name]['RT_weighted_avg'].mean(), color='black', alpha=0.5, lw=0.5)
+            ax[j + 1].axvline(df[(df['name'] == name) & (df['charge'] == charge)]['DT_weighted_avg'].mean(),
+                              color='black', alpha=0.5, lw=0.5)
 
             # Plot horizontal and vertical lines corresponding to initial RT and DT centers used to extract tensors
             retention_label_center = \
