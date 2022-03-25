@@ -14,6 +14,7 @@ import seaborn as sns
 from scipy.optimize import curve_fit
 from sklearn.metrics import mean_squared_error
 import glob as glob
+from pathlib import Path
 import argparse
 
 def check_dir(path):
@@ -466,6 +467,12 @@ if __name__ == "__main__":
             ppm_lockmass_radius = int(configfile['ppm_lockmass_radius'])
         if configfile['polyfit_deg'] is not None:
             polyfit_deg = int(configfile['polyfit_deg'])
+
+        if configfile['lockmass_compound'] == 'GluFibPrecursor' or configfile['lockmass_compound'] == 'LeuEnkPrecursor':
+            if output_degrees is not None:
+                Path(output_degrees).touch()
+            if output_kde is not None:
+                Path(output_kde).touch()
 
 
         main(mzml_gz_path=mzml_gz_path,
