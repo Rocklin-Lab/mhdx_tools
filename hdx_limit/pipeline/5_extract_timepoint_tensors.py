@@ -423,10 +423,8 @@ if __name__ == "__main__":
         config_rt_radius = configfile["rt_radius"]
         config_dt_radius_scale = configfile["dt_radius_scale"]
 
+        # Use rt / dt recenter? Expects DT_weighted_avg and RT_wighted_avg columns in checked_library_info.py
         use_rtdt_recenter = snakemake.params['use_rtdt_recenter']
-        # Check condition to rerun extract tensor for undeuterated files
-        if use_rtdt_recenter and mzml_gz_path.split('/')[-1].replace('.gz','') in configfile[0]:
-            Path(snakemake.output.pop(-1)).touch()
 
         main(library_info_path=snakemake.input[0],
              mzml_gz_path=snakemake.input[1],
