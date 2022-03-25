@@ -1069,6 +1069,9 @@ class IsotopeCluster:
         self.factor_auc = factor_auc
         self.factor_auc_with_gauss_extrapol = factor_auc_with_gauss_extrapol
 
+        # set an idotp variable
+        self.idotp = None
+
         # Prune factor_mz to get window around cluster that is consistent between charge-states.
         self.cluster_mz_data = copy.deepcopy(self.factor_mz_data)
         self.cluster_mz_data[0:self.low_idx] = 0
