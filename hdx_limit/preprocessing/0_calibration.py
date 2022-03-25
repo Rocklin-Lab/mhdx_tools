@@ -185,7 +185,7 @@ def generate_thr_exp_pairs(scan_times,
     time_step = int(runtime / time_bins)
 
     if output_extracted_signals is not None:
-        fig, ax = plt.subplots(len(mzs_thr), time_bins, figsize=(3 * time_bins, 50), dpi=200)
+        fig, ax = plt.subplots(len(mzs_thr), time_bins, figsize=(3 * time_bins, 2*len(mzs_thr)), dpi=200)
 
     for i, t in enumerate(range(0, runtime, time_step)):
         keep = (scan_times >= t) & (scan_times < t + time_step)
