@@ -393,15 +393,27 @@ if __name__ == "__main__":
     if "snakemake" in globals():
         configfile = yaml.load(open(snakemake.input[2], "rb").read(), Loader=yaml.Loader)
         use_time_warping = configfile['use_time_warping']
+
+        # Handle how calibration files are expected based on configfile lockmass and protein_polyfit params
+        # Note calibration files are expected in specific folders: resources/0_calibration
+        # and resources/1_imtbx, respectively
+        file_name = snakemake.input[1].split('/')[-1].replace('.gz','')
         if configfile['lockmass']:
-            lockmass_polyfit_calibration_dict_path = [f for f in snakemake.input if '0_calibration' in f][0]
-            print('Loading lockmass calibration dict %s'%lockmass_polyfit_calibration_dict_path)
+            if os.path.exists("resources/0_calibration/" + file_name + "_mz_calib_dict.pk"):
+                lockmass_polyfit_calibration_dict_path = "resources/0_calibration/" + file_name + "_mz_calib_dict.pk"
+                print('Loading lockmass calibration dict %s'%lockmass_polyfit_calibration_dict_path)
+            else:
+                print("ERROR: lockmass calibration dict from %s expected but not found. Exiting!" %file_name)
+                exit()
         else:
             lockmass_polyfit_calibration_dict_path = None
-        file_name = snakemake.input[1].split('/')[-1].replace('.gz','')
         if configfile['protein_polyfit'] and any(file_name in undeut_files for undeut_files in configfile[0]):
-            protein_polyfit_calibration_dict_path = [f for f in snakemake.input if '1_imtbx' in f][0]
-            print('Loading protein polyfit calibration dict %s'%protein_polyfit_calibration_dict_path)
+            if os.path.exists("resources/1_imtbx/" + file_name + "_mz_calib_dict.pk"):
+                protein_polyfit_calibration_dict_path = "resources/1_imtbx/" + file_name + "_mz_calib_dict.pk"
+                print('Loading protein polyfit calibration dict %s'%protein_polyfit_calibration_dict_path)
+            else:
+                print("ERROR: protein polyfit calibration dict from %s expected but not found. Exiting! "%file_name)
+                exit()
         else:
             protein_polyfit_calibration_dict_path = None
 
