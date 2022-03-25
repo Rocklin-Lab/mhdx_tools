@@ -194,7 +194,7 @@ def generate_thr_exp_pairs(scan_times,
                                                  ppm_radius=ppm_radius, min_intensity=min_intensity)
         thr_exp_pairs[i] = [thr_peaks, obs_peaks]
 
-        if output_extracted_signals is not None and len(mz_thr) > 1:
+        if output_extracted_signals is not None and len(mzs_thr) > 1:
             for j, mz_thr in enumerate(mzs_thr):
                 mz_low = mz_thr - mz_thr * ppm_radius / 1e6
                 mz_high = mz_thr + mz_thr * ppm_radius / 1e6
@@ -233,7 +233,7 @@ def generate_thr_exp_pairs(scan_times,
                     ax[j][i].text(0.02, 0.9, 't=%i-%imin' % (t, t + time_step), horizontalalignment='left',
                                   transform=ax[j][i].transAxes, color='blue')
 
-            if output_extracted_signals is not None and len(mz_thr) == 1:
+            if output_extracted_signals is not None and len(mzs_thr) == 1:
                 for mz_thr in mzs_thr:
                     mz_low = mz_thr - mz_thr * ppm_radius / 1e6
                     mz_high = mz_thr + mz_thr * ppm_radius / 1e6
