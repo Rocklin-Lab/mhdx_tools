@@ -233,50 +233,49 @@ def generate_thr_exp_pairs(scan_times,
                     ax[j][i].text(0.02, 0.9, 't=%i-%imin' % (t, t + time_step), horizontalalignment='left',
                                   transform=ax[j][i].transAxes, color='blue')
 
-            if output_extracted_signals is not None and len(mzs_thr) == 1:
-                for mz_thr in mzs_thr:
-                    mz_low = mz_thr - mz_thr * ppm_radius / 1e6
-                    mz_high = mz_thr + mz_thr * ppm_radius / 1e6
-                    mask = (mzs >= mz_low) & (mzs <= mz_high)
-                    ax[i].plot(mzs[mask], np.sum(tensor[keep], axis=0)[mask], c='orange')
-                    try:
-                        H, A, x0, sigma = gauss_fit(mzs[mask], obs_spec[mask])
-                    except:
-                        x0 = mz_thr
-                        A = 0
-                    ax[i].plot(np.linspace(mzs[mask][0], mzs[mask][-1], 50),
-                                  gaussian_function(np.linspace(mzs[mask][0], mzs[mask][-1], 50), H, A, x0, sigma),
-                                  c='blue')
-                    ax[i].axvline(mz_thr, ls='--', c='red')
-                    ax[i].axvline(x0, ls='--', c='blue')
-                    ax[i].set_yticks([])
-                    ax[i].set_xticks([mz_thr])
-                    rmse = rmse_from_gaussian_fit(mzs[mask], obs_spec[mask])
-                    if A > min_intensity and rmse < 0.1:
-                        ax[i].text(0.98, 0.9, 'I=%.2e' % A, horizontalalignment='right',
-                                      transform=ax[i].transAxes)
-                        ax[i].text(0.98, 0.8, 'mz_err=%.1f ppm' % ((x0 - mz_thr) * 1e6 / mz_thr),
-                                      horizontalalignment='right',
-                                      transform=ax[i].transAxes)
-                        ax[i].text(0.98, 0.7, 'rmse_fit=%.2f' % rmse, horizontalalignment='right',
-                                      transform=ax[j][i].transAxes)
-                    else:
-                        ax[i].text(0.98, 0.9, 'I=%.2e' % A, horizontalalignment='right',
-                                      transform=ax[i].transAxes, c='red')
-                        ax[i].text(0.98, 0.8, 'mz_err=%.1f ppm' % ((x0 - mz_thr) * 1e6 / mz_thr),
-                                      horizontalalignment='right',
-                                      transform=ax[i].transAxes, c='red')
-                        ax[i].text(0.98, 0.7, 'rmse_fit=%.2f' % rmse, horizontalalignment='right',
-                                      transform=ax[i].transAxes, c='red')
-                    if i == 0:
-                        ax[i].text(0.02, 0.9, 't=%i-%imin' % (t, t + time_step), horizontalalignment='left',
-                                      transform=ax[i].transAxes, color='blue')
+        if output_extracted_signals is not None and len(mzs_thr) == 1:
+            for mz_thr in mzs_thr:
+                mz_low = mz_thr - mz_thr * ppm_radius / 1e6
+                mz_high = mz_thr + mz_thr * ppm_radius / 1e6
+                mask = (mzs >= mz_low) & (mzs <= mz_high)
+                ax[i].plot(mzs[mask], np.sum(tensor[keep], axis=0)[mask], c='orange')
+                try:
+                    H, A, x0, sigma = gauss_fit(mzs[mask], obs_spec[mask])
+                except:
+                    x0 = mz_thr
+                    A = 0
+                ax[i].plot(np.linspace(mzs[mask][0], mzs[mask][-1], 50),
+                              gaussian_function(np.linspace(mzs[mask][0], mzs[mask][-1], 50), H, A, x0, sigma),
+                              c='blue')
+                ax[i].axvline(mz_thr, ls='--', c='red')
+                ax[i].axvline(x0, ls='--', c='blue')
+                ax[i].set_yticks([])
+                ax[i].set_xticks([mz_thr])
+                rmse = rmse_from_gaussian_fit(mzs[mask], obs_spec[mask])
+                if A > min_intensity and rmse < 0.1:
+                    ax[i].text(0.98, 0.9, 'I=%.2e' % A, horizontalalignment='right',
+                                  transform=ax[i].transAxes)
+                    ax[i].text(0.98, 0.8, 'mz_err=%.1f ppm' % ((x0 - mz_thr) * 1e6 / mz_thr),
+                                  horizontalalignment='right',
+                                  transform=ax[i].transAxes)
+                    ax[i].text(0.98, 0.7, 'rmse_fit=%.2f' % rmse, horizontalalignment='right',
+                                  transform=ax[i].transAxes)
+                else:
+                    ax[i].text(0.98, 0.9, 'I=%.2e' % A, horizontalalignment='right',
+                                  transform=ax[i].transAxes, c='red')
+                    ax[i].text(0.98, 0.8, 'mz_err=%.1f ppm' % ((x0 - mz_thr) * 1e6 / mz_thr),
+                                  horizontalalignment='right',
+                                  transform=ax[i].transAxes, c='red')
+                    ax[i].text(0.98, 0.7, 'rmse_fit=%.2f' % rmse, horizontalalignment='right',
+                                  transform=ax[i].transAxes, c='red')
+
+                ax[i].text(0.02, 0.9, 't=%i-%imin' % (t, t + time_step), horizontalalignment='left',
+                                  transform=ax[i].transAxes, color='blue')
 
     if output_extracted_signals is not None:
         fig.tight_layout()
         fig.savefig(output_extracted_signals, dpi=300, format='pdf')
         plt.close('all')
-
 
     return thr_exp_pairs
 
