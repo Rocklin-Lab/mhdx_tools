@@ -303,7 +303,7 @@ def main(library_info_path,
 
             # Iterate over each library_info index that needs to read the scan.
             for i in scan_to_lines[scan_number]:  
-                print("Library Index: " + str(i) + " Len Output: " +
+                print("Library Index: " + str(i) + " N Scans: " + str(scans_per_line[i]) + " Len Output: " +
                       str(len(output_scans[i])))
                 obs_mz_values = library_info["obs_mz"].values[i]
                 mz_low = obs_mz_values - (low_mass_margin /
