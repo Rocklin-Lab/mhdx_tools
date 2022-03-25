@@ -324,7 +324,10 @@ def main(library_info_path,
                 #try:
                 # Is this the last scan the line needed? If so, save to disk.
                 if len(output_scans[i]) == scans_per_line[i]:
-                    my_name = library_info.iloc[i]["name"]
+                    if use_rtdt_recenter:
+                        my_name = library_info.iloc[i]["name_recentered"]
+                    else:
+                        my_name = library_info.iloc[i]["name"]
                     my_charge = library_info.iloc[i]["charge"]
                     my_out_test = "/" + my_name + "/" + my_name + "_" + "charge" + str(my_charge) + "_" + mzml + ".gz.cpickle.zlib"
                     print("library idx = " + str(i), flush=True)
