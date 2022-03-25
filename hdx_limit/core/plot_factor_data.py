@@ -39,8 +39,8 @@ from scipy.ndimage.filters import gaussian_filter
 
 
 
-def plot_factor_row(fig, gs, retention_labels, drift_labels, mz_labels, bins_per_isotope_peak, row_number, factor=None,
-                    tensor3=None, name='', from_dict=True):
+def plot_factor_row(fig, gs, retention_labels, drift_labels, mz_labels, bins_per_isotope_peak, row_number,
+                    tensor_auc=None, factor=None, tensor3=None, name='', from_dict=True):
     """
     plot the factor data (3d rt, dt, mz), mz data, integrated mz data
     :param retention_labels: retention labels
@@ -80,6 +80,18 @@ def plot_factor_row(fig, gs, retention_labels, drift_labels, mz_labels, bins_per
     ax.set_yticklabels(['%.1f' % drift_labels[0], '%.1f' % drift_labels[-1]], rotation='horizontal')
     ax.tick_params(length=3, pad=3)
 
+    if tensor_auc is not None:
+
+        plt.text(
+            1.0,
+            1.3,
+            "\n%.2f" % tensor_auc,
+            horizontalalignment="right",
+            verticalalignment="top",
+            transform=ax.transAxes,
+            color="blue",
+            )
+
     # plot mz data
 
     padded_mz_labels = []
@@ -116,8 +128,8 @@ def plot_factor_row(fig, gs, retention_labels, drift_labels, mz_labels, bins_per
     plt.grid(axis='x', linewidth=0.25)
 
 
-def plot_factor_data(retention_labels, drift_labels, mz_labels, bins_per_isotope_peak, tensor3, factors, output_path,
-                     gauss_filter_params=(3, 1), title='', from_dict=True):
+def plot_factor_data(retention_labels, drift_labels, mz_labels, bins_per_isotope_peak, tensor3, tensor_auc, factors,
+                     output_path, gauss_filter_params=(3, 1), title='', from_dict=True):
     """
     plot factor data
     :param retention_labels: retention time labels
@@ -153,6 +165,7 @@ def plot_factor_data(retention_labels, drift_labels, mz_labels, bins_per_isotope
                     retention_labels=retention_labels,
                     drift_labels=drift_labels,
                     mz_labels=mz_labels,
+                    tensor_auc=tensor_auc,
                     bins_per_isotope_peak=bins_per_isotope_peak,
                     row_number=0,
                     factor=None,
@@ -200,6 +213,7 @@ def plot_factor_data(retention_labels, drift_labels, mz_labels, bins_per_isotope
                             drift_labels=drift_labels,
                             mz_labels=mz_labels,
                             bins_per_isotope_peak=bins_per_isotope_peak,
+                            tensor_auc=factor.factor_auc/tensor_auc,
                             row_number=num + 2,
                             factor=factor,
                             tensor3=None,
@@ -323,6 +337,7 @@ def plot_factor_data_from_data_tensor(data_tensor, output_path):
                      bins_per_isotope_peak=data_tensor.DataTensor.bins_per_isotope_peak,
                      tensor3=data_tensor.DataTensor.full_grid_out,
                      factors=data_tensor.DataTensor.factors,
+                     tensor_auc=data_tensor.DataTensor.tensor_auc,
                      output_path=output_path,
                      gauss_filter_params=data_tensor.gauss_params,
                      title=title,
