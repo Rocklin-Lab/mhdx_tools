@@ -71,7 +71,8 @@ def cum_peak_gaps_from_sequence(sequence):
 
     n_exchangable = len(sequence) - 2 - sequence[2:].count('P')
 
-    f=molmass.Formula(sequence)
+    pep_seq = 'peptide(' + sequence + ')'
+    f=molmass.Formula(pep_seq)
     start = min([x[0] for x in f.spectrum().values()])-0.5
     n_isotopes = int(len(f.spectrum(minfract=0.0001)))
 
@@ -79,7 +80,7 @@ def cum_peak_gaps_from_sequence(sequence):
     y=np.zeros((len(x)))
 
     for k in range(n_isotopes):
-        f=molmass.Formula(sequence)
+        f=molmass.Formula(pep_seq)
         if k > 0: f = f - (k * hyd) + (k * deut)
         peaks = [(x[0], x[1]) for x in f.spectrum().values()]
 
