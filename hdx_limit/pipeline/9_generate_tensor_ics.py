@@ -72,7 +72,7 @@ def convert_factor_mz_data_to_cont(mz_data, mz_labels, bins_per_isotope_peak):
     return padded_mz_labels, padded_factor_mz
 
 
-def plot_mz_data(fig, gs, row_num, col_num, mz_label, mz_data, plot_label):
+def plot_mz_data(fig, gs, row_num, col_num, mz_label, mz_data, plot_label, idotp=None):
     """Creates a subplot in a given figure at set row/column position, plots the m/Z of a passed IC or Factor.
 
     Args:
@@ -92,7 +92,9 @@ def plot_mz_data(fig, gs, row_num, col_num, mz_label, mz_data, plot_label):
 
     ax = fig.add_subplot(gs[row_num, col_num])
     plt.plot(mz_label, mz_data, linewidth=0.5, label=plot_label)
-    plt.text(0, 0.1, s=str(mz_sum), fontsize=10, transform=ax.transAxes)
+    plt.text(0.75, 1.2, s='sum_int=%.2f' % mz_sum, fontsize=10, transform=ax.transAxes)
+    if idotp is not None:
+        plt.text(0, 1.2, s='idotp=%.3f' % idotp, fontsize=10, transform=ax.transAxes)
     ax.set_yticks([])
     ax.tick_params(length=3, pad=3)
     ax.spines['right'].set_visible(False)
@@ -154,6 +156,7 @@ def plot_ics(list_of_ics_from_a_factor):
                      col_num=n_cols,
                      mz_label=ic_mz_label,
                      mz_data=ic_mz_,
+                     idotp=ic.idotp,
                      plot_label=str(num))
 
         if (n_cols+1) % num_columns == 0:
