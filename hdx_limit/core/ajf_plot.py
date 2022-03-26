@@ -143,7 +143,7 @@ def ajf_plot(df, winner, tps, output_path):
 
     x_max = len(df.iloc[0]['ic'].baseline_integrated_mz)
 
-    fig = plt.figure(figsize=(2. * n_cols, 40))
+    fig = plt.figure(figsize=(2. * n_cols, 2.5 + 1.2 * len(tps)))
 
     gs = gridspec.GridSpec(2, 1, height_ratios=[1, 15], wspace=0., hspace=0.05)
 
