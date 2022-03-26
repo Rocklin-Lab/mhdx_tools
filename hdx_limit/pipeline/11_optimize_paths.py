@@ -183,7 +183,7 @@ def main(library_info_path,
     if prefiltered_ics_out_path is not None:
         limit_write(p1.prefiltered_ics, prefiltered_ics_out_path)
 
-    if len(p1.prefiltered_ics) > 5:
+    if len(p1.prefiltered_ics) >= configfile["thresholds"]["min_timepoints"]:
 
         # Checks if arguments require monobody scoring run.
         if (any(arg is not None for arg in monobody_path_arguments)) or (monobody_return_flag is not False):
