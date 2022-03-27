@@ -168,8 +168,6 @@ def generate_dataframe_ics(configfile,
         name_recentered = '_'.join(name.split('_')[:-1]) + '_' + str(
             round(df[(df['name'] == name)]['RT_weighted_avg'].values[0], 5))
 
-        df.drop_duplicates(subset=['name_recentered', 'charge'], ignore_index=True, inplace=True)
-
         plt.tight_layout()
         plt.savefig('results/plots/tensor-recenter/' + name_recentered + '.pdf', format='pdf', dpi=200)
         plt.close('all')
@@ -221,10 +219,11 @@ def main(configfile,
         df[(df['name'] == name) & (df['charge'] == charge)].sort_values(by='idotp', ascending=False)[
             cols_ics_recenter].values[0]
         my_row['name_recentered'] = '_'.join(name.split('_')[:-1]) + '_' + str(
-            round(my_row['RT_weighted_avg'].values[0], 3))
+            round(my_row['RT_weighted_avg'].values[0], 5))
         out_df = out_df.append(my_row)
 
     if library_info_out_path is not None:
+        out_df.drop_duplicates(subset=['name_recentered', 'charge'], ignore_index=True, inplace=True)
         out_df.to_json(library_info_out_path)
 
     if plot_out_path is not None:
