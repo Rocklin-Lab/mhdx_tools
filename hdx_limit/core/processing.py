@@ -124,7 +124,8 @@ def generate_tensor_factors(tensor_fpath, library_info_df, timepoint_index, gaus
                             timepoint_label=None,
                             filter_factors=False,
                             factor_rt_r2_cutoff=0.90,
-                            factor_dt_r2_cutoff=0.90):
+                            factor_dt_r2_cutoff=0.90,
+                            use_rtdt_recenter=False):
     """Generates a DataTensor from values extracted from a .mzML, along with several analytical parameters.
 
         Args:
@@ -157,7 +158,8 @@ def generate_tensor_factors(tensor_fpath, library_info_df, timepoint_index, gaus
                                   library_info=library_info_df,
                                   timepoint_index=timepoint_index,
                                   mz_centers=mz_centers,
-                                  normalization_factor=normalization_factor)
+                                  normalization_factor=normalization_factor,
+                                  use_rtdt_recenter=use_rtdt_recenter)
 
     print("Post-Tensor-Pre-Factor-Initialization: " + str(process.memory_info().rss /
                                         (1024 * 1024 * 1024)))
@@ -226,7 +228,8 @@ class TensorGenerator:
     c13_mass_diff = 1.00335
 
 
-    def __init__(self, filename, timepoint_index, library_info, mz_centers, normalization_factor, **kwargs):
+    def __init__(self, filename, timepoint_index, library_info, mz_centers, normalization_factor, use_rtdt_recenter,
+                 **kwargs):
         """Initializes the TensorGenerator object to create a DataTensor.
 
         Args:
@@ -265,9 +268,17 @@ class TensorGenerator:
         self.tensor = io.limit_read(self.filename)
         self.name = filename.split("/")[-2] # Expects format: path/to/{rt-group-name}/{rt-group-name}_{charge}_{file.mzML.gz}.cpickle.zlib.
         self.charge = int([item[6:] for item in filename.split("/")[-1].split("_") if "charge" in item][0]) # Finds by keyword and strips text.
-        self.lib_idx = self.library_info.loc[(library_info["name"]==self.name) & (library_info["charge"]==self.charge)].index
-        self.my_row = self.library_info.loc[(library_info["name"]==self.name) & (library_info["charge"]==self.charge)]
-        self.max_peak_center = len(self.library_info.loc[self.library_info["name"] == self.name]["sequence"].values[0])
+        if use_rtdt_recenter:
+            self.lib_idx = self.library_info.loc[
+                (library_info["name_recentered"] == self.name) & (library_info["charge"] == self.charge)].index
+            self.my_row = self.library_info.loc[
+                (library_info["name_recentered"] == self.name) & (library_info["charge"] == self.charge)]
+            self.max_peak_center = len(
+                self.library_info.loc[self.library_info["name_recentered"] == self.name]["sequence"].values[0])
+        else:
+            self.lib_idx = self.library_info.loc[(library_info["name"]==self.name) & (library_info["charge"]==self.charge)].index
+            self.my_row = self.library_info.loc[(library_info["name"]==self.name) & (library_info["charge"]==self.charge)]
+            self.max_peak_center = len(self.library_info.loc[self.library_info["name"] == self.name]["sequence"].values[0])
         self.total_isotopes = self.max_peak_center + self.high_mass_margin
         self.total_mass_window = self.low_mass_margin + self.total_isotopes
 
@@ -356,6 +367,7 @@ class PathOptimizer:
                  thresholds,
                  pareto_prefilter=True,
                  old_data_dir=None,
+                 use_rtdt_recenter=False,
                  **kwargs):
         """Initializes an instance of PathOptimizer, performs preprocessing of inputs so the returned object is ready for optimization.
 
@@ -397,10 +409,16 @@ class PathOptimizer:
         self.library_info = library_info
         self.timepoints = timepoints
         self.n_undeut_runs = n_undeut_runs
-        self.max_peak_center = len(
-            self.library_info.loc[self.library_info["name"] ==
-                                  self.name]["sequence"].values[0]
-        )
+        if use_rtdt_recenter:
+            self.max_peak_center = len(
+                self.library_info.loc[self.library_info["name_recentered"] ==
+                                      self.name]["sequence"].values[0]
+            )
+        else:
+            self.max_peak_center = len(
+                self.library_info.loc[self.library_info["name"] ==
+                                      self.name]["sequence"].values[0]
+            )
 
         self.old_data_dir = old_data_dir
         self.old_files = None
@@ -411,7 +429,8 @@ class PathOptimizer:
         self.dt_error_rmse = None
 
         self.gather_old_data()
-        self.select_undeuterated()
+
+        self.select_undeuterated(use_rtdt_recenter=use_rtdt_recenter)
         self.precalculate_fit_to_ground()
         if user_prefilter:
             self.thresholds = thresholds
@@ -519,7 +538,8 @@ class PathOptimizer:
                             all_tp_clusters=None,
                             library_info=None,
                             name=None,
-                            n_undeut_runs=None):
+                            n_undeut_runs=None,
+                            use_rtdt_recenter=False):
         """Description of function.
 
         Args:
@@ -548,7 +568,10 @@ class PathOptimizer:
         if n_undeut_runs is None:
             n_undeut_runs = self.n_undeut_runs
 
-        my_seq = library_info.loc[library_info["name"] == name]["sequence"].values[0]
+        if use_rtdt_recenter:
+            my_seq = library_info.loc[library_info["name_recentered"] == name]["sequence"].values[0]
+        else:
+            my_seq = library_info.loc[library_info["name"] == name]["sequence"].values[0]
 
         if (
                 self.old_data_dir is not None
