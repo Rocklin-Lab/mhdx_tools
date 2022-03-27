@@ -264,7 +264,8 @@ def main(library_info_path,
                                           timepoint_label=None,
                                           filter_factors=filter_factors,
                                           factor_rt_r2_cutoff=factor_rt_r2_cutoff,
-                                          factor_dt_r2_cutoff=factor_dt_r2_cutoff)
+                                          factor_dt_r2_cutoff=factor_dt_r2_cutoff,
+                                          use_rtdt_recenter=use_rtdt_recenter)
 
     all_ics = []
 
