@@ -88,11 +88,18 @@ def generate_dataframe_ics(configfile,
                                      df[(df['name'] == name) & (df['charge'] == charge)]['dt'].quantile(0.75)
         iqr = percentile75 - percentile25
         lb, ub = percentile25 - 1.5 * iqr, percentile75 + 1.5 * iqr
-        df.loc[(df['name'] == name) & (df['charge'] == charge), 'DT_weighted_avg'] = sum(
-            df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub)]['dt'] *
-            df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub)]['auc']) / sum(
-            df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub)]['auc'])
-    # Find RT weighted average
+        if len(df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
+                        df['dt'] <= 13)]) > 0:
+            df.loc[(df['name'] == name) & (df['charge'] == charge), 'DT_weighted_avg'] = sum(
+                df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
+                            df['dt'] <= 13.)]['dt'] *
+                df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
+                            df['dt'] <= 13.)]['auc']) / sum(
+                df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
+                            df['dt'] <= 13.)]['auc'])
+        else:
+            df.loc[(df['name'] == name) & (df['charge'] == charge), 'DT_weighted_avg'] = -1
+        # Find RT weighted average
     for name in set(df['name'].values):
         # Remove outliers
         percentile25, percentile75 = df[(df['name'] == name)]['rt'].quantile(0.25), \
@@ -232,7 +239,8 @@ def main(configfile,
             cols_ics_recenter].values[0]
         my_row['name_recentered'] = '_'.join(name.split('_')[:-1]) + '_' + str(
             round(my_row['RT_weighted_avg'].values[0], 5))
-        out_df = out_df.append(my_row)
+        if not my_row['DT_weighted_avg'] < 0.1:
+            out_df = out_df.append(my_row)
 
     if library_info_out_path is not None:
         out_df.drop_duplicates(subset=['name_recentered', 'charge'], ignore_index=True, inplace=True)
