@@ -83,14 +83,26 @@ def generate_dataframe_ics(configfile,
 
     # Find DT weighted average
     for name, charge in set([(n, c) for (n, c) in df[['name', 'charge']].values]):
+        # Remove outliers
+        percentile25, percentile75 = df[(df['name'] == name) & (df['charge'] == charge)]['dt'].quantile(0.25), \
+                                     df[(df['name'] == name) & (df['charge'] == charge)]['dt'].quantile(0.75)
+        iqr = percentile75 - percentile25
+        lb, ub = percentile25 - 1.5 * iqr, percentile75 + 1.5 * iqr
         df.loc[(df['name'] == name) & (df['charge'] == charge), 'DT_weighted_avg'] = sum(
-            df[(df['name'] == name) & (df['charge'] == charge)]['dt'] *
-            df[(df['name'] == name) & (df['charge'] == charge)]['auc']) / sum(
-            df[(df['name'] == name) & (df['charge'] == charge)]['auc'])
+            df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ul)]['dt'] *
+            df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ul)]['auc']) / sum(
+            df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ul)]['auc'])
     # Find RT weighted average
     for name in set(df['name'].values):
+        # Remove outliers
+        percentile25, percentile75 = df[(df['name'] == name)]['rt'].quantile(0.25), \
+                                     df[(df['name'] == name)]['rt'].quantile(0.75)
+        iqr = percentile75 - percentile25
+        lb, ub = percentile25 - 1.5 * iqr, percentile75 + 1.5 * iqr
         df.loc[df['name'] == name, 'RT_weighted_avg'] = sum(
-            df[df['name'] == name]['rt'] * df[df['name'] == name]['auc']) / sum(df[df['name'] == name]['auc'])
+            df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ul)]['rt'] * df[(df['name'] == name)
+                                & (df['rt'] >= lb) & (df['rt'] <= ul)]['auc']) / sum(df[(df['name'] == name)
+                                & (df['rt'] >= lb) & (df['rt'] <= ul)]['auc'])
 
     # Compute DT weighted avg in bin dimension (this value should be used to extract tensors for consistency with
     # 5_extract_timepoint_tensor code
