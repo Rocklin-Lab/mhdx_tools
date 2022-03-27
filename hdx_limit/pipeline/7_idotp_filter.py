@@ -163,6 +163,7 @@ def generate_dataframe_ics(configfile,
             drift_label_center = df[(df['name'] == name) & (df['charge'] == charge)]['ic'].values[0].drift_labels[
                 len(df[(df['name'] == name) & (df['charge'] == charge)]['ic'].values[0].drift_labels) // 2]
             ax[j + 1].axvline(drift_label_center, color='red', alpha=0.5, lw=0.5)
+            ax[j + 1].text(0, 0.95, 'drift_center=%.2f' % drift_label_center, transform=ax[j + 1].transAxes, fontsize=6)
 
             ax[0].scatter(df[(df['name'] == name) & (df['charge'] == charge)]['DT_weighted_avg'].mean(),
                           (sum(df[(df['name'] == name) & (df['charge'] == charge)]['rt'] *
