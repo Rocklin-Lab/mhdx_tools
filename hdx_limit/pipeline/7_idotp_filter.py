@@ -89,9 +89,9 @@ def generate_dataframe_ics(configfile,
         iqr = percentile75 - percentile25
         lb, ub = percentile25 - 1.5 * iqr, percentile75 + 1.5 * iqr
         df.loc[(df['name'] == name) & (df['charge'] == charge), 'DT_weighted_avg'] = sum(
-            df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ul)]['dt'] *
-            df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ul)]['auc']) / sum(
-            df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ul)]['auc'])
+            df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub)]['dt'] *
+            df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub)]['auc']) / sum(
+            df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub)]['auc'])
     # Find RT weighted average
     for name in set(df['name'].values):
         # Remove outliers
@@ -101,8 +101,8 @@ def generate_dataframe_ics(configfile,
         lb, ub = percentile25 - 1.5 * iqr, percentile75 + 1.5 * iqr
         df.loc[df['name'] == name, 'RT_weighted_avg'] = sum(
             df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ul)]['rt'] * df[(df['name'] == name)
-                                & (df['rt'] >= lb) & (df['rt'] <= ul)]['auc']) / sum(df[(df['name'] == name)
-                                & (df['rt'] >= lb) & (df['rt'] <= ul)]['auc'])
+                                & (df['rt'] >= lb) & (df['rt'] <= ub)]['auc']) / sum(df[(df['name'] == name)
+                                & (df['rt'] >= lb) & (df['rt'] <= ub)]['auc'])
 
     # Compute DT weighted avg in bin dimension (this value should be used to extract tensors for consistency with
     # 5_extract_timepoint_tensor code
