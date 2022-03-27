@@ -100,7 +100,7 @@ def generate_dataframe_ics(configfile,
         iqr = percentile75 - percentile25
         lb, ub = percentile25 - 1.5 * iqr, percentile75 + 1.5 * iqr
         df.loc[df['name'] == name, 'RT_weighted_avg'] = sum(
-            df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ul)]['rt'] * df[(df['name'] == name)
+            df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)]['rt'] * df[(df['name'] == name)
                                 & (df['rt'] >= lb) & (df['rt'] <= ub)]['auc']) / sum(df[(df['name'] == name)
                                 & (df['rt'] >= lb) & (df['rt'] <= ub)]['auc'])
 
