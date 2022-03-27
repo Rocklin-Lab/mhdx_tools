@@ -130,8 +130,10 @@ def generate_dataframe_ics(configfile,
                         ax=ax[0])
         ax[0].set_ylim(df[df['name'] == name]['RT_weighted_avg'].mean() - 0.4,
                        df[df['name'] == name]['RT_weighted_avg'].mean() + 0.4)
-        ax[0].set_xlim(df[df['name'] == name]['DT_weighted_avg'].min() - 0.5,
-                       df[df['name'] == name]['DT_weighted_avg'].max() + 0.5)
+        ax[0].set_xlim(min(df[df['name'] == name]['DT_weighted_avg'].min(),
+                           df[df['name'] == name]['dt'].min()) - 0.5,
+                       max(df[df['name'] == name]['DT_weighted_avg'].max(),
+                           df[df['name'] == name]['dt'].max()) + 0.5)
         ax[0].axhline(df[df['name'] == name]['RT_weighted_avg'].mean(), color='black', alpha=0.5, lw=0.5)
         ax[0].text(0, 1.01, '%s' % name, transform=ax[0].transAxes, fontsize=8)
         ax[0].set_xlabel('DT')
@@ -163,7 +165,6 @@ def generate_dataframe_ics(configfile,
             drift_label_center = df[(df['name'] == name) & (df['charge'] == charge)]['ic'].values[0].drift_labels[
                 len(df[(df['name'] == name) & (df['charge'] == charge)]['ic'].values[0].drift_labels) // 2]
             ax[j + 1].axvline(drift_label_center, color='red', alpha=0.5, lw=0.5)
-            ax[j + 1].text(0, 0.95, 'drift_center=%.2f' % drift_label_center, transform=ax[j + 1].transAxes, fontsize=6)
 
             ax[0].scatter(df[(df['name'] == name) & (df['charge'] == charge)]['DT_weighted_avg'].mean(),
                           (sum(df[(df['name'] == name) & (df['charge'] == charge)]['rt'] *
