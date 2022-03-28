@@ -97,6 +97,13 @@ def generate_dataframe_ics(configfile,
                             df['dt'] <= 13.)]['auc']) / sum(
                 df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
                             df['dt'] <= 13.)]['auc'])
+            # How many signals do we see? How many undeuterated files generated passing ICs?
+            df.loc[df['name'] == name, 'n_signals'] = len(
+                df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
+                            df['dt'] <= 13.)])
+            df.loc[df['name'] == name, 'n_UN'] = len(
+                set(df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
+                            df['dt'] <= 13.)]['file_index'].values))
             if len(df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
                     df['dt'] <= 13)]) > 1:
                 # DT standard deviation
@@ -119,6 +126,7 @@ def generate_dataframe_ics(configfile,
                             df['dt'] <= 13.), 'dt_weighted_std'] = 0
         else:
             df.loc[(df['name'] == name) & (df['charge'] == charge), 'DT_weighted_avg'] = -1
+
     # Find RT weighted average
     for name in set(df['name'].values):
         # Remove outliers
@@ -144,10 +152,6 @@ def generate_dataframe_ics(configfile,
             df.loc[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub), 'rt_std'] = 0
             df.loc[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub),
                    'rt_weighted_std'] = 0
-        # How many signals do we see? How many undeuterated files generated passing ICs?
-        df.loc[df['name'] == name, 'n_signals'] = len(df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)])
-        df.loc[df['name'] == name, 'n_UN'] = len(
-            set(df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)]['file_index'].values))
 
 
         # Compute DT weighted avg in bin dimension (this value should be used to extract tensors for consistency with
