@@ -431,7 +431,7 @@ class PathOptimizer:
         self.gather_old_data()
 
         self.select_undeuterated(use_rtdt_recenter=use_rtdt_recenter)
-        self.precalculate_fit_to_ground()
+        self.precalculate_fit_to_ground(use_rtdt_recenter=use_rtdt_recenter)
         if user_prefilter:
             self.thresholds = thresholds
             self.filters_from_user()
@@ -682,7 +682,8 @@ class PathOptimizer:
 
     def precalculate_fit_to_ground(self,
                                    all_tp_clusters=None,
-                                   undeut_grounds=None):
+                                   undeut_grounds=None,
+                                   use_rtdt_recenter=False):
         """Description of function.
 
         Args:
@@ -702,8 +703,12 @@ class PathOptimizer:
 
                 undeut = undeut_grounds[ic.charge_states[0]]
 
-                ic.dt_ground_err = abs(ic.dt_coms - undeut.dt_coms)
-                ic.rt_ground_err = abs(ic.rt_com - undeut.rt_com)
+                if use_rtdt_recenter:
+                    ic.dt_ground_err = abs(ic.dt_coms - undeut.drift_labels[len(undeut.drift_labels) // 2])
+                    ic.rt_ground_err = abs(ic.rt_com - undeut.retention_labels[len(undeut.drift_labels) // 2])
+                else:
+                    ic.dt_ground_err = abs(ic.dt_coms - undeut.dt_coms)
+                    ic.rt_ground_err = abs(ic.rt_com - undeut.rt_com)
                 ic.auc_ground_err = ic.log_baseline_auc - undeut.log_baseline_auc
                 ic.dt_ground_fit = max(
                     np.correlate(undeut.dt_norms[0], ic.dt_norms[0], mode='full'))
