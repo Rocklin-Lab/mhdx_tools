@@ -32,6 +32,7 @@ Todo:
 
 """
 import os
+from dataclasses import dataclass
 import time
 import sys
 import math
@@ -39,7 +40,7 @@ import copy
 import psutil
 import peakutils
 import numpy as np
-from nn_fac import ntf
+import nn_fac
 from scipy.signal import find_peaks
 from scipy.ndimage.filters import gaussian_filter
 from scipy.ndimage.measurements import center_of_mass
@@ -48,6 +49,264 @@ from scipy.optimize import curve_fit
 from sklearn.metrics import mean_squared_error
 from scipy.stats import norm
 from scipy.stats import linregress
+
+
+def cal_area_under_curve_from_normal_distribution(low_bound, upper_bound, center, width):
+    """Computes the cumulative distribution function for a gaussian with given center, bounds, and width.
+
+    Args:
+        low_bound (float): Lower or left bound on gaussian, unitless.
+        upper_bound (float):  Upper or right bound on gaussian, unitless.
+        center (float): Center of gaussian, unitless.
+        width (float): Width of gaussian, unitless.
+
+    Returns:
+        auc (float): Area Under the Curve, computed cumulative distribution of specified gaussian.
+
+    """
+    lb_cdf = norm.cdf(low_bound, loc=center, scale=width)
+    ub_cdf = norm.cdf(upper_bound, loc=center, scale=width)
+    auc = ub_cdf - lb_cdf
+    return auc
+
+
+def estimate_gauss_param(y_data, x_data):
+    """Estimates the parameters of a gaussian fit to a set of datapoints with x,y coordinates in x_data and y_data.
+
+    Args:
+        y_data (iterable of floats): Y values of data to fit.
+        x_data (iterable of floats): X values of data to fit.
+
+    Returns:
+        init_guess (list of floats): baseline offset, amplitude, center, width.
+
+    """
+    ymax = np.max(y_data)
+    maxindex = np.nonzero(y_data == ymax)[0]
+    peakmax_x = x_data[maxindex][0]
+    norm_arr = y_data/max(y_data)
+    bins_for_width = norm_arr[norm_arr > 0.70]
+    width_bin = len(bins_for_width)
+    init_guess = [0, ymax, peakmax_x, width_bin]
+    # bounds = ([0, 0, 0, 0], [np.inf, np.inf, len(x_data)-1, len(x_data)-1])
+    return init_guess
+
+
+def gauss_func(x, y0, A, xc, w):
+    """Model Gaussian function to pass to scipy.optimize.curve_fit.
+
+    Args:
+        x (list of floats): X dimension values.
+        y0 (float): Offset of y-values from 0.
+        A (float): Amplitude of Gaussian.
+        xc (float): Center of Gaussian in x dimension.
+        w (float): Width or sigma of Gaussian.
+
+    Returns:
+        y (list of floats): Y-values of Gaussian function evaluated over x.
+
+    """
+    rxc = ((x - xc) ** 2) / (2 * (w ** 2))
+    y = y0 + A * (np.exp(-rxc))
+    return y
+
+
+def adjrsquared(r2, param, num):
+    """Calculates the adjusted R^2 for a parametric fit to data.
+
+    Args:
+         r2 (float): R^2 or 'coefficient of determination' of a linear regression between fitted and observed values.
+         param (int): Number of parameters in fitting model.
+         num (int): Number of datapoints in sample.
+
+    Returns:
+        y (float): Adjusted R^2 <= R^2, increases when additional parameters improve fit more than could be expected by chance.
+
+    """
+    y = 1 - (((1 - r2) * (num - 1)) / (num - param - 1))
+    return y
+
+
+def fit_gaussian(x_data, y_data, data_label="dt"):
+    """Performs fitting of a gaussian function to a provided data sample and computes linear regression on residuals to measure quality of fit.
+
+    Args:
+        x_data (list of floats): X dimension values for sample data.
+        y_data (list of floats): Y dimension values for sample data.
+        data_label (str): Label indicating origin of data in multidimensional separation (rt, dt, m/z).
+
+    Returns:
+        gauss_fit_dict (dict): Contains the following key-value pairs describing the Guassian and linear regression parameters.
+            "gauss_fit_success" (bool): Boolean indicating the success (True) or failure (False) of the fitting operation.
+            "y_baseline" (float): Fitted parameter for the Gaussian function's offset from y=0.
+            "y_amp" (float): Fitted parameter for the amplitude of the Gaussian function.
+            "xc" (float): Fitted parameter for the center of the Gaussian in the x dimension.
+            "width" (float): Fitted parameter for the x dimensional width of the Gaussian function.
+            "y_fit" (list of floats): Y values of fitted Gaussian function evaluated over x.
+            "fit_rmse" (float): Root-mean-square error, the standard deviation of the residuals between the fit and sample.
+            "fit_lingress_slope" (float): The slope of the linear regression line over the residuals between fit and sample.
+            "fit_lingress_intercept" (float): The intercept point of the line fit to the residuals.
+            "fit_lingress_pvalue" (float): The p-value for a hypothesis test whose null hypothesis is that the above slope is zero
+            "fit_lingress_stderr" (float): Standard error of the estimated slope under the assumption of residual normality.
+            "fit_lingress_r2" (float): R^2 or 'coeffiecient of determination' of linear regression over residuals.
+            "fit_lingress_adj_r2" (float): Adjusted R^2, always <= R^2, decreases with extraneous parameters.
+            "auc" (float): Area under the curve, cumulative distribution function of fitted gaussian evaluated over the length of x_data.
+
+    """
+    init_guess = estimate_gauss_param(y_data, x_data)
+    gauss_fit_dict = dict()
+    gauss_fit_dict['data_label'] = data_label
+    gauss_fit_dict['gauss_fit_success'] = False
+    gauss_fit_dict['xc'] = center_of_mass(y_data)[0]
+    gauss_fit_dict['auc'] = 1.0
+    gauss_fit_dict['fit_rmse'] = 100.0
+    gauss_fit_dict['fit_linregress_r2'] = 0.0
+    gauss_fit_dict['fit_lingress_adj_r2'] = 0.0
+
+    try:
+        popt, pcov = curve_fit(gauss_func, x_data, y_data, p0=init_guess, maxfev=100000)
+        if popt[2] < 0:
+            return gauss_fit_dict
+        if popt[3] < 0:
+            return gauss_fit_dict
+        else:
+            y_fit = gauss_func(x_data, *popt)
+            fit_rmse = mean_squared_error(y_data/max(y_data), y_fit/max(y_fit), squared=False)
+            slope, intercept, rvalue, pvalue, stderr = linregress(y_data, y_fit)
+            adj_r2 = adjrsquared(r2=rvalue**2, param=4, num=len(y_data))
+            gauss_fit_dict['gauss_fit_success'] = True
+            gauss_fit_dict['y_baseline'] = popt[0]
+            gauss_fit_dict['y_amp'] = popt[1]
+            gauss_fit_dict['xc'] = popt[2]
+            gauss_fit_dict['width'] = popt[3]
+            gauss_fit_dict['y_fit'] = y_fit
+            gauss_fit_dict['fit_rmse'] = fit_rmse
+            gauss_fit_dict['fit_lingress_slope'] = slope
+            gauss_fit_dict['fit_lingress_intercept'] = intercept
+            gauss_fit_dict['fit_lingress_pvalue'] = pvalue
+            gauss_fit_dict['fit_lingress_stderr'] = stderr
+            gauss_fit_dict['fit_linregress_r2'] = rvalue ** 2
+            gauss_fit_dict['fit_lingress_adj_r2'] = adj_r2
+            gauss_fit_dict['auc'] = cal_area_under_curve_from_normal_distribution(low_bound=x_data[0],
+                                                                                  upper_bound=x_data[-1],
+                                                                                  center=popt[2],
+                                                                                  width=popt[3])
+            return gauss_fit_dict
+    except:
+        return gauss_fit_dict
+
+
+def model_data_with_gauss(x_data, gauss_params):
+    # TODO: Add docstring.
+
+    data_length = len(x_data)
+    bin_value = (x_data[-1] - x_data[0])/data_length
+    center = gauss_params[2]
+    data_length_half = int(data_length/2)
+    low_val = center - (data_length_half * bin_value)
+    new_x_data = []
+    for num in range(data_length):
+        val = low_val + (num * bin_value)
+        new_x_data.append(val)
+    new_x_data = np.array(new_x_data)
+    new_gauss_data = gauss_func(new_x_data, *gauss_params)
+    return new_gauss_data
+
+
+@dataclass
+class NNFACDATA(object):
+
+    """
+    dataclass to store nnfac data
+    """
+
+    factor_rank: int = None
+    init_method: str = None
+    max_iteration: int = None
+    tolerance: float = None
+    sparsity_coefficients: list = None
+    fixed_modes: list = None
+    normalize: list = None
+    factors: list = None
+    n_iter: int = None
+    rec_errors: np.ndarray = None
+    converge: bool = None
+
+
+def factorize_tensor(input_grid,
+                     init_method='random',
+                     factors_0=[],
+                     factor_rank=15,
+                     n_iter_max=100000,
+                     tolerance=1e-8,
+                     sparsity_coefficients=[],
+                     fixed_modes=[],
+                     normalize=[],
+                     verbose=True,
+                     return_errors=True):
+    """
+
+    Args:
+        input_grid:
+        init_method:
+        factors_0:
+        factor_rank:
+        n_iter_max:
+        tolerance:
+        sparsity_coefficients:
+        fixed_modes:
+        normalize:
+        verbose:
+        return_errors:
+
+    Returns:
+
+    """
+
+    nnfac_output = NNFACDATA(factor_rank=factor_rank,
+                             init_method=init_method,
+                             max_iteration=n_iter_max,
+                             tolerance=tolerance,
+                             sparsity_coefficients=sparsity_coefficients,
+                             fixed_modes=fixed_modes,
+                             normalize=normalize)
+
+    if return_errors:
+
+        factor_out = nn_fac.ntf.ntf(tensor=input_grid,
+                                    rank=factor_rank,
+                                    init=init_method,
+                                    factors_0=factors_0,
+                                    n_iter_max=n_iter_max,
+                                    tol=tolerance,
+                                    sparsity_coefficients=sparsity_coefficients,
+                                    fixed_modes=fixed_modes,
+                                    normalize=normalize,
+                                    verbose=verbose,
+                                    return_errors=return_errors)
+
+        nnfac_output.factors = factor_out[0]
+        nnfac_output.rec_errors = factor_out[1]
+        nnfac_output.n_iter = len(factor_out[1])
+        nnfac_output.converge = False
+        if abs(factor_out[1][-2] - factor_out[1][-1]) < tolerance:
+            nnfac_output.converge = True
+
+    else:
+        factor_out = nn_fac.ntf.ntf(tensor=input_grid,
+                                    rank=factor_rank,
+                                    init=init_method,
+                                    factors_0=factors_0,
+                                    n_iter_max=n_iter_max,
+                                    tol=tolerance,
+                                    sparsity_coefficients=sparsity_coefficients,
+                                    fixed_modes=fixed_modes,
+                                    normalize=normalize,
+                                    verbose=verbose,
+                                    return_errors=return_errors)
+        nnfac_output.factors = factor_out
+
+    return nnfac_output
 
 
 class DataTensor:
@@ -357,168 +616,6 @@ class DataTensor:
         pmem(str(n_itr) + " Script End")
         # t = time.time()
         # print('Done: T+'+str(t-t0))
-
-
-def cal_area_under_curve_from_normal_distribution(low_bound, upper_bound, center, width):
-    """Computes the cumulative distribution function for a gaussian with given center, bounds, and width.
-
-    Args:
-        low_bound (float): Lower or left bound on gaussian, unitless. 
-        upper_bound (float):  Upper or right bound on gaussian, unitless.
-        center (float): Center of gaussian, unitless. 
-        width (float): Width of gaussian, unitless.
-
-    Returns:
-        auc (float): Area Under the Curve, computed cumulative distribution of specified gaussian.
-
-    """
-    lb_cdf = norm.cdf(low_bound, loc=center, scale=width)
-    ub_cdf = norm.cdf(upper_bound, loc=center, scale=width)
-    auc = ub_cdf - lb_cdf
-    return auc
-
-
-def estimate_gauss_param(y_data, x_data):
-    """Estimates the parameters of a gaussian fit to a set of datapoints with x,y coordinates in x_data and y_data.
-
-    Args:
-        y_data (iterable of floats): Y values of data to fit.
-        x_data (iterable of floats): X values of data to fit.
-
-    Returns:
-        init_guess (list of floats): baseline offset, amplitude, center, width.
-
-    """
-    ymax = np.max(y_data)
-    maxindex = np.nonzero(y_data == ymax)[0]
-    peakmax_x = x_data[maxindex][0]
-    norm_arr = y_data/max(y_data)
-    bins_for_width = norm_arr[norm_arr > 0.70]
-    width_bin = len(bins_for_width)
-    init_guess = [0, ymax, peakmax_x, width_bin]
-    # bounds = ([0, 0, 0, 0], [np.inf, np.inf, len(x_data)-1, len(x_data)-1])
-    return init_guess
-
-
-def gauss_func(x, y0, A, xc, w):
-    """Model Gaussian function to pass to scipy.optimize.curve_fit.
-
-    Args:
-        x (list of floats): X dimension values.
-        y0 (float): Offset of y-values from 0.
-        A (float): Amplitude of Gaussian.
-        xc (float): Center of Gaussian in x dimension.
-        w (float): Width or sigma of Gaussian. 
-
-    Returns:
-        y (list of floats): Y-values of Gaussian function evaluated over x.
-
-    """
-    rxc = ((x - xc) ** 2) / (2 * (w ** 2))
-    y = y0 + A * (np.exp(-rxc))
-    return y
-
-
-def adjrsquared(r2, param, num):
-    """Calculates the adjusted R^2 for a parametric fit to data.
-
-    Args:
-         r2 (float): R^2 or 'coefficient of determination' of a linear regression between fitted and observed values.
-         param (int): Number of parameters in fitting model.
-         num (int): Number of datapoints in sample.
-
-    Returns:
-        y (float): Adjusted R^2 <= R^2, increases when additional parameters improve fit more than could be expected by chance.
-
-    """
-    y = 1 - (((1 - r2) * (num - 1)) / (num - param - 1))
-    return y
-
-
-def fit_gaussian(x_data, y_data, data_label="dt"):
-    """Performs fitting of a gaussian function to a provided data sample and computes linear regression on residuals to measure quality of fit.
-
-    Args:
-        x_data (list of floats): X dimension values for sample data.
-        y_data (list of floats): Y dimension values for sample data.
-        data_label (str): Label indicating origin of data in multidimensional separation (rt, dt, m/z). 
-
-    Returns:
-        gauss_fit_dict (dict): Contains the following key-value pairs describing the Guassian and linear regression parameters.
-            "gauss_fit_success" (bool): Boolean indicating the success (True) or failure (False) of the fitting operation.
-            "y_baseline" (float): Fitted parameter for the Gaussian function's offset from y=0. 
-            "y_amp" (float): Fitted parameter for the amplitude of the Gaussian function.
-            "xc" (float): Fitted parameter for the center of the Gaussian in the x dimension.
-            "width" (float): Fitted parameter for the x dimensional width of the Gaussian function.
-            "y_fit" (list of floats): Y values of fitted Gaussian function evaluated over x. 
-            "fit_rmse" (float): Root-mean-square error, the standard deviation of the residuals between the fit and sample.
-            "fit_lingress_slope" (float): The slope of the linear regression line over the residuals between fit and sample.
-            "fit_lingress_intercept" (float): The intercept point of the line fit to the residuals.
-            "fit_lingress_pvalue" (float): The p-value for a hypothesis test whose null hypothesis is that the above slope is zero
-            "fit_lingress_stderr" (float): Standard error of the estimated slope under the assumption of residual normality.
-            "fit_lingress_r2" (float): R^2 or 'coeffiecient of determination' of linear regression over residuals.
-            "fit_lingress_adj_r2" (float): Adjusted R^2, always <= R^2, decreases with extraneous parameters.
-            "auc" (float): Area under the curve, cumulative distribution function of fitted gaussian evaluated over the length of x_data.
-
-    """
-    init_guess = estimate_gauss_param(y_data, x_data)
-    gauss_fit_dict = dict()
-    gauss_fit_dict['data_label'] = data_label
-    gauss_fit_dict['gauss_fit_success'] = False
-    gauss_fit_dict['xc'] = center_of_mass(y_data)[0]
-    gauss_fit_dict['auc'] = 1.0
-    gauss_fit_dict['fit_rmse'] = 100.0
-    gauss_fit_dict['fit_linregress_r2'] = 0.0
-    gauss_fit_dict['fit_lingress_adj_r2'] = 0.0
-
-    try:
-        popt, pcov = curve_fit(gauss_func, x_data, y_data, p0=init_guess, maxfev=100000)
-        if popt[2] < 0:
-            return gauss_fit_dict
-        if popt[3] < 0:
-            return gauss_fit_dict
-        else:
-            y_fit = gauss_func(x_data, *popt)
-            fit_rmse = mean_squared_error(y_data/max(y_data), y_fit/max(y_fit), squared=False)
-            slope, intercept, rvalue, pvalue, stderr = linregress(y_data, y_fit)
-            adj_r2 = adjrsquared(r2=rvalue**2, param=4, num=len(y_data))
-            gauss_fit_dict['gauss_fit_success'] = True
-            gauss_fit_dict['y_baseline'] = popt[0]
-            gauss_fit_dict['y_amp'] = popt[1]
-            gauss_fit_dict['xc'] = popt[2]
-            gauss_fit_dict['width'] = popt[3]
-            gauss_fit_dict['y_fit'] = y_fit
-            gauss_fit_dict['fit_rmse'] = fit_rmse
-            gauss_fit_dict['fit_lingress_slope'] = slope
-            gauss_fit_dict['fit_lingress_intercept'] = intercept
-            gauss_fit_dict['fit_lingress_pvalue'] = pvalue
-            gauss_fit_dict['fit_lingress_stderr'] = stderr
-            gauss_fit_dict['fit_linregress_r2'] = rvalue ** 2
-            gauss_fit_dict['fit_lingress_adj_r2'] = adj_r2
-            gauss_fit_dict['auc'] = cal_area_under_curve_from_normal_distribution(low_bound=x_data[0],
-                                                                                  upper_bound=x_data[-1],
-                                                                                  center=popt[2],
-                                                                                  width=popt[3])
-            return gauss_fit_dict
-    except:
-        return gauss_fit_dict
-
-
-def model_data_with_gauss(x_data, gauss_params):
-    # TODO: Add docstring.
-
-    data_length = len(x_data)
-    bin_value = (x_data[-1] - x_data[0])/data_length
-    center = gauss_params[2]
-    data_length_half = int(data_length/2)
-    low_val = center - (data_length_half * bin_value)
-    new_x_data = []
-    for num in range(data_length):
-        val = low_val + (num * bin_value)
-        new_x_data.append(val)
-    new_x_data = np.array(new_x_data)
-    new_gauss_data = gauss_func(new_x_data, *gauss_params)
-    return new_gauss_data
 
 
 class Factor:
