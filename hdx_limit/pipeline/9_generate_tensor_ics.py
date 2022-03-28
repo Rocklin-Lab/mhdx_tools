@@ -221,7 +221,8 @@ def main(library_info_path,
          ic_peak_width=2,
          ic_rel_height_filter=True,
          ic_rel_height_filter_baseline=0.10,
-         ic_rel_height_threshold=0.10):
+         ic_rel_height_threshold=0.10,
+         use_rtdt_recenter=False):
     """Performs factorization to deconvolute tensor, identifies IsotopeCluster objects, and can return and/or write output list of IsotopeClusters.
 
     Args:
@@ -241,7 +242,10 @@ def main(library_info_path,
     library_info = pd.read_json(library_info_path)
     my_name = tensor_input_path.split("/")[-2] # Name from protein directory.
     my_charge = int([item[6:] for item in tensor_input_path.split("/")[-1].split("_") if "charge" in item][0]) # Finds by keyword and strip text.
-    my_row = library_info.loc[(library_info["name"]==my_name) & (library_info["charge"]==my_charge)]
+    if use_rtdt_recenter:
+        my_row = library_info.loc[(library_info["name_recentered"] == my_name) & (library_info["charge"] == my_charge)]
+    else:
+        my_row = library_info.loc[(library_info["name"]==my_name) & (library_info["charge"]==my_charge)]
     my_centers = my_row["mz_centers"].values
     centers = my_centers[0]
 
@@ -263,7 +267,8 @@ def main(library_info_path,
                                           timepoint_label=None,
                                           filter_factors=filter_factors,
                                           factor_rt_r2_cutoff=factor_rt_r2_cutoff,
-                                          factor_dt_r2_cutoff=factor_dt_r2_cutoff)
+                                          factor_dt_r2_cutoff=factor_dt_r2_cutoff,
+                                          use_rtdt_recenter=use_rtdt_recenter)
 
     all_ics = []
 
@@ -355,6 +360,8 @@ if __name__ == "__main__":
     # Open timepoints .yaml into dict for main().
     config_dict = yaml.load(open(args.timepoints_yaml, 'rb'), Loader=yaml.Loader)
 
+    use_rtdt_recenter = config_dict["use_rtdt_recenter"]
+
     filter_factors = config_dict["filter_factor"]
     factor_rt_r2_cutoff = config_dict["factor_rt_r2_cutoff"]
     factor_dt_r2_cutoff = config_dict["factor_dt_r2_cutoff"]
@@ -387,4 +394,5 @@ if __name__ == "__main__":
          auto_ic_peak_width=auto_ic_peak_width,
          ic_rel_height_filter=ic_rel_ht_filter,
          ic_rel_height_filter_baseline=ic_rel_ht_baseline,
-         ic_rel_height_threshold=ic_rel_ht_threshold)
+         ic_rel_height_threshold=ic_rel_ht_threshold,
+         use_rtdt_recenter=use_rtdt_recenter)

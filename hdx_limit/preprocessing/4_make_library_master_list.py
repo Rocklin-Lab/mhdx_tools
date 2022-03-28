@@ -46,6 +46,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import itertools
+from pathlib import Path
 from fastdtw import fastdtw
 from collections import OrderedDict
 from scipy.signal import find_peaks
@@ -539,7 +540,11 @@ def main(names_and_seqs_path,
         plt.savefig(normalization_factors_plot_outpath)
 
     if rt_correlation_plot_outpath is not None:
-        rt_correlation_plot(intermediates=intermediates, output_path=rt_correlation_plot_outpath)
+        if len(intermediates) > 1:
+            rt_correlation_plot(intermediates=intermediates, output_path=rt_correlation_plot_outpath)
+        else:
+            #touch empty file if only one run is present
+            Path(rt_correlation_plot_outpath).touch()
     
     if return_flag is not None:
         return {"library_info": catdf.to_dict(), "normalization_factors": normalization_factors}

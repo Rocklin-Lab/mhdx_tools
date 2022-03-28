@@ -740,11 +740,21 @@ def main(isotopes_path,
             testq["mz_mono_fix"] = apply_polyfit_cal_mz(
                 polyfit_coeffs=calib_dict_protein_polyfit["polyfit_coeffs"], mz=testq["mz_mono_fix"])
             testq["mz_mono_fix_round"] = np.round(testq["mz_mono_fix"].values, 3)
+        elif protein_calibration_outpath is not None:
+            gen_mz_error_calib_output(
+                testq=testq,
+                allseq=allseq,
+                calib_pk_fpath=protein_calibration_outpath,
+                polyfit_degree=polyfit_deg,
+                ppm_tol=ppm_tolerance,
+                int_tol=intensity_tolerance,
+                cluster_corr_tol=cluster_corr_tolerance,
+                mass_to_correct="mz_mono_fix")
     elif protein_polyfit and protein_calibration_outpath is not None:
         calib_dict_protein_polyfit = gen_mz_error_calib_output(
                 testq=testq,
                 allseq=allseq,
-                calib_pk_fpath=calibration_outpath,
+                calib_pk_fpath=protein_calibration_outpath,
                 polyfit_degree=polyfit_deg,
                 ppm_tol=ppm_tolerance,
                 int_tol=intensity_tolerance,
@@ -754,6 +764,16 @@ def main(isotopes_path,
                 polyfit_coeffs=calib_dict_protein_polyfit["polyfit_coeffs"], mz=testq["mz_mono"])
         testq["mz_mono_fix_round"] = np.round(testq["mz_mono_fix"].values, 3)
     else:
+        if protein_calibration_outpath is not None:
+            gen_mz_error_calib_output(
+                testq=testq,
+                allseq=allseq,
+                calib_pk_fpath=protein_calibration_outpath,
+                polyfit_degree=polyfit_deg,
+                ppm_tol=ppm_tolerance,
+                int_tol=intensity_tolerance,
+                cluster_corr_tol=cluster_corr_tolerance,
+                mass_to_correct="mz_mono")
         # This is what is initially implemented for mz correction.
         # Identify major peak of abs_ppm_error clusters, apply correction to all monoisotopic mz values.
         offset, offset_peak_width = find_offset(sum_df)
@@ -815,14 +835,18 @@ if __name__ == "__main__":
         protein_calibration_outpath = snakemake.output[3]
         polyfit_deg = configfile['polyfit_deg']
         if configfile['lockmass']:
+            print('Lockmass polyfit True')
             lockmass_calibration_dict = snakemake.input[3]
             runtime = configfile['runtime']
         else:
+            print('Lockmass polyfit False')
             lockmass_calibration_dict = None
             runtime = None
         if configfile['protein_polyfit']:
+            print('Protein polyfit True')
             protein_polyfit = True
         else:
+            print('Protein polyfit False')
             protein_polyfit = False
 
         main(isotopes_path,

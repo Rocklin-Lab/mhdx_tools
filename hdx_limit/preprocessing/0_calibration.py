@@ -14,13 +14,14 @@ import seaborn as sns
 from scipy.optimize import curve_fit
 from sklearn.metrics import mean_squared_error
 import glob as glob
+from pathlib import Path
 import argparse
 
 def check_dir(path):
     '''
     Create directory from path if doesn't exist
     '''
-    if not os.path.isdir(os.path.dirname(path)):
+    if not os.path.isdir(os.path.dirname(path)) and len(os.path.dirname(path)) != 0:
         os.makedirs(os.path.dirname(path))
 
 def save_pickle_object(obj, fpath):
@@ -66,6 +67,9 @@ def get_mzs_thr(lockmass_compound, m0=300, m1=2000):
     elif lockmass_compound == 'GluFibPrecursor':
         # Glufib precursor
         return np.array([785.84265])
+    elif lockmass_compound == 'LeuEnkPrecursor':
+        # LeuEnk precursor
+        return np.array([556.2771])
     else:
         print('LockMass compound not found. Check get_mz_centers function!')
         exit()
@@ -171,7 +175,8 @@ def generate_thr_exp_pairs(scan_times,
                            time_bins=6,
                            min_intensity=1e3,
                            ppm_radius=100,
-                           output_extracted_signals=None):
+                           output_extracted_signals=None,
+                           ):
     '''
     Generate dictionary containing theoretical and experimental peaks above
     intensity threshold and below error threshold.
@@ -181,7 +186,7 @@ def generate_thr_exp_pairs(scan_times,
     time_step = int(runtime / time_bins)
 
     if output_extracted_signals is not None:
-        fig, ax = plt.subplots(len(mzs_thr), time_bins, figsize=(3 * time_bins, 50), dpi=200)
+        fig, ax = plt.subplots(len(mzs_thr), time_bins, figsize=(3 * time_bins, 2*len(mzs_thr)), dpi=200)
 
     for i, t in enumerate(range(0, runtime, time_step)):
         keep = (scan_times >= t) & (scan_times < t + time_step)
@@ -190,7 +195,7 @@ def generate_thr_exp_pairs(scan_times,
                                                  ppm_radius=ppm_radius, min_intensity=min_intensity)
         thr_exp_pairs[i] = [thr_peaks, obs_peaks]
 
-        if output_extracted_signals is not None:
+        if output_extracted_signals is not None and len(mzs_thr) > 1:
             for j, mz_thr in enumerate(mzs_thr):
                 mz_low = mz_thr - mz_thr * ppm_radius / 1e6
                 mz_high = mz_thr + mz_thr * ppm_radius / 1e6
@@ -229,9 +234,49 @@ def generate_thr_exp_pairs(scan_times,
                     ax[j][i].text(0.02, 0.9, 't=%i-%imin' % (t, t + time_step), horizontalalignment='left',
                                   transform=ax[j][i].transAxes, color='blue')
 
+        if output_extracted_signals is not None and len(mzs_thr) == 1:
+            for mz_thr in mzs_thr:
+                mz_low = mz_thr - mz_thr * ppm_radius / 1e6
+                mz_high = mz_thr + mz_thr * ppm_radius / 1e6
+                mask = (mzs >= mz_low) & (mzs <= mz_high)
+                ax[i].plot(mzs[mask], np.sum(tensor[keep], axis=0)[mask], c='orange')
+                try:
+                    H, A, x0, sigma = gauss_fit(mzs[mask], obs_spec[mask])
+                except:
+                    x0 = mz_thr
+                    A = 0
+                ax[i].plot(np.linspace(mzs[mask][0], mzs[mask][-1], 50),
+                              gaussian_function(np.linspace(mzs[mask][0], mzs[mask][-1], 50), H, A, x0, sigma),
+                              c='blue')
+                ax[i].axvline(mz_thr, ls='--', c='red')
+                ax[i].axvline(x0, ls='--', c='blue')
+                ax[i].set_yticks([])
+                ax[i].set_xticks([mz_thr])
+                rmse = rmse_from_gaussian_fit(mzs[mask], obs_spec[mask])
+                if A > min_intensity and rmse < 0.1:
+                    ax[i].text(0.98, 0.9, 'I=%.2e' % A, horizontalalignment='right',
+                                  transform=ax[i].transAxes)
+                    ax[i].text(0.98, 0.8, 'mz_err=%.1f ppm' % ((x0 - mz_thr) * 1e6 / mz_thr),
+                                  horizontalalignment='right',
+                                  transform=ax[i].transAxes)
+                    ax[i].text(0.98, 0.7, 'rmse_fit=%.2f' % rmse, horizontalalignment='right',
+                                  transform=ax[i].transAxes)
+                else:
+                    ax[i].text(0.98, 0.9, 'I=%.2e' % A, horizontalalignment='right',
+                                  transform=ax[i].transAxes, c='red')
+                    ax[i].text(0.98, 0.8, 'mz_err=%.1f ppm' % ((x0 - mz_thr) * 1e6 / mz_thr),
+                                  horizontalalignment='right',
+                                  transform=ax[i].transAxes, c='red')
+                    ax[i].text(0.98, 0.7, 'rmse_fit=%.2f' % rmse, horizontalalignment='right',
+                                  transform=ax[i].transAxes, c='red')
+
+                ax[i].text(0.02, 0.9, 't=%i-%imin' % (t, t + time_step), horizontalalignment='left',
+                                  transform=ax[i].transAxes, color='blue')
+
     if output_extracted_signals is not None:
         fig.tight_layout()
         fig.savefig(output_extracted_signals, dpi=300, format='pdf')
+        plt.close('all')
 
     return thr_exp_pairs
 
@@ -240,7 +285,7 @@ def generate_lockmass_calibration_dict(thr_exp_pairs, polyfit_deg, lockmass_comp
                                        output_pk=None, output_kde=None):
     cal_dict = {}
 
-    if lockmass_compound != 'GluFibPrecursor':
+    if lockmass_compound != 'GluFibPrecursor' and lockmass_compound != 'LeuEnkPrecursor':
 
         for idx in thr_exp_pairs.keys():
             thr_mz, obs_mz = np.array(thr_exp_pairs[idx])
@@ -262,16 +307,17 @@ def generate_lockmass_calibration_dict(thr_exp_pairs, polyfit_deg, lockmass_comp
             fig_kde, ax_kde = plt.subplots(1,1)
             for i, key in enumerate(cal_dict.keys()):
                 sns.kdeplot(cal_dict[key]['ppm_error_before_corr'], label='%i-%imin'%(6*key, 6*key+6), ax=ax_kde,
-                            colors=colors[i])
-                sns.kdeplot(cal_dict[key]['ppm_error_after_corr'], ax=ax_kde, ls='--', colors=colors[i])
+                            color=colors[i])
+                sns.kdeplot(cal_dict[key]['ppm_error_after_corr'], ax=ax_kde, ls='--', color=colors[i])
             ax_kde.legend(loc=2)
             ax_kde.set_xlabel('ppm error')
             fig_kde.savefig(output_kde, dpi=200, format='pdf')
+            plt.close()
         return cal_dict
 
     else:
         for idx in thr_exp_pairs.keys():
-            thr_mz, obs_mz = np.arran(thr_exp_pairs[idx])
+            thr_mz, obs_mz = np.array(thr_exp_pairs[idx])
             coeff = thr_mz / obs_mz
             obs_mz_corr = coeff * obs_mz
             ppm_error_before_corr = 1e6 * (obs_mz - thr_mz) / thr_mz
@@ -361,6 +407,8 @@ def main(mzml_gz_path,
          output_kde=None,
          ):
 
+    if output_extracted_signals is not None:
+        check_dir(output_extracted_signals)
     if output_pk is not None:
         check_dir(output_pk)
     if output_degrees is not None:
@@ -382,7 +430,7 @@ def main(mzml_gz_path,
                                            ppm_radius=ppm_radius,
                                            output_extracted_signals=output_extracted_signals)
 
-    if lockmass_compound != 'GluFibPrecursor':
+    if lockmass_compound != 'GluFibPrecursor' and lockmass_compound != 'LeuEnkPrecursor':
         plot_degrees(thr_exp_pairs,
                      polyfit_deg=polyfit_deg,
                      lockmass_compound=lockmass_compound,
@@ -420,6 +468,12 @@ if __name__ == "__main__":
         if configfile['polyfit_deg'] is not None:
             polyfit_deg = int(configfile['polyfit_deg'])
 
+        if configfile['lockmass_compound'] == 'GluFibPrecursor' or configfile['lockmass_compound'] == 'LeuEnkPrecursor':
+            if output_degrees is not None:
+                Path(output_degrees).touch()
+            if output_kde is not None:
+                Path(output_kde).touch()
+
 
         main(mzml_gz_path=mzml_gz_path,
              lockmass_compound=configfile['lockmass_compound'],
@@ -445,7 +499,7 @@ if __name__ == "__main__":
             "--lockmass_compound",
             default=None,
             help=
-            "LockMass compound. Choose from: SodiumFormate, GluFibPrecursor, GluFibFragments"
+            "LockMass compound. Choose from: SodiumFormate, GluFibPrecursor, GluFibFragments, LeuEnkPrecursor"
         )
         parser.add_argument(
             "-runtime",
