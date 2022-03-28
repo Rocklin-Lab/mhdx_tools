@@ -97,9 +97,29 @@ def generate_dataframe_ics(configfile,
                             df['dt'] <= 13.)]['auc']) / sum(
                 df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
                             df['dt'] <= 13.)]['auc'])
+            if len(df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
+                    df['dt'] <= 13)]) > 1:
+                # DT standard deviation
+                df.loc[(df['name'] == name) & (df['charge'] == charge), 'dt_std'] = df[(df['name'] == name) & (
+                        df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (df['dt'] <= 13.)]['dt'].std()
+                # DT weighted standard deviation
+                values = df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
+                            df['dt'] <= 13.)]['dt']
+                weights = df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
+                            df['dt'] <= 13.)]['auc']
+                avg_value = df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
+                            df['dt'] <= 13.)]['DT_weighted_avg']
+                df.loc[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
+                            df['dt'] <= 13.), 'dt_weighted_std'] = np.sqrt(
+                    (weights * (values - avg_value) ** 2) / sum(weights) * (len(values) - 1))
+            else:
+                df.loc[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
+                            df['dt'] <= 13.), 'dt_std'] = 0
+                df.loc[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
+                            df['dt'] <= 13.), 'dt_weighted_std'] = 0
         else:
             df.loc[(df['name'] == name) & (df['charge'] == charge), 'DT_weighted_avg'] = -1
-        # Find RT weighted average
+    # Find RT weighted average
     for name in set(df['name'].values):
         # Remove outliers
         percentile25, percentile75 = df[(df['name'] == name)]['rt'].quantile(0.25), \
@@ -110,8 +130,27 @@ def generate_dataframe_ics(configfile,
             df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)]['rt'] * df[(df['name'] == name)
                                 & (df['rt'] >= lb) & (df['rt'] <= ub)]['auc']) / sum(df[(df['name'] == name)
                                 & (df['rt'] >= lb) & (df['rt'] <= ub)]['auc'])
+        if len(df.loc[df['name'] == name, 'RT_weighted_avg']) > 1:
+            # DT standard deviation
+            df.loc[df['name'] == name, 'dt_std'] = df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)]['rt'].std()
+            # DT weighted standard deviation
+            values = df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)]['rt']
+            weights = df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)]['auc']
+            avg_value = df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)]['RT_weighted_avg']
+            df.loc[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub),
+                   'rt_weighted_std'] = np.sqrt((weights * (values - avg_value) ** 2) / sum(weights) * (len(values) - 1)
+                                                )
+        else:
+            df.loc[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub), 'rt_std'] = 0
+            df.loc[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub),
+                   'rt_weighted_std'] = 0
+        # How many signals do we see? How many undeuterated files generated passing ICs?
+        df.loc[df['name'] == name, 'n_signals'] = len(df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)])
+        df.loc[df['name'] == name, 'n_UN'] = len(
+            set(df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)]['file_index'].values))
 
-    # Compute DT weighted avg in bin dimension (this value should be used to extract tensors for consistency with
+
+        # Compute DT weighted avg in bin dimension (this value should be used to extract tensors for consistency with
     # 5_extract_timepoint_tensor code
     df['DT_weighted_avg_bins'] = df['DT_weighted_avg'] * 200.0 / 13.781163434903
 
@@ -228,7 +267,8 @@ def main(configfile,
                                 idotp_cutoff=idotp_cutoff)
 
     cols_idotp = ['idotp', 'integrated_mz_width', 'mz_centers', 'theor_mz_dist']
-    cols_ics_recenter = ['RT_weighted_avg', 'DT_weighted_avg_bins', 'DT_weighted_avg']
+    cols_ics_recenter = ['RT_weighted_avg', 'DT_weighted_avg_bins', 'DT_weighted_avg', 'rt_std', 'dt_std',
+                         'rt_weighted_std', 'dt_weighted_std', 'n_signals', 'n_UN']
 
     out_df = pd.DataFrame(columns=list(library_info.columns) + cols_idotp + cols_ics_recenter + ['name_recentered'])
 
