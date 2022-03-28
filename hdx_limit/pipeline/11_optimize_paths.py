@@ -176,7 +176,8 @@ def main(library_info_path,
         pareto_filter=configfile["pareto_prefilter"],
         timepoints=configfile["timepoints"],
         n_undeut_runs=len(configfile[0]),
-        old_data_dir=old_data_dir
+        old_data_dir=old_data_dir,
+        use_rtdt_recenter=configfile["use_rtdt_recenter"],
     )
 
     # Starting condition output arguments.
