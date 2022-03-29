@@ -140,7 +140,7 @@ def generate_dataframe_ics(configfile,
                                 & (df['rt'] >= lb) & (df['rt'] <= ub)]['auc'])
         if len(df.loc[df['name'] == name, 'RT_weighted_avg']) > 1:
             # DT standard deviation
-            df.loc[df['name'] == name, 'dt_std'] = df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)]['rt'].std()
+            df.loc[df['name'] == name, 'rt_std'] = df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)]['rt'].std()
             # DT weighted standard deviation
             values = df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)]['rt']
             weights = df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)]['auc']
