@@ -39,6 +39,7 @@ import math
 import copy
 import psutil
 import peakutils
+import molmass
 import numpy as np
 import nn_fac
 from scipy.signal import find_peaks
@@ -49,6 +50,21 @@ from scipy.optimize import curve_fit
 from sklearn.metrics import mean_squared_error
 from scipy.stats import norm
 from scipy.stats import linregress
+
+
+def pmem(id_str):
+    """Prints memory in use by process with a passed debug label.
+
+    Args:
+        id_str (str): String to prepend to memory output, for identifying origin of pmem call.
+
+    Returns:
+        None
+
+    """
+    process = psutil.Process(os.getpid())
+    print(id_str + " Process Memory (GB): " +
+          str(process.memory_info().rss / 1024 / 1024 / 1024))
 
 
 def cal_area_under_curve_from_normal_distribution(low_bound, upper_bound, center, width):
@@ -233,6 +249,27 @@ class NNFACDATA(object):
     converge: bool = None
 
 
+def factor_correlations(factors):
+    """
+    check correlactions between factors
+    Args:
+        factors: factors output from nnfac
+
+    Returns: max correlation between factors
+
+    """
+
+    corrcoef_1 = np.corrcoef(factors[0].T)
+    corrcoef_2 = np.corrcoef(factors[1].T)
+    corrcoef_3 = np.corrcoef(factors[2].T)
+
+    min_corr_mat = np.minimum(np.minimum(corrcoef_1, corrcoef_2), corrcoef_3)
+
+    max_corr = np.max(min_corr_mat[np.where(~np.eye(min_corr_mat.shape[0], dtype=bool))])
+
+    return max_corr
+
+
 def factorize_tensor(input_grid,
                      init_method='random',
                      factors_0=[],
@@ -247,19 +284,19 @@ def factorize_tensor(input_grid,
     """
 
     Args:
-        input_grid:
-        init_method:
-        factors_0:
-        factor_rank:
-        n_iter_max:
-        tolerance:
-        sparsity_coefficients:
-        fixed_modes:
-        normalize:
-        verbose:
-        return_errors:
+        input_grid: input grid for factorization
+        init_method: initialization method: 'random', 'nndsvd', or 'custom'
+        factors_0: factors to iniitialize with
+        factor_rank: factor rank
+        n_iter_max: max iteration
+        tolerance: tolerance criteria for convergence
+        sparsity_coefficients: sparsity coeffs
+        fixed_modes: fixing modes for W and H
+        normalize: normalize boolean list
+        verbose: True for printing out nnfac operation
+        return_errors: True for return errors, toc, convergence etc
 
-    Returns:
+    Returns: nnfacdata object
 
     """
 
@@ -307,6 +344,104 @@ def factorize_tensor(input_grid,
         nnfac_output.factors = factor_out
 
     return nnfac_output
+
+
+def gen_factors_with_corr_check(input_grid,
+                                init_method='random',
+                                factors_0=[],
+                                max_num_factors=15,
+                                n_iter_max=100000,
+                                tolerance=1e-8,
+                                sparsity_coefficients=[],
+                                fixed_modes=[],
+                                normalize=[],
+                                verbose=False,
+                                return_errors=True,
+                                corr_threshold=0.17):
+    """
+    generate factors with reducing the rank while checking factor correlations
+    Args:
+        input_grid: input grid for factorization
+        init_method: initialization method: 'random', 'nndsvd', or 'custom'
+        factors_0: factors to iniitialize with
+        max_num_factors: max number of factor rank
+        n_iter_max: max iteration
+        tolerance: tolerance criteria for rec error for convergence
+        sparsity_coefficients: sparsity coeffs
+        fixed_modes: fixing modes for W and H
+        normalize: normalize boolean list for modes (l2 normalization)
+        verbose: True for printing out nnfac operation
+        return_errors: True for return errors, toc, convergence etc
+        corr_threshold: factor correlation threshold. factors have to have a correlation smaller than this value
+
+    Returns:
+
+    """
+
+    last_corr_check = 1.0
+    max_num_factors += 1
+
+    factor_output = None
+
+    while max_num_factors > 2 and last_corr_check > corr_threshold:
+
+        max_num_factors -= 1
+
+        pmem('Factorize: %s # Factors (Start)' % max_num_factors)
+
+        factor_output = factorize_tensor(input_grid=input_grid,
+                                         init_method=init_method,
+                                         factors_0=factors_0,
+                                         factor_rank=max_num_factors,
+                                         n_iter_max=n_iter_max,
+                                         tolerance=tolerance,
+                                         sparsity_coefficients=sparsity_coefficients,
+                                         fixed_modes=fixed_modes,
+                                         normalize=normalize,
+                                         verbose=verbose,
+                                         return_errors=return_errors)
+
+        pmem('Factorize: %s # Factors (End)' % max_num_factors)
+
+        if max_num_factors > 1:
+            last_corr_check = factor_correlations(factor_output.factors)
+
+    return factor_output
+
+
+def calculate_theoretical_isotope_dist_from_sequence(sequence, n_isotopes=None):
+
+    seq_formula = molmass.Formula(sequence)
+    isotope_dist = np.array([x[1] for x in seq_formula.spectrum().values()])
+    isotope_dist = isotope_dist / max(isotope_dist)
+    if n_isotopes:
+        if n_isotopes < len(isotope_dist):
+            isotope_dist = isotope_dist[:n_isotopes]
+        else:
+            fill_arr = np.zeros(n_isotopes - len(isotope_dist))
+            isotope_dist = np.append(isotope_dist, fill_arr)
+    return isotope_dist
+
+
+def calculate_empirical_isotope_dist_from_integrated_mz(integrated_mz_array,
+                                                        n_isotopes=None):
+
+    isotope_dist = integrated_mz_array / max(integrated_mz_array)
+    if n_isotopes:
+        isotope_dist = isotope_dist[:n_isotopes]
+    return isotope_dist
+
+def calculate_isotope_dist_dot_product(sequence, undeut_integrated_mz_array):
+
+    theo_isotope_dist = calculate_theoretical_isotope_dist_from_sequence(
+        sequence=sequence)
+    emp_isotope_dist = calculate_empirical_isotope_dist_from_integrated_mz(
+        integrated_mz_array=undeut_integrated_mz_array)
+    min_length = min([len(theo_isotope_dist), len(emp_isotope_dist)])
+    dot_product = np.linalg.norm(
+        np.dot(theo_isotope_dist[0:min_length], emp_isotope_dist[0:min_length])
+    ) / np.linalg.norm(theo_isotope_dist) / np.linalg.norm(emp_isotope_dist)
+    return dot_product
 
 
 class DataTensor:
@@ -377,6 +512,7 @@ class DataTensor:
         self.integrated_mz_limits = integrated_mz_limits
         self.bins_per_isotope_peak = bins_per_isotope_peak
         self.normalization_factor = normalization_factor
+        self.factors = None
 
         if kwargs is not None:
             kws = list(kwargs.keys())
@@ -408,7 +544,7 @@ class DataTensor:
                 self.full_grid_out,
             ) = self.sparse_to_full_tensor_reprofile((self.rts, self.dts, self.seq_out),
                                                      self.integrated_mz_limits,
-                                                     self.bins_per_isotope_peak )
+                                                     self.bins_per_isotope_peak)
             self.full_gauss_grids = self.gauss(self.full_grid_out)
             self.tensor_auc = (np.sum(self.full_grid_out) / self.normalization_factor)[0]
 
@@ -489,9 +625,17 @@ class DataTensor:
                                                   (rt_sig, dt_sig))
         return gauss_grid
 
-
     # TODO: This isn't great style, make this take the tensor as input and return the factors.
-    def factorize(self, n_factors=4, new_mz_len=None, gauss_params=None): 
+    def factorize(self,
+                  max_num_factors=15,
+                  init_method='nndsvd',
+                  factors_0=[],
+                  fixed_modes=[],
+                  sparsity_coeffs=[],
+                  normalize=[],
+                  niter_max=100000,
+                  tol=1e-8,
+                  factor_corr_threshold=0.17):
         """Performs the non-negative PARAFAC on tensor, implemented by nn-fac python library, saves to self.Factors.
 
         Args:
@@ -504,43 +648,8 @@ class DataTensor:
         """
         # Test factorization starting at n_factors = 15 and counting down, keep factorization that has no factors with correlation greater than 0.2 in any dimension.
 
-        def corr_check(factors):
-            """Checks the maximum correlation between Factors in each dimension, used to determine if n_factors should be reduced.
-
-            Args:
-                factors (list of Factor objects): Factors resulting from PARAFAC being checked for inter-correlation.
-
-            Returns:
-                maximum_correlation (float): Maximum correlation between any two factors in any dimension.
-
-            """
-            # Checks scipy non_negatve_parafac output factors for inter-factor (off-diagonal) correlations > cutoff, returns True if all values are < cutoff
-
-            a = np.minimum(
-                np.minimum(np.corrcoef(factors[0].T),
-                           np.corrcoef(factors[1].T)),
-                np.corrcoef(factors[2].T),
-            )
-
-            return np.max(a[np.where(~np.eye(a.shape[0], dtype=bool))])
-
-
-        def pmem(id_str):
-            """Prints memory in use by process with a passed debug label.
-
-            Args:
-                id_str (str): String to prepend to memory output, for identifying origin of pmem call.
-
-            Returns:
-                None
-
-            """
-            process = psutil.Process(os.getpid())
-            print(id_str + " Process Memory (GB): " +
-                  str(process.memory_info().rss / 1024 / 1024 / 1024))
-
         t = time.time()
-        pmem("0 Start")
+        pmem("Factorize: start_function")
         # print('Filtering... T+'+str(t-t0))
         # handle concatenation and intetrpolfilter option
         if self.n_concatenated != 1:
@@ -551,71 +660,124 @@ class DataTensor:
             )
         else:
             concat_dt_idxs = None
-            if gauss_params != None:
-                grid = self.gauss(self.full_grid_out, gauss_params[0],
-                                  gauss_params[1])
-            else:
-                grid = self.full_grid_out
-        
-        grid = self.full_gauss_grids
-        
-        pmem("1 Pre-Factorization")
-        n_itr = 2
-        
-        last_corr_check = 1.0
-        n_factors += 1
-        while n_factors > 2 and last_corr_check > 0.17:
-            n_factors -= 1
-            pmem(str(n_itr) + " " + str(n_factors) + " Factors " + " Start")
-            t1 = time.time()
-            # print('Starting '+str(nf)+' Factors... T+'+str(t1-t))
-            nnf1 = ntf.ntf(grid, n_factors)
-            pmem(str(n_itr) + " " + str(n_factors) + " Factors " + " End")
-            n_itr += 1
-            t2 = time.time()
-            # print('Factorization Duration: '+str(t2-t1))
+        #     if gauss_params != None:
+        #         grid = self.gauss(self.full_grid_out, gauss_params[0],
+        #                           gauss_params[1])
+        #     else:
+        #         grid = self.full_grid_out
+        #
+        # grid = self.full_gauss_grids
 
-            if n_factors > 1:
-                last_corr_check = corr_check(nnf1)
-                
-        pmem(str(n_itr) + " Post-Factorization")
-        n_itr += 1
-        # Create Factor objects
-        factors = []
-        t = time.time()
-        # print('Saving Factor Objects... T+'+str(t-t0))
-        for i in range(n_factors):
-            pmem(str(n_itr) + " Start Factor " + str(i))
-            n_itr += 1
-            factors.append(
-                Factor(
-                    source_file=self.source_file,
-                    tensor_idx=self.tensor_idx,
-                    timepoint_idx=self.timepoint_idx,
-                    name=self.name,
-                    charge_states=self.charge_states,
-                    rts=nnf1[0].T[i],
-                    dts=nnf1[1].T[i],
-                    mz_data=nnf1[2].T[i],
-                    retention_labels=self.retention_labels,
-                    drift_labels=self.drift_labels,
-                    mz_labels=self.mz_labels,
-                    factor_idx=i,
-                    n_factors=n_factors,
-                    bins_per_isotope_peak = self.bins_per_isotope_peak,
-                    n_concatenated=self.n_concatenated,
-                    concat_dt_idxs=concat_dt_idxs,
-                    tensor_auc=self.tensor_auc,
-                    normalization_factor=self.normalization_factor
-                ))
-            pmem(str(n_itr) + " End Factor " + str(i))
-            n_itr += 1
-        pmem(str(n_itr) + " Factor Initialization End")
-        n_itr += 1
-        self.factors = factors
-        pmem(str(n_itr) + " Script End")
+        pmem("Factorize: Stage0")
+
+        factor_output = gen_factors_with_corr_check(input_grid=self.full_gauss_grids,
+                                                    init_method=init_method,
+                                                    factors_0=factors_0,
+                                                    max_num_factors=max_num_factors,
+                                                    n_iter_max=niter_max,
+                                                    tolerance=tol,
+                                                    sparsity_coefficients=sparsity_coeffs,
+                                                    fixed_modes=fixed_modes,
+                                                    normalize=normalize,
+                                                    verbose=False,
+                                                    return_errors=True,
+                                                    corr_threshold=factor_corr_threshold)
+
+        # delete the factors attribute from the class to save the metadata
+        factor_output_metadata = copy.deepcopy(factor_output)
+        delattr(factor_output_metadata, 'factors')
+
+        pmem("Factorize: Gen Factor Object List")
+
+        factor_list = []
+        for num in range(factor_output.factor_rank):
+            pmem("Factorize: Gen Factor # %s start" % num)
+            factor_obj = Factor(source_file=self.source_file,
+                                tensor_idx=self.tensor_idx,
+                                timepoint_idx=self.timepoint_idx,
+                                name=self.name,
+                                charge_states=self.charge_states,
+                                rts=factor_output.factors[0].T[num],
+                                dts=factor_output.factors[1].T[num],
+                                mz_data=factor_output.factors[2].T[num],
+                                retention_labels=self.retention_labels,
+                                drift_labels=self.drift_labels,
+                                mz_labels=self.mz_labels,
+                                factor_idx=num,
+                                n_factors=factor_output.factor_rank,
+                                nnfac_output=factor_output_metadata,
+                                bins_per_isotope_peak=self.bins_per_isotope_peak,
+                                n_concatenated=self.n_concatenated,
+                                concat_dt_idxs=concat_dt_idxs,
+                                tensor_auc=self.tensor_auc,
+                                normalization_factor=self.normalization_factor)
+            pmem("Factorize: Gen Factor # %s end" % num)
+            factor_list.append(factor_obj)
+
+        pmem("Factorize: Appended factors to a list")
+
+        self.factors = factor_list
+
+        pmem('Factorize: End of function')
+
+
+
+        # n_itr = 2
+        #
+        # last_corr_check = 1.0
+        # n_factors += 1
+        # while n_factors > 2 and last_corr_check > 0.17:
+        #     n_factors -= 1
+        #     pmem(str(n_itr) + " " + str(n_factors) + " Factors " + " Start")
+        #     t1 = time.time()
+        #     # print('Starting '+str(nf)+' Factors... T+'+str(t1-t))
+        #     nnf1 = ntf.ntf(grid, n_factors)
+        #     pmem(str(n_itr) + " " + str(n_factors) + " Factors " + " End")
+        #     n_itr += 1
+        #     t2 = time.time()
+        #     # print('Factorization Duration: '+str(t2-t1))
+        #
+        #     if n_factors > 1:
+        #         last_corr_check = corr_check(nnf1)
+        #
+        # pmem(str(n_itr) + " Post-Factorization")
+        # n_itr += 1
+        # # Create Factor objects
+        # factors = []
         # t = time.time()
-        # print('Done: T+'+str(t-t0))
+        # # print('Saving Factor Objects... T+'+str(t-t0))
+        # for i in range(n_factors):
+        #     pmem(str(n_itr) + " Start Factor " + str(i))
+        #     n_itr += 1
+        #     factors.append(
+        #         Factor(
+        #             source_file=self.source_file,
+        #             tensor_idx=self.tensor_idx,
+        #             timepoint_idx=self.timepoint_idx,
+        #             name=self.name,
+        #             charge_states=self.charge_states,
+        #             rts=nnf1[0].T[i],
+        #             dts=nnf1[1].T[i],
+        #             mz_data=nnf1[2].T[i],
+        #             retention_labels=self.retention_labels,
+        #             drift_labels=self.drift_labels,
+        #             mz_labels=self.mz_labels,
+        #             factor_idx=i,
+        #             n_factors=n_factors,
+        #             bins_per_isotope_peak = self.bins_per_isotope_peak,
+        #             n_concatenated=self.n_concatenated,
+        #             concat_dt_idxs=concat_dt_idxs,
+        #             tensor_auc=self.tensor_auc,
+        #             normalization_factor=self.normalization_factor
+        #         ))
+        #     pmem(str(n_itr) + " End Factor " + str(i))
+        #     n_itr += 1
+        # pmem(str(n_itr) + " Factor Initialization End")
+        # n_itr += 1
+        # self.factors = factors
+        # pmem(str(n_itr) + " Script End")
+        # # t = time.time()
+        # # print('Done: T+'+str(t-t0))
 
 
 class Factor:
@@ -677,6 +839,7 @@ class Factor:
         mz_labels,
         factor_idx,
         n_factors,
+        nnfac_output,
         bins_per_isotope_peak,
         n_concatenated,
         concat_dt_idxs,
@@ -724,6 +887,7 @@ class Factor:
         self.n_concatenated = n_concatenated
         self.concat_dt_idxs = concat_dt_idxs
         self.normalization_factor = normalization_factor
+        self.nnfac_output = nnfac_output
 
         ###Compute Instance Values###
 
@@ -819,7 +983,14 @@ class Factor:
                 out.append((i, j))
         return out
 
-    def find_isotope_clusters(self, prominence=0.15, width_val=3, rel_height_filter=True, baseline_threshold=0.15, rel_height_threshold=0.10):
+    def find_isotope_clusters(self,
+                              prominence=0.15,
+                              width_val=3,
+                              rel_height_filter=True,
+                              baseline_threshold=0.15,
+                              rel_height_threshold=0.10,
+                              calculate_idotp=False,
+                              sequence=None):
         """Identifies portions of the integrated mz dimension that look 'isotope-cluster-like', saves in isotope_clusters.
 
         Args:
@@ -869,46 +1040,45 @@ class Factor:
         cluster_idx = 0
         for integrated_indices, integrated_mz_width in zip(ic_idxs, int_mz_width):
             if integrated_indices != None:
-                newIC = IsotopeCluster(
-                    integrated_mz_peak_width=integrated_mz_width,
-                    charge_states=self.charge_states,
-                    factor_mz_data=copy.deepcopy(self.mz_data),
-                    name=self.name,
-                    source_file=self.source_file,
-                    tensor_idx=self.tensor_idx,
-                    timepoint_idx=self.timepoint_idx,
-                    n_factors=self.n_factors,
-                    factor_idx=self.factor_idx,
-                    cluster_idx=cluster_idx,
-                    low_idx = self.bins_per_isotope_peak * integrated_indices[0],
-                    high_idx = self.bins_per_isotope_peak * (integrated_indices[1] + 1),
-                    rts=self.rts,
-                    dts=self.dts,
-                    rt_mean=self.rt_mean,
-                    dt_mean=self.dt_mean,
-                    rt_gauss_fit_success=self.rt_gauss_fit_success,
-                    dt_gauss_fit_success=self.dt_gauss_fit_success,
-                    rt_gaussian_rmse=self.rt_gaussian_rmse,
-                    dt_gaussian_rmse=self.dt_gaussian_rmse,
-                    rt_com=self.rt_com,
-                    dt_coms=self.dt_com,
-                    rt_auc=self.rt_auc,
-                    dt_auc=self.dt_auc,
-                    retention_labels=self.retention_labels,
-                    drift_labels=self.drift_labels,
-                    mz_labels=self.mz_labels,
-                    bins_per_isotope_peak=self.bins_per_isotope_peak,
-                    max_rtdt=self.max_rtdt,
-                    outer_rtdt=self.outer_rtdt,
-                    max_rtdt_old=self.max_rtdt_old,
-                    outer_rtdt_old=self.outer_rtdt_old,
-                    n_concatenated=self.n_concatenated,
-                    concat_dt_idxs=self.concat_dt_idxs,
-                    normalization_factor=self.normalization_factor,
-                    tensor_auc=self.tensor_auc,
-                    factor_auc=self.factor_auc,
-                    factor_auc_with_gauss_extrapol=self.factor_auc_with_gauss_extrapol
-                )
+                newIC = IsotopeCluster(integrated_mz_peak_width=integrated_mz_width,
+                                       charge_states=self.charge_states,
+                                       factor_mz_data=copy.deepcopy(self.mz_data),
+                                       name=self.name,
+                                       source_file=self.source_file,
+                                       tensor_idx=self.tensor_idx,
+                                       timepoint_idx=self.timepoint_idx,
+                                       n_factors=self.n_factors,
+                                       factor_idx=self.factor_idx,
+                                       cluster_idx=cluster_idx,
+                                       low_idx = self.bins_per_isotope_peak * integrated_indices[0],
+                                       high_idx = self.bins_per_isotope_peak * (integrated_indices[1] + 1),
+                                       rts=self.rts,
+                                       dts=self.dts,
+                                       rt_mean=self.rt_mean,
+                                       dt_mean=self.dt_mean,
+                                       rt_gauss_fit_success=self.rt_gauss_fit_success,
+                                       dt_gauss_fit_success=self.dt_gauss_fit_success,
+                                       rt_gaussian_rmse=self.rt_gaussian_rmse,
+                                       dt_gaussian_rmse=self.dt_gaussian_rmse,
+                                       rt_com=self.rt_com,
+                                       dt_coms=self.dt_com,
+                                       rt_auc=self.rt_auc,
+                                       dt_auc=self.dt_auc,
+                                       retention_labels=self.retention_labels,
+                                       drift_labels=self.drift_labels,
+                                       mz_labels=self.mz_labels,
+                                       bins_per_isotope_peak=self.bins_per_isotope_peak,
+                                       max_rtdt=self.max_rtdt,
+                                       outer_rtdt=self.outer_rtdt,
+                                       max_rtdt_old=self.max_rtdt_old,
+                                       outer_rtdt_old=self.outer_rtdt_old,
+                                       n_concatenated=self.n_concatenated,
+                                       concat_dt_idxs=self.concat_dt_idxs,
+                                       normalization_factor=self.normalization_factor,
+                                       tensor_auc=self.tensor_auc,
+                                       factor_auc=self.factor_auc,
+                                       factor_auc_with_gauss_extrapol=self.factor_auc_with_gauss_extrapol,
+                                       nnfac_output=self.nnfac_output)
                 if (newIC.baseline_peak_error / newIC.baseline_auc <
                         0.2):  # TODO: HARDCODE
                     self.isotope_clusters.append(newIC)
@@ -1009,7 +1179,8 @@ class IsotopeCluster:
         normalization_factor,
             tensor_auc,
             factor_auc,
-            factor_auc_with_gauss_extrapol
+            factor_auc_with_gauss_extrapol,
+            nnfac_output,
     ):
         """Creates an instance of the IsotopeCluster class from a portion of Factor.mz_data.
 
@@ -1165,6 +1336,7 @@ class IsotopeCluster:
         self.tensor_auc = tensor_auc
         self.factor_auc = factor_auc
         self.factor_auc_with_gauss_extrapol = factor_auc_with_gauss_extrapol
+        self.nnfac_output = nnfac_output
 
         # set an idotp variable
         self.idotp = None
