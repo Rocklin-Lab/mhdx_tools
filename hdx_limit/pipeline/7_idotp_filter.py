@@ -239,36 +239,37 @@ def generate_dataframe_ics(configfile,
     return df
 
 def plot_deviations(df):
+
     sns.set_context('talk')
 
-    fig, ax = plt.subplots(4, 2, figsize=(10, 12), dpi=200)
+    figd, axd = plt.subplots(4, 2, figsize=(10, 12), dpi=200)
 
-    sns.histplot(df['n_UN'], ax=ax[0][0])
-    sns.histplot(df['n_UN'], ax=ax[0][0], kde=True)
+    sns.histplot(df['n_UN'], ax=axd[0][0])
+    sns.histplot(df['n_UN'], ax=axd[0][0], kde=True)
 
-    sns.histplot(df['n_signals'], ax=ax[0][1])
-    sns.histplot(df['n_signals'], ax=ax[0][1], kde=True)
+    sns.histplot(df['n_signals'], ax=axd[0][1])
+    sns.histplot(df['n_signals'], ax=axd[0][1], kde=True)
 
-    sns.histplot(df['im_mono'] * 13.781163434903 / 200 - df['DT_weighted_avg'], ax=ax[1][0])
-    sns.histplot(df['im_mono'] * 13.781163434903 / 200 - df['DT_weighted_avg'], ax=ax[1][0], kde=True)
-    ax[1][0].set_xlabel('DT error')
+    sns.histplot(df['im_mono'] * 13.781163434903 / 200 - df['DT_weighted_avg'], ax=axd[1][0])
+    sns.histplot(df['im_mono'] * 13.781163434903 / 200 - df['DT_weighted_avg'], ax=axd[1][0], kde=True)
+    axd[1][0].set_xlabel('DT error')
 
-    sns.histplot(df['RT'] - df['RT_weighted_avg'], ax=ax[1][1])
-    sns.histplot(df['RT'] - df['RT_weighted_avg'], ax=ax[1][1], kde=True)
-    ax[1][1].set_xlabel('RT error')
+    sns.histplot(df['RT'] - df['RT_weighted_avg'], ax=axd[1][1])
+    sns.histplot(df['RT'] - df['RT_weighted_avg'], ax=axd[1][1], kde=True)
+    axd[1][1].set_xlabel('RT error')
 
-    sns.histplot(df['dt_weighted_std'], ax=ax[2][0])
-    sns.histplot(df['dt_weighted_std'], ax=ax[2][0], kde=True)
+    sns.histplot(df['dt_weighted_std'], ax=axd[2][0])
+    sns.histplot(df['dt_weighted_std'], ax=axd[2][0], kde=True)
 
-    sns.histplot(df['dt_std'], ax=ax[2][1])
-    sns.histplot(df['dt_std'], ax=ax[2][1], kde=True)
+    sns.histplot(df['dt_std'], ax=axd[2][1])
+    sns.histplot(df['dt_std'], ax=axd[2][1], kde=True)
 
-    sns.histplot(df['rt_weighted_std'], ax=ax[3][0])
-    sns.histplot(df['rt_weighted_std'], ax=ax[3][0], kde=True)
+    sns.histplot(df['rt_weighted_std'], ax=axd[3][0])
+    sns.histplot(df['rt_weighted_std'], ax=axd[3][0], kde=True)
 
-    sns.histplot(df['rt_std'], ax=ax[3][1], bins=100)
+    sns.histplot(df['rt_std'], ax=axd[3][1], bins=100)
 
-    plt.savefig('results/plots/preprocessing/deviations_UN.pdf', format='pdf', dpi=200)
+    figd.savefig('results/plots/preprocessing/deviations_UN.pdf', format='pdf', dpi=200)
     plt.close('all')
 
 
