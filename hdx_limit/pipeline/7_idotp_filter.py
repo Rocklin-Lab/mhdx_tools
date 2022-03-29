@@ -321,7 +321,7 @@ def main(configfile,
         my_row['name_recentered'] = '_'.join(name.split('_')[:-1]) + '_' + str(
             round(my_row['RT_weighted_avg'].values[0], 5))
         if not my_row['DT_weighted_avg'].values[0] < 0.1:
-            out_df = out_df.append(my_row)
+            out_df = pd.concat([out_df, my_row], ignore_index=True)
 
     if library_info_out_path is not None:
         out_df.drop_duplicates(subset=['name_recentered', 'charge'], ignore_index=True, inplace=True)
