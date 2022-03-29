@@ -158,9 +158,11 @@ def ajf_plot(df, winner, tps, output_path):
         ax_clean.text(0, 0.9, 'ATC is present', fontsize=12, weight='bold', ha='left')
     else:
         ax_clean.text(0, 0.9, 'ATC is NONE', fontsize=12, weight='bold', ha='left')
-    if prefiltered_ics is not None:
+    if len(df[df['prefiltered'] == 1]) > 0:
+        prefiltered_ics = True
         ax_clean.text(0, 0.7, 'PREFILTERED is present', fontsize=12, weight='bold', ha='left')
     else:
+        prefiltered_ics = None
         ax_clean.text(0, 0.7, 'PREFILTERED is NONE', fontsize=12, weight='bold', ha='left')
     if winner is not None:
         ax_clean.text(0, 0.5, 'WINNER is present', fontsize=12, weight='bold', ha='left')
@@ -519,6 +521,7 @@ def ajf_plot(df, winner, tps, output_path):
 
 
 def plot_ajf_(configfile, atc, prefiltered_ics, winner, output_path):
+
     if not os.path.isdir(os.path.dirname(output_path)):
         os.makedirs(os.path.dirname(output_path))
 
