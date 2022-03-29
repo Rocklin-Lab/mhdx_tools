@@ -410,7 +410,16 @@ def gen_factors_with_corr_check(input_grid,
 
 
 def calculate_theoretical_isotope_dist_from_sequence(sequence, n_isotopes=None):
+    """Calculate theoretical isotope distribtuion from the given one-letter sequence of a library protein.
 
+    Args:
+        sequence (string): sequence in one letter code
+        n_isotopes (int): number of isotopes to include. If none, includes all
+
+    Return:
+        isotope_dist (numpy ndarray): resulting theoretical isotope distribution
+
+    """
     seq_formula = molmass.Formula(sequence)
     isotope_dist = np.array([x[1] for x in seq_formula.spectrum().values()])
     isotope_dist = isotope_dist / max(isotope_dist)
@@ -422,17 +431,33 @@ def calculate_theoretical_isotope_dist_from_sequence(sequence, n_isotopes=None):
             isotope_dist = np.append(isotope_dist, fill_arr)
     return isotope_dist
 
-
 def calculate_empirical_isotope_dist_from_integrated_mz(integrated_mz_array,
                                                         n_isotopes=None):
+    """Calculate the isotope distribution from the integrated mz intensitities.
 
+    Args:
+        integrated_mz_values (Numpy ndarray): array of integrated mz intensitites
+        n_isotopes (int): number of isotopes to include. If none, includes all
+    Returns:
+        isotope_dist (Numpy ndarray): isotope distribution with magnitude normalized to 1
+
+    """
     isotope_dist = integrated_mz_array / max(integrated_mz_array)
     if n_isotopes:
         isotope_dist = isotope_dist[:n_isotopes]
     return isotope_dist
 
-def calculate_isotope_dist_dot_product(sequence, undeut_integrated_mz_array):
 
+def calculate_isotope_dist_dot_product(sequence, undeut_integrated_mz_array):
+    """Calculate dot product between theoretical isotope distribution from the sequence and experimental integrated mz array.
+
+    Args:
+        sequence (string): single-letter sequence of the library protein-of-interest
+        undeut_integrated_mz_array (Numpy ndarray): observed integrated mz array from an undeuterated .mzML
+    Returns:
+        dot_product (float): result of dot product between theoretical and observed integrated-m/Z, from [0-1]
+
+    """
     theo_isotope_dist = calculate_theoretical_isotope_dist_from_sequence(
         sequence=sequence)
     emp_isotope_dist = calculate_empirical_isotope_dist_from_integrated_mz(
@@ -1079,6 +1104,12 @@ class Factor:
                                        factor_auc=self.factor_auc,
                                        factor_auc_with_gauss_extrapol=self.factor_auc_with_gauss_extrapol,
                                        nnfac_output=self.nnfac_output)
+
+                # calculate idotp if set to true and save it in the class
+                if calculate_idotp:
+                    newIC.idotp = calculate_isotope_dist_dot_product(sequence=sequence,
+                                                                     undeut_integrated_mz_array=newIC.baseline_integrated_mz)
+
                 if (newIC.baseline_peak_error / newIC.baseline_auc <
                         0.2):  # TODO: HARDCODE
                     self.isotope_clusters.append(newIC)
