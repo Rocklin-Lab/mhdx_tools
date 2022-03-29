@@ -333,6 +333,7 @@ def main(configfile,
         sns.displot(idotps)
         plt.axvline(idotp_cutoff, 0, 1)
         plt.savefig(plot_out_path)
+        plt.close('all')
 
     # Plot deviation plots. Add this to a proper output in the snakemake scope later
     plot_deviations(out_df)
