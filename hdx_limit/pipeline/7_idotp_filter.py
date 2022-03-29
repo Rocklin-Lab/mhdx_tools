@@ -337,7 +337,8 @@ def main(configfile,
         plt.close('all')
 
     # Plot deviation plots. Add this to a proper output in the snakemake scope later
-    plot_deviations(out_df)
+    df = pd.read_json(library_info_out_path)
+    plot_deviations(df)
 
     if return_flag:
         return out_df
