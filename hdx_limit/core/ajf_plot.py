@@ -154,14 +154,14 @@ def ajf_plot(df, winner, tps, output_path):
     ax_clean.axis('off')
 
     # Add information if files are present
-    if atc is not None:
+    if len(df) > 0:
         ax_clean.text(0, 0.9, 'ATC is present', fontsize=12, weight='bold', ha='left')
     else:
         ax_clean.text(0, 0.9, 'ATC is NONE', fontsize=12, weight='bold', ha='left')
     if prefiltered_ics is not None:
         ax_clean.text(0, 0.7, 'PREFILTERED is present', fontsize=12, weight='bold', ha='left')
     else:
-        ax_clean.text(0, 0.7, 'PREFILTEREDis NONE', fontsize=12, weight='bold', ha='left')
+        ax_clean.text(0, 0.7, 'PREFILTERED is NONE', fontsize=12, weight='bold', ha='left')
     if winner is not None:
         ax_clean.text(0, 0.5, 'WINNER is present', fontsize=12, weight='bold', ha='left')
     else:

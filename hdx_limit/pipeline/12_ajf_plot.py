@@ -15,6 +15,27 @@ if __name__ == '__main__':
         output_multi = snakemake.output[0]
         output_mono = snakemake.output[1]
 
+        if not os.stat(atc).st_size == 0:
+            atc = limit_read(atc)
+        else:
+            atc = None
+            print('ATC is NONE')
+        if not os.stat(prefiltered_ics).st_size == 0:
+            prefiltered_ics = limit_read(prefiltered_ics)
+        else:
+            prefiltered_ics = None
+            print('PREFILTERED IS NONE')
+        if not os.stat(winner_multi).st_size == 0:
+            winner_multi = limit_read(winner_multi)
+        else:
+            winner_multi = None
+            print('WINNER MULTI IS NONE')
+        if not os.stat(winner_mono).st_size == 0:
+            winner_mono = limit_read(winner_mono)
+        else:
+            winner_mono = None
+            print('WINNER MONO IS NONE')
+
         plot_ajf_(configfile=configfile,
                   atc=atc,
                   prefiltered_ics=prefiltered_ics,
