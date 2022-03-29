@@ -270,6 +270,7 @@ def plot_deviations(df):
 
     sns.histplot(df['rt_std'].values, ax=ax[3][1], bins=100)
 
+    plt.tight_layout()
     fig.savefig('results/plots/deviations_UN.pdf', format='pdf', dpi=200, bbox_inches='tight')
     plt.close('all')
 
