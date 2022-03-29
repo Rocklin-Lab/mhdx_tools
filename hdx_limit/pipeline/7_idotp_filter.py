@@ -238,6 +238,39 @@ def generate_dataframe_ics(configfile,
 
     return df
 
+def plot_deviations(df):
+    sns.set_context('talk')
+
+    fig, ax = plt.subplots(4, 2, figsize=(10, 12), dpi=200)
+
+    sns.histplot(df['n_UN'], ax=ax[0][0])
+    sns.histplot(df['n_UN'], ax=ax[0][0], kde=True)
+
+    sns.histplot(df['n_signals'], ax=ax[0][1])
+    sns.histplot(df['n_signals'], ax=ax[0][1], kde=True)
+
+    sns.histplot(df['im_mono'] * 13.781163434903 / 200 - df['DT_weighted_avg'], ax=ax[1][0])
+    sns.histplot(df['im_mono'] * 13.781163434903 / 200 - df['DT_weighted_avg'], ax=ax[1][0], kde=True)
+    ax[1][0].set_xlabel('DT error')
+
+    sns.histplot(df['RT'] - df['RT_weighted_avg'], ax=ax[1][1])
+    sns.histplot(df['RT'] - df['RT_weighted_avg'], ax=ax[1][1], kde=True)
+    ax[1][1].set_xlabel('RT error')
+
+    sns.histplot(df['dt_weighted_std'], ax=ax[2][0])
+    sns.histplot(df['dt_weighted_std'], ax=ax[2][0], kde=True)
+
+    sns.histplot(df['dt_std'], ax=ax[2][1])
+    sns.histplot(df['dt_std'], ax=ax[2][1], kde=True)
+
+    sns.histplot(df['rt_weighted_std'], ax=ax[3][0])
+    sns.histplot(df['rt_weighted_std'], ax=ax[3][0], kde=True)
+
+    sns.histplot(df['rt_std'], ax=ax[3][1], bins=100)
+
+    plt.savefig('results/plots/preprocessing/deviations_UN.pdf', format='pdf', dpi=200)
+    plt.close('all')
+
 
 def main(configfile,
          library_info_path,
@@ -269,6 +302,8 @@ def main(configfile,
     df = generate_dataframe_ics(configfile=configfile,
                                 all_ics_inputs=all_ics_inputs,
                                 idotp_cutoff=idotp_cutoff)
+
+    plot_deviations(df)
 
     cols_idotp = ['idotp', 'integrated_mz_width', 'mz_centers', 'theor_mz_dist']
     cols_ics_recenter = ['RT_weighted_avg', 'DT_weighted_avg_bins', 'DT_weighted_avg', 'rt_std', 'dt_std',
