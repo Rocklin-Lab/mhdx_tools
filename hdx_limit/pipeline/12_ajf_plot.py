@@ -8,30 +8,30 @@ if __name__ == '__main__':
 
     if "snakemake" in globals():
         configfile = yaml.load(open(snakemake.input[0], "rb").read(), Loader=yaml.Loader)
-        atc = limit_read(snakemake.input[1])
-        prefiltered_ics = limit_read(snakemake.input[2])
-        winner_multi = limit_read(snakemake.input[3])
-        winner_mono = limit_read(snakemake.input[4])
+        atc_path = snakemake.input[1]
+        prefiltered_ics_path = snakemake.input[2]
+        winner_multi_path = snakemake.input[3]
+        winner_mono_path = snakemake.input[4]
         output_multi = snakemake.output[0]
         output_mono = snakemake.output[1]
 
-        if not os.stat(atc).st_size == 0:
-            atc = limit_read(atc)
+        if not os.stat(atc_path).st_size == 0:
+            atc = limit_read(atc_path)
         else:
             atc = None
             print('ATC is NONE')
-        if not os.stat(prefiltered_ics).st_size == 0:
-            prefiltered_ics = limit_read(prefiltered_ics)
+        if not os.stat(prefiltered_ics_path).st_size == 0:
+            prefiltered_ics = limit_read(prefiltered_ics_path)
         else:
             prefiltered_ics = None
             print('PREFILTERED IS NONE')
-        if not os.stat(winner_multi).st_size == 0:
-            winner_multi = limit_read(winner_multi)
+        if not os.stat(winner_multi_path).st_size == 0:
+            winner_multi = limit_read(winner_multi_path)
         else:
             winner_multi = None
             print('WINNER MULTI IS NONE')
-        if not os.stat(winner_mono).st_size == 0:
-            winner_mono = limit_read(winner_mono)
+        if not os.stat(winner_mono_path).st_size == 0:
+            winner_mono = limit_read(winner_mono_path)
         else:
             winner_mono = None
             print('WINNER MONO IS NONE')
