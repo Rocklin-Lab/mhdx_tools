@@ -247,9 +247,11 @@ def plot_deviations(df):
 
     sns.histplot(df['n_UN'].values, ax=ax[0][0])
     sns.histplot(df['n_UN'].values, ax=ax[0][0], kde=True)
+    ax[0][0].set_xlabel('n_UN')
 
     sns.histplot(df['n_signals'].values, ax=ax[0][1])
     sns.histplot(df['n_signals'].values, ax=ax[0][1], kde=True)
+    ax[0][1].set_xlabel('n_signals')
 
     sns.histplot(df['im_mono'].values * 13.781163434903 / 200 - df['DT_weighted_avg'].values, ax=ax[1][0])
     sns.histplot(df['im_mono'].values * 13.781163434903 / 200 - df['DT_weighted_avg'].values, ax=ax[1][0], kde=True)
@@ -261,17 +263,21 @@ def plot_deviations(df):
 
     sns.histplot(df['dt_weighted_std'].values, ax=ax[2][0])
     sns.histplot(df['dt_weighted_std'].values, ax=ax[2][0], kde=True)
+    ax[2][0].set_xlabel('DT_weighted_std')
 
     sns.histplot(df['dt_std'].values, ax=ax[2][1])
     sns.histplot(df['dt_std'].values, ax=ax[2][1], kde=True)
+    ax[2][1].set_xlabel('DT_std')
 
     sns.histplot(df['rt_weighted_std'].values, ax=ax[3][0])
     sns.histplot(df['rt_weighted_std'].values, ax=ax[3][0], kde=True)
+    ax[3][0].set_xlabel('RT_weighted_std')
 
     sns.histplot(df['rt_std'].values, ax=ax[3][1], bins=100)
+    ax[3][1].set_xlabel('RT_std')
 
     plt.tight_layout()
-    fig.savefig('results/plots/deviations_UN.pdf', format='pdf', dpi=200, bbox_inches='tight')
+    plt.savefig('results/plots/deviations_UN.pdf', format='pdf', dpi=200, bbox_inches='tight')
     plt.close('all')
 
 
