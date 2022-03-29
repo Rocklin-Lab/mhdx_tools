@@ -589,3 +589,5 @@ if __name__ == '__main__':
              prefiltered_ics=prefiltered_ics,
              winner=winner,
              output_path=args.output)
+
+#TEST
