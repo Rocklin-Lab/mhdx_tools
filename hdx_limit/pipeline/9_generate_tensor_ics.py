@@ -270,6 +270,13 @@ def main(library_info_path,
                                           factor_dt_r2_cutoff=factor_dt_r2_cutoff,
                                           use_rtdt_recenter=use_rtdt_recenter)
 
+    # set up vars for calculating idotp if 0 timepoint index
+    calc_idotp = False
+    prot_seq = None
+    if my_tp == 0:
+        calc_idotp = True
+        prot_seq = my_row['sequence'].values[0]
+
     all_ics = []
 
     ic_peak_width_auto = 0.8 * my_row['integrated_mz_width'].values[0]
@@ -280,16 +287,20 @@ def main(library_info_path,
 
         if auto_ic_peak_width:
             factor.find_isotope_clusters(prominence=ic_peak_prominence,
-                                     width_val=ic_peak_width_auto,
-                                     rel_height_filter=ic_rel_height_filter,
-                                     baseline_threshold=ic_rel_height_filter_baseline,
-                                     rel_height_threshold=ic_rel_height_threshold)
+                                         width_val=ic_peak_width_auto,
+                                         rel_height_filter=ic_rel_height_filter,
+                                         baseline_threshold=ic_rel_height_filter_baseline,
+                                         rel_height_threshold=ic_rel_height_threshold,
+                                         calculate_idotp=calc_idotp,
+                                         sequence=prot_seq)
         else:
             factor.find_isotope_clusters(prominence=ic_peak_prominence,
                                          width_val=ic_peak_width,
                                          rel_height_filter=ic_rel_height_filter,
                                          baseline_threshold=ic_rel_height_filter_baseline,
-                                         rel_height_threshold=ic_rel_height_threshold)
+                                         rel_height_threshold=ic_rel_height_threshold,
+                                         calculate_idotp=calc_idotp,
+                                         sequence=prot_seq)
 
         for ic in factor.isotope_clusters:
             all_ics.append(ic)
