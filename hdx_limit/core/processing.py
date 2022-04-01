@@ -598,9 +598,9 @@ class PathOptimizer:
                 ic.baseline_integrated_mz,
                 columns=["major_species_integrated_intensities"],
             )
-            fit = self.calculate_isotope_dist_dot_product(sequence=my_seq, undeut_integrated_mz_array=ic.baseline_integrated_mz)
-            ic.undeut_ground_dot_product = fit
-            dot_products.append((fit, ic.charge_states))
+            # fit = self.calculate_isotope_dist_dot_product(sequence=my_seq, undeut_integrated_mz_array=ic.baseline_integrated_mz)
+            # ic.undeut_ground_dot_product = fit
+            dot_products.append((ic.idotp, ic.charge_states))
 
         # Append final (0, 0) to be called by charge_idxs which are not in the charge group for a single loop iteration
         dot_products.append((0, 0))
