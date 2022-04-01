@@ -300,6 +300,7 @@ def factorize_tensor(input_grid,
 
     """
 
+    # initialize the datacalss
     nnfac_output = NNFACDATA(factor_rank=factor_rank,
                              init_method=init_method,
                              max_iteration=n_iter_max,
@@ -308,19 +309,22 @@ def factorize_tensor(input_grid,
                              fixed_modes=fixed_modes,
                              normalize=normalize)
 
-    if return_errors:
+    # factorize
+    factor_out = nn_fac.ntf.ntf(tensor=input_grid,
+                                rank=factor_rank,
+                                init=init_method,
+                                factors_0=factors_0,
+                                n_iter_max=n_iter_max,
+                                tol=tolerance,
+                                sparsity_coefficients=sparsity_coefficients,
+                                fixed_modes=fixed_modes,
+                                normalize=normalize,
+                                verbose=verbose,
+                                return_errors=return_errors)
 
-        factor_out = nn_fac.ntf.ntf(tensor=input_grid,
-                                    rank=factor_rank,
-                                    init=init_method,
-                                    factors_0=factors_0,
-                                    n_iter_max=n_iter_max,
-                                    tol=tolerance,
-                                    sparsity_coefficients=sparsity_coefficients,
-                                    fixed_modes=fixed_modes,
-                                    normalize=normalize,
-                                    verbose=verbose,
-                                    return_errors=return_errors)
+    # store relevant data
+
+    if return_errors:
 
         nnfac_output.factors = factor_out[0]
         nnfac_output.rec_errors = factor_out[1]
@@ -330,17 +334,6 @@ def factorize_tensor(input_grid,
             nnfac_output.converge = True
 
     else:
-        factor_out = nn_fac.ntf.ntf(tensor=input_grid,
-                                    rank=factor_rank,
-                                    init=init_method,
-                                    factors_0=factors_0,
-                                    n_iter_max=n_iter_max,
-                                    tol=tolerance,
-                                    sparsity_coefficients=sparsity_coefficients,
-                                    fixed_modes=fixed_modes,
-                                    normalize=normalize,
-                                    verbose=verbose,
-                                    return_errors=return_errors)
         nnfac_output.factors = factor_out
 
     return nnfac_output
