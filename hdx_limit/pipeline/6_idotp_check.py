@@ -56,8 +56,9 @@ from hdx_limit.core.plot_ics_data import plot_ics_from_ic_list
 from hdx_limit.core.processing import TensorGenerator, generate_tensor_factors
 from hdx_limit.core.io import limit_write
 
+
 def cum_peak_gaps_from_sequence(sequence):
-    """Determine expected cumulative mass distances between isotopes of a given protein sequence. 
+    """Determine expected cumulative mass distances between isotopes of a given protein sequence.
     Later divided by charge and added to observed m/Z.
 
     Args:
@@ -133,27 +134,6 @@ def calculate_empirical_isotope_dist_from_integrated_mz(integrated_mz_array,
     if n_isotopes:
         isotope_dist = isotope_dist[:n_isotopes]
     return isotope_dist
-
-
-def calculate_isotope_dist_dot_product(sequence, undeut_integrated_mz_array):
-    """Calculate dot product between theoretical isotope distribution from the sequence and experimental integrated mz array.
-    
-    Args:
-        sequence (string): single-letter sequence of the library protein-of-interest
-        undeut_integrated_mz_array (Numpy ndarray): observed integrated mz array from an undeuterated .mzML
-    Returns:
-        dot_product (float): result of dot product between theoretical and observed integrated-m/Z, from [0-1]
-
-    """
-    theo_isotope_dist = calculate_theoretical_isotope_dist_from_sequence(
-        sequence=sequence)
-    emp_isotope_dist = calculate_empirical_isotope_dist_from_integrated_mz(
-        integrated_mz_array=undeut_integrated_mz_array)
-    min_length = min([len(theo_isotope_dist), len(emp_isotope_dist)])
-    dot_product = np.linalg.norm(
-        np.dot(theo_isotope_dist[0:min_length], emp_isotope_dist[0:min_length])
-    ) / np.linalg.norm(theo_isotope_dist) / np.linalg.norm(emp_isotope_dist)
-    return dot_product, theo_isotope_dist
 
 
 def gen_ics_list(library_info_df,
@@ -253,34 +233,6 @@ def gen_ics_list(library_info_df,
     return undeut_ics_list
 
 
-# def calc_dot_prod_for_isotope_clusters(sequence, undeut_isotope_clusters):
-#     """Calculate normalized dot product [0-1] of undeuterated IsotopeCluster.baseline_subtracted_int_mz to sequence determined theoretical distribution
-#
-#     Args:
-#         sequence (str): sequence of the protein-of-interest in single-letter format
-#         undeut_isotope_clusters (list): list of IsotopeCluster objects to be compared against reference
-#
-#     Returns:
-#         dot_product_list (list): list of dot product results, index matched to integrated_mz_list
-#         integrated_mz_list (list): list of integrated m/Z arrays, index matched to dot_product_list
-#
-#     """
-#     dot_product_list = []
-#     integrated_mz_list = []
-#     integrated_mz_width_list = []
-#     out_theor_mz_dist = None # Need this because the return statement can't see theor_mz_dist from the loop sometimes?
-#     for index, isotope_clusters in enumerate(undeut_isotope_clusters):
-#         integrated_mz_array = isotope_clusters.baseline_integrated_mz
-#         int_mz_width = isotope_clusters.integrated_mz_peak_width
-#         dot_product, out_theor_mz_dist = calculate_isotope_dist_dot_product(
-#             sequence=sequence, undeut_integrated_mz_array=integrated_mz_array)
-#         dot_product_list.append(dot_product)
-#         integrated_mz_list.append(integrated_mz_array)
-#         integrated_mz_width_list.append(int_mz_width)
-#
-#     return dot_product_list, integrated_mz_list, integrated_mz_width_list, out_theor_mz_dist
-
-
 def main(library_info_path,
          normalization_factor,
          undeut_tensor_path_list,
@@ -347,6 +299,7 @@ def main(library_info_path,
                                      undeut_tensor_path_list=undeut_tensor_path_list,
                                      factor_output_path_list=factor_output_path_list,
                                      factor_plot_output_path_list=factor_plot_output_path_list,
+                                     ics_plot_output_path_list=ics_plot_output_path_list,
                                      prot_sequence=prot_seq,
                                      mz_centers=mz_centers,
                                      normalization_factor=normalization_factor,
