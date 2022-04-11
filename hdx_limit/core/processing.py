@@ -117,8 +117,17 @@ def create_factor_data_object(data_tensor, gauss_params, timepoint_label=None):
     return factor_data_dict
 
 
-def generate_tensor_factors(tensor_fpath, library_info_df, timepoint_index, gauss_params, mz_centers, normalization_factor,
+def generate_tensor_factors(tensor_fpath,
+                            library_info_df,
+                            timepoint_index,
+                            gauss_params,
+                            mz_centers,
+                            normalization_factor,
                             n_factors=15,
+                            init_method='nndsvd',
+                            niter_max=100000,
+                            tol=1e-8,
+                            factor_corr_threshold=0.17,
                             factor_output_fpath=None,
                             factor_plot_output_path=None,
                             timepoint_label=None,
@@ -166,8 +175,11 @@ def generate_tensor_factors(tensor_fpath, library_info_df, timepoint_index, gaus
 
     print('Factorizing ... ')
 
-    data_tensor.DataTensor.factorize(n_factors=n_factors,
-                                     gauss_params=gauss_params)
+    data_tensor.DataTensor.factorize(max_num_factors=n_factors,
+                                     init_method=init_method,
+                                     niter_max=niter_max,
+                                     tol=tol,
+                                     factor_corr_threshold=factor_corr_threshold)
 
     print("Post-Factorization: " + str(process.memory_info().rss /
                                        (1024 * 1024 * 1024)))
