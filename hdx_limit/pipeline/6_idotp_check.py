@@ -159,6 +159,7 @@ def gen_tensors_factorize(library_info_df,
                           undeut_tensor_path_list,
                           mz_centers,
                           normalization_factor,
+                          prot_sequence,
                           factor_output_path_list=None,
                           factor_plot_output_path_list=None,
                           timepoint_index=0,
@@ -228,13 +229,15 @@ def gen_tensors_factorize(library_info_df,
                                               factor_rt_r2_cutoff=factor_rt_r2_cutoff,
                                               factor_dt_r2_cutoff=factor_dt_r2_cutoff)
 
-        # Generate Factors and IsotopeClusters from DataTensor. 
+        # Generate Factors and IsotopeClusters from DataTensor. calculate idotp here
         for factor in data_tensor.DataTensor.factors:
             factor.find_isotope_clusters(prominence=ic_peak_prominence,
                                          width_val=ic_peak_width,
                                          rel_height_filter=ic_rel_height_filter,
                                          baseline_threshold=ic_rel_height_filter_baseline,
-                                         rel_height_threshold=ic_rel_height_threshold)
+                                         rel_height_threshold=ic_rel_height_threshold,
+                                         calculate_idotp=True,
+                                         sequence=prot_sequence)
             for isotope_cluster in factor.isotope_clusters:
                 undeut_ics_list.append(
                     isotope_cluster
