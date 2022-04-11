@@ -213,6 +213,10 @@ def main(library_info_path,
          return_flag=False,
          gauss_params=(3, 1),
          n_factors=15,
+         init_method='nndsvd',
+         niter_max=100000,
+         tol=1e-8,
+         factor_corr_threshold=0.17,
          filter_factors=False,
          factor_rt_r2_cutoff=0.91,
          factor_dt_r2_cutoff=0.91,
@@ -260,6 +264,10 @@ def main(library_info_path,
                                           timepoint_index=my_tp,
                                           gauss_params=gauss_params,
                                           n_factors=n_factors,
+                                          init_method=init_method,
+                                          niter_max=niter_max,
+                                          tol=tol,
+                                          factor_corr_threshold=factor_corr_threshold,
                                           mz_centers=centers,
                                           normalization_factor=normalization_factor,
                                           factor_output_fpath=factor_out_path,
@@ -377,6 +385,12 @@ if __name__ == "__main__":
     factor_rt_r2_cutoff = config_dict["factor_rt_r2_cutoff"]
     factor_dt_r2_cutoff = config_dict["factor_dt_r2_cutoff"]
 
+    max_num_factors = config_dict["max_num_factors"]
+    factor_init_method = config_dict["init_method"]
+    factor_niter_max = config_dict["n_iter_max"]
+    factor_tol = config_dict["tolerance"]
+    factor_corr_thres = config_dict["factor_corr_threshold"]
+
     ic_peak_prom = config_dict["ic_peak_prominence"]
     ic_peak_width = config_dict["ic_peak_width"]
     auto_ic_peak_width = config_dict["auto_ic_peak_width"]
@@ -397,6 +411,11 @@ if __name__ == "__main__":
          factor_plot_output_path=args.factor_plot_out_path,
          ic_plot_output_path=args.ic_plot_out_path,
          gauss_params=args.gauss_params,
+         n_factors=max_num_factors,
+         init_method=factor_init_method,
+         niter_max=factor_niter_max,
+         tol=factor_tol,
+         factor_corr_threshold=factor_corr_thres,
          filter_factors=filter_factors,
          factor_rt_r2_cutoff=factor_rt_r2_cutoff,
          factor_dt_r2_cutoff=factor_dt_r2_cutoff,
