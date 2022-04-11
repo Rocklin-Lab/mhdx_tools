@@ -163,6 +163,10 @@ def gen_tensors_factorize(library_info_df,
                           factor_plot_output_path_list=None,
                           timepoint_index=0,
                           n_factors=15,
+                          init_method='nndsvd',
+                          niter_max=100000,
+                          tol=1e-8,
+                          factor_corr_threshold=0.17,
                           gauss_params=(3, 1),
                           filter_factors=False,
                           factor_rt_r2_cutoff=0.91,
@@ -204,14 +208,17 @@ def gen_tensors_factorize(library_info_df,
         factor_plot_output_path_list = [None for i in undeut_tensor_path_list]
 
     for undeut_tensor_path, factor_output_path, factor_plot_output_path in zip(
-        undeut_tensor_path_list, factor_output_path_list, factor_plot_output_path_list
-        ):
+        undeut_tensor_path_list, factor_output_path_list, factor_plot_output_path_list):
         # Generate DataTensor from extracted data.
         data_tensor = generate_tensor_factors(tensor_fpath=undeut_tensor_path,
                                               library_info_df=library_info_df,
                                               timepoint_index=timepoint_index,
                                               gauss_params=gauss_params,
                                               n_factors=n_factors,
+                                              init_method=init_method,
+                                              niter_max=niter_max,
+                                              tol=tol,
+                                              factor_corr_threshold=factor_corr_threshold,
                                               mz_centers=mz_centers,
                                               normalization_factor=normalization_factor,
                                               factor_output_fpath=factor_output_path,
@@ -220,6 +227,7 @@ def gen_tensors_factorize(library_info_df,
                                               filter_factors=filter_factors,
                                               factor_rt_r2_cutoff=factor_rt_r2_cutoff,
                                               factor_dt_r2_cutoff=factor_dt_r2_cutoff)
+
         # Generate Factors and IsotopeClusters from DataTensor. 
         for factor in data_tensor.DataTensor.factors:
             factor.find_isotope_clusters(prominence=ic_peak_prominence,
