@@ -155,28 +155,28 @@ def calculate_isotope_dist_dot_product(sequence, undeut_integrated_mz_array):
     return dot_product, theo_isotope_dist
 
 
-def gen_tensors_factorize(library_info_df,
-                          undeut_tensor_path_list,
-                          mz_centers,
-                          normalization_factor,
-                          prot_sequence,
-                          factor_output_path_list=None,
-                          factor_plot_output_path_list=None,
-                          timepoint_index=0,
-                          n_factors=15,
-                          init_method='nndsvd',
-                          niter_max=100000,
-                          tol=1e-8,
-                          factor_corr_threshold=0.17,
-                          gauss_params=(3, 1),
-                          filter_factors=False,
-                          factor_rt_r2_cutoff=0.91,
-                          factor_dt_r2_cutoff=0.91,
-                          ic_peak_prominence=0.10,
-                          ic_peak_width=2,
-                          ic_rel_height_filter=False,
-                          ic_rel_height_filter_baseline=0.10,
-                          ic_rel_height_threshold=0.10):
+def gen_ics_list(library_info_df,
+                 undeut_tensor_path_list,
+                 mz_centers,
+                 normalization_factor,
+                 prot_sequence,
+                 factor_output_path_list=None,
+                 factor_plot_output_path_list=None,
+                 timepoint_index=0,
+                 n_factors=15,
+                 init_method='nndsvd',
+                 niter_max=100000,
+                 tol=1e-8,
+                 factor_corr_threshold=0.17,
+                 gauss_params=(3, 1),
+                 filter_factors=False,
+                 factor_rt_r2_cutoff=0.91,
+                 factor_dt_r2_cutoff=0.91,
+                 ic_peak_prominence=0.10,
+                 ic_peak_width=2,
+                 ic_rel_height_filter=False,
+                 ic_rel_height_filter_baseline=0.10,
+                 ic_rel_height_threshold=0.10):
     """Instantiates TensorGenerator and factorizes.
     
     Args:
@@ -199,7 +199,6 @@ def gen_tensors_factorize(library_info_df,
         data_tensor_list (list): list of all DataTensor objects made from path_list
 
     """
-    data_tensor_list = []
     undeut_ics_list = []
 
     # Handle optional factor arguments in control structure.
@@ -242,36 +241,35 @@ def gen_tensors_factorize(library_info_df,
                 undeut_ics_list.append(
                     isotope_cluster
                 )
-        data_tensor_list.append(data_tensor)
-    return undeut_ics_list, data_tensor_list
+    return undeut_ics_list
 
 
-def calc_dot_prod_for_isotope_clusters(sequence, undeut_isotope_clusters):
-    """Calculate normalized dot product [0-1] of undeuterated IsotopeCluster.baseline_subtracted_int_mz to sequence determined theoretical distribution
-    
-    Args:
-        sequence (str): sequence of the protein-of-interest in single-letter format
-        undeut_isotope_clusters (list): list of IsotopeCluster objects to be compared against reference 
-
-    Returns:
-        dot_product_list (list): list of dot product results, index matched to integrated_mz_list
-        integrated_mz_list (list): list of integrated m/Z arrays, index matched to dot_product_list
-
-    """
-    dot_product_list = []
-    integrated_mz_list = []
-    integrated_mz_width_list = []
-    out_theor_mz_dist = None # Need this because the return statement can't see theor_mz_dist from the loop sometimes?
-    for index, isotope_clusters in enumerate(undeut_isotope_clusters):
-        integrated_mz_array = isotope_clusters.baseline_integrated_mz
-        int_mz_width = isotope_clusters.integrated_mz_peak_width
-        dot_product, out_theor_mz_dist = calculate_isotope_dist_dot_product(
-            sequence=sequence, undeut_integrated_mz_array=integrated_mz_array)
-        dot_product_list.append(dot_product)
-        integrated_mz_list.append(integrated_mz_array)
-        integrated_mz_width_list.append(int_mz_width)
-
-    return dot_product_list, integrated_mz_list, integrated_mz_width_list, out_theor_mz_dist
+# def calc_dot_prod_for_isotope_clusters(sequence, undeut_isotope_clusters):
+#     """Calculate normalized dot product [0-1] of undeuterated IsotopeCluster.baseline_subtracted_int_mz to sequence determined theoretical distribution
+#
+#     Args:
+#         sequence (str): sequence of the protein-of-interest in single-letter format
+#         undeut_isotope_clusters (list): list of IsotopeCluster objects to be compared against reference
+#
+#     Returns:
+#         dot_product_list (list): list of dot product results, index matched to integrated_mz_list
+#         integrated_mz_list (list): list of integrated m/Z arrays, index matched to dot_product_list
+#
+#     """
+#     dot_product_list = []
+#     integrated_mz_list = []
+#     integrated_mz_width_list = []
+#     out_theor_mz_dist = None # Need this because the return statement can't see theor_mz_dist from the loop sometimes?
+#     for index, isotope_clusters in enumerate(undeut_isotope_clusters):
+#         integrated_mz_array = isotope_clusters.baseline_integrated_mz
+#         int_mz_width = isotope_clusters.integrated_mz_peak_width
+#         dot_product, out_theor_mz_dist = calculate_isotope_dist_dot_product(
+#             sequence=sequence, undeut_integrated_mz_array=integrated_mz_array)
+#         dot_product_list.append(dot_product)
+#         integrated_mz_list.append(integrated_mz_array)
+#         integrated_mz_width_list.append(int_mz_width)
+#
+#     return dot_product_list, integrated_mz_list, integrated_mz_width_list, out_theor_mz_dist
 
 
 def main(library_info_path,
@@ -331,39 +329,41 @@ def main(library_info_path,
     print("Observed m/Z: "+str(my_info['obs_mz'].values[0]))
     mz_centers = (prot_cum_peak_gaps/prot_charge) + my_info['expect_mz'].values[0] # replaced from obs_mz to expect_mz
 
-    iso_clusters_list, data_tensor_list = gen_tensors_factorize(
-        library_info_df=library_info,
-        undeut_tensor_path_list=undeut_tensor_path_list,
-        factor_output_path_list=factor_output_path_list,
-        factor_plot_output_path_list=factor_plot_output_path_list,
-        mz_centers=mz_centers,
-        normalization_factor=normalization_factor,
-        n_factors=n_factors,
-        gauss_params=gauss_params,
-        filter_factors=filter_factors,
-        factor_dt_r2_cutoff=factor_dt_r2,
-        factor_rt_r2_cutoff=factor_rt_r2,
-        ic_peak_prominence=ic_peak_prominence,
-        ic_peak_width=ic_peak_width,
-        ic_rel_height_filter=ic_rel_height_filter,
-        ic_rel_height_filter_baseline=ic_rel_height_filter_baseline,
-        ic_rel_height_threshold=ic_rel_height_threshold)
+    iso_clusters_list = gen_ics_list(library_info_df=library_info,
+                                     undeut_tensor_path_list=undeut_tensor_path_list,
+                                     factor_output_path_list=factor_output_path_list,
+                                     factor_plot_output_path_list=factor_plot_output_path_list,
+                                     prot_sequence=prot_seq,
+                                     mz_centers=mz_centers,
+                                     normalization_factor=normalization_factor,
+                                     n_factors=n_factors,
+                                     gauss_params=gauss_params,
+                                     filter_factors=filter_factors,
+                                     factor_dt_r2_cutoff=factor_dt_r2,
+                                     factor_rt_r2_cutoff=factor_rt_r2,
+                                     ic_peak_prominence=ic_peak_prominence,
+                                     ic_peak_width=ic_peak_width,
+                                     ic_rel_height_filter=ic_rel_height_filter,
+                                     ic_rel_height_filter_baseline=ic_rel_height_filter_baseline,
+                                     ic_rel_height_threshold=ic_rel_height_threshold)
 
-    idotp_list, integtd_mz_list, integt_mz_width_list, theo_mz_dist = calc_dot_prod_for_isotope_clusters(
-        sequence=prot_seq, undeut_isotope_clusters=iso_clusters_list)
+    idotp_list = [x.idotp for x in iso_clusters_list]
+    integrated_mz_width_list = [x.integrated_mz_peak_width for x in iso_clusters_list]
+    theo_mz_dist = calculate_theoretical_isotope_dist_from_sequence(sequence=prot_seq)
+
+
+    # idotp_list, integtd_mz_list, integt_mz_width_list, theo_mz_dist = calc_dot_prod_for_isotope_clusters(
+    #     sequence=prot_seq, undeut_isotope_clusters=iso_clusters_list)
 
     if len(idotp_list) > 0:
         max_idotp_idx = np.argmax(np.array(idotp_list))
         max_idotp = np.array(idotp_list)[max_idotp_idx]
-        int_mz_width = np.array(integt_mz_width_list)[max_idotp_idx]
+        int_mz_width = np.array(integrated_mz_width_list)[max_idotp_idx]
     else: 
         max_idotp = 0
         int_mz_width = 0
 
     if all_clusters_output is not None:
-        for ic in iso_clusters_list:
-            ic.undeut_ground_dot_product = calculate_isotope_dist_dot_product(sequence=prot_seq,
-                                                undeut_integrated_mz_array=ic.baseline_integrated_mz)[0]
         limit_write(iso_clusters_list, all_clusters_output)
 
     if output_path is not None:
@@ -377,9 +377,7 @@ def main(library_info_path,
     if return_flag is not None:
         return {
             "iso_clusters_list": iso_clusters_list,
-            "data_tensor_list": data_tensor_list,
             "idotp_list": idotp_list,
-            "integrated_mz_list": integtd_mz_list
         }
 
 
