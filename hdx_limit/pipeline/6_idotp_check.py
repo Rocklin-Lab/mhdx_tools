@@ -52,6 +52,7 @@ from scipy.stats import norm
 from scipy.signal import find_peaks
 from collections import defaultdict as ddict
 from scipy.ndimage.filters import gaussian_filter
+from hdx_limit.core.plot_ics_data import plot_ics_from_ic_list
 from hdx_limit.core.processing import TensorGenerator, generate_tensor_factors
 from hdx_limit.core.io import limit_write
 
@@ -162,6 +163,7 @@ def gen_ics_list(library_info_df,
                  prot_sequence,
                  factor_output_path_list=None,
                  factor_plot_output_path_list=None,
+                 ics_plot_output_path_list=None,
                  timepoint_index=0,
                  n_factors=15,
                  init_method='nndsvd',
@@ -206,9 +208,11 @@ def gen_ics_list(library_info_df,
         factor_output_path_list = [None for i in undeut_tensor_path_list]
     if factor_plot_output_path_list is None:
         factor_plot_output_path_list = [None for i in undeut_tensor_path_list]
+    if ics_plot_output_path_list is None:
+        ics_plot_output_path_list = [None for i in undeut_tensor_path_list]
 
-    for undeut_tensor_path, factor_output_path, factor_plot_output_path in zip(
-        undeut_tensor_path_list, factor_output_path_list, factor_plot_output_path_list):
+    for undeut_tensor_path, factor_output_path, factor_plot_output_path, ic_plot_output_path in zip(
+        undeut_tensor_path_list, factor_output_path_list, factor_plot_output_path_list, ics_plot_output_path_list):
         # Generate DataTensor from extracted data.
         data_tensor = generate_tensor_factors(tensor_fpath=undeut_tensor_path,
                                               library_info_df=library_info_df,
@@ -229,6 +233,7 @@ def gen_ics_list(library_info_df,
                                               factor_dt_r2_cutoff=factor_dt_r2_cutoff)
 
         # Generate Factors and IsotopeClusters from DataTensor. calculate idotp here
+        ics_per_tensor_file = []
         for factor in data_tensor.DataTensor.factors:
             factor.find_isotope_clusters(prominence=ic_peak_prominence,
                                          width_val=ic_peak_width,
@@ -238,9 +243,13 @@ def gen_ics_list(library_info_df,
                                          calculate_idotp=True,
                                          sequence=prot_sequence)
             for isotope_cluster in factor.isotope_clusters:
-                undeut_ics_list.append(
-                    isotope_cluster
-                )
+                undeut_ics_list.append(isotope_cluster)
+                ics_per_tensor_file.append(isotope_cluster)
+
+        if ic_plot_output_path is not None:
+            plot_ics_from_ic_list(list_of_ics=ics_per_tensor_file,
+                                  output_path=ic_plot_output_path)
+
     return undeut_ics_list
 
 
@@ -279,6 +288,7 @@ def main(library_info_path,
          factor_plot_output_path_list=None,
          output_path=None,
          all_clusters_output=None,
+         ics_plot_output_path_list=None,
          return_flag=None,
          n_factors=15,
          init_method='nndsvd',
