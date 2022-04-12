@@ -97,6 +97,13 @@ def generate_dataframe_ics(configfile,
                             df['dt'] <= 13.)]['auc']) / sum(
                 df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
                             df['dt'] <= 13.)]['auc'])
+            # How many signals do we see? How many undeuterated files generated passing ICs?
+            df.loc[df['name'] == name, 'n_signals'] = len(
+                df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
+                            df['dt'] <= 13.)])
+            df.loc[df['name'] == name, 'n_UN'] = len(
+                set(df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
+                            df['dt'] <= 13.)]['file_index'].values))
             if len(df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
                     df['dt'] <= 13)]) > 1:
                 # DT standard deviation
@@ -119,6 +126,7 @@ def generate_dataframe_ics(configfile,
                             df['dt'] <= 13.), 'dt_weighted_std'] = 0
         else:
             df.loc[(df['name'] == name) & (df['charge'] == charge), 'DT_weighted_avg'] = -1
+
     # Find RT weighted average
     for name in set(df['name'].values):
         # Remove outliers
@@ -132,7 +140,7 @@ def generate_dataframe_ics(configfile,
                                 & (df['rt'] >= lb) & (df['rt'] <= ub)]['auc'])
         if len(df.loc[df['name'] == name, 'RT_weighted_avg']) > 1:
             # DT standard deviation
-            df.loc[df['name'] == name, 'dt_std'] = df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)]['rt'].std()
+            df.loc[df['name'] == name, 'rt_std'] = df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)]['rt'].std()
             # DT weighted standard deviation
             values = df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)]['rt']
             weights = df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)]['auc']
@@ -144,10 +152,6 @@ def generate_dataframe_ics(configfile,
             df.loc[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub), 'rt_std'] = 0
             df.loc[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub),
                    'rt_weighted_std'] = 0
-        # How many signals do we see? How many undeuterated files generated passing ICs?
-        df.loc[df['name'] == name, 'n_signals'] = len(df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)])
-        df.loc[df['name'] == name, 'n_UN'] = len(
-            set(df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)]['file_index'].values))
 
 
         # Compute DT weighted avg in bin dimension (this value should be used to extract tensors for consistency with
@@ -235,6 +239,48 @@ def generate_dataframe_ics(configfile,
     return df
 
 
+def plot_deviations(df):
+
+    sns.set_context('talk')
+
+    fig, ax = plt.subplots(4, 2, figsize=(10, 12), dpi=200)
+
+    sns.histplot(df['n_UN'].values, ax=ax[0][0])
+    sns.histplot(df['n_UN'].values, ax=ax[0][0], kde=True)
+    ax[0][0].set_xlabel('n_UN')
+
+    sns.histplot(df['n_signals'].values, ax=ax[0][1])
+    sns.histplot(df['n_signals'].values, ax=ax[0][1], kde=True)
+    ax[0][1].set_xlabel('n_signals')
+
+    sns.histplot(df['im_mono'].values * 13.781163434903 / 200 - df['DT_weighted_avg'].values, ax=ax[1][0])
+    sns.histplot(df['im_mono'].values * 13.781163434903 / 200 - df['DT_weighted_avg'].values, ax=ax[1][0], kde=True)
+    ax[1][0].set_xlabel('DT error')
+
+    sns.histplot(df['RT'].values - df['RT_weighted_avg'].values, ax=ax[1][1])
+    sns.histplot(df['RT'].values - df['RT_weighted_avg'].values, ax=ax[1][1], kde=True)
+    ax[1][1].set_xlabel('RT error')
+
+    sns.histplot(df['dt_weighted_std'].values, ax=ax[2][0])
+    sns.histplot(df['dt_weighted_std'].values, ax=ax[2][0], kde=True)
+    ax[2][0].set_xlabel('DT_weighted_std')
+
+    sns.histplot(df['dt_std'].values, ax=ax[2][1])
+    sns.histplot(df['dt_std'].values, ax=ax[2][1], kde=True)
+    ax[2][1].set_xlabel('DT_std')
+
+    sns.histplot(df['rt_weighted_std'].values, ax=ax[3][0])
+    sns.histplot(df['rt_weighted_std'].values, ax=ax[3][0], kde=True)
+    ax[3][0].set_xlabel('RT_weighted_std')
+
+    sns.histplot(df['rt_std'].values, ax=ax[3][1], bins=100)
+    ax[3][1].set_xlabel('RT_std')
+
+    plt.tight_layout()
+    plt.savefig('results/plots/deviations_UN.pdf', format='pdf', dpi=200, bbox_inches='tight')
+    plt.close('all')
+
+
 def main(configfile,
          library_info_path,
          all_idotp_inputs,
@@ -282,7 +328,7 @@ def main(configfile,
         my_row['name_recentered'] = '_'.join(name.split('_')[:-1]) + '_' + str(
             round(my_row['RT_weighted_avg'].values[0], 5))
         if not my_row['DT_weighted_avg'].values[0] < 0.1:
-            out_df = out_df.append(my_row)
+            out_df = pd.concat([out_df, my_row], ignore_index=True)
 
     if library_info_out_path is not None:
         out_df.drop_duplicates(subset=['name_recentered', 'charge'], ignore_index=True, inplace=True)
@@ -295,6 +341,11 @@ def main(configfile,
         sns.displot(idotps)
         plt.axvline(idotp_cutoff, 0, 1)
         plt.savefig(plot_out_path)
+        plt.close('all')
+
+    # Plot deviation plots. Add this to a proper output in the snakemake scope later
+    df = pd.read_json(library_info_out_path)
+    plot_deviations(df)
 
     if return_flag:
         return out_df
