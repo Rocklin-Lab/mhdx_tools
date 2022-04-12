@@ -74,7 +74,7 @@ def generate_dataframe_ics(configfile,
             charge = ic.charge_states[0]
             file_index = configfile[0].index([i for i in configfile[0] if '_'.join(
                 ic.info_tuple[0].split('/')[-1].split('.')[-5:-4][0].split('_')[-4:]) in i][0])
-            idotp = ic.undeut_ground_dot_product
+            idotp = ic.idotp
 
             data.append([key, ic, rt, dt, auc, charge, file_index, idotp])
 
