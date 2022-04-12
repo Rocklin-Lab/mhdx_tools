@@ -320,7 +320,7 @@ def factorize_tensor(input_grid,
                                 fixed_modes=fixed_modes,
                                 normalize=normalize,
                                 verbose=verbose,
-                                return_errors=return_errors)
+                                return_costs=return_errors)
 
     # store relevant data
 
