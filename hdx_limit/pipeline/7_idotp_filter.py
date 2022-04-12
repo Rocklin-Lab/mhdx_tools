@@ -56,7 +56,7 @@ def generate_dataframe_ics(configfile,
             if len(ics) > 0:
                 protein_ics[f.split('/')[-2:-1][0]] = [ics]
         else:
-            ics = [ic for ic in limit_read(f) if ic.undeut_ground_dot_product >= idotp_cutoff]
+            ics = [ic for ic in limit_read(f) if ic.idotp >= idotp_cutoff]
             if len(ics) > 0:
                 protein_ics[f.split('/')[-2:-1][0]].append(ics)
 
