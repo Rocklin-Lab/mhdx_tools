@@ -780,7 +780,7 @@ class PathOptimizer:
         # pick best-fitting undeut charge-state for all paths
         for key in undeut_grounds.keys():
             uds.append(undeut_grounds[key])
-            fits.append(undeut_grounds[key].undeut_ground_dot_product)
+            fits.append(undeut_grounds[key].idotp)
         path.append(uds[np.argmax(fits)])
 
         # Relies on use of prefiltered_ics naming convention, when prefilter = 0, all_tp_clusters should have the first n_undeut_runs collapsed into a single list and be named and passed as prefiltered_ics
