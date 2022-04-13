@@ -376,7 +376,7 @@ def ajf_plot(df, winner, tps, output_path):
             ax_charge_states_ics_atc[i].text(x_max, 0.7,
                                              'idotp=%.3f' %
                                              df[(df['charge'] == charge) & (df['tp_idx'] == 0)]['ic'].values[
-                                                 0].undeut_ground_dot_product,
+                                                 0].idotp,
                                              horizontalalignment='right', verticalalignment='center', fontsize=12)
         ax_charge_states_ics_atc[i].set_ylim(-len(tps) + 0.95, 1.05)
         ax_charge_states_ics_atc[i].set_yticks([])
@@ -436,7 +436,7 @@ def ajf_plot(df, winner, tps, output_path):
                 ax_charge_states_ics_prefiltered[i].text(x_max, 0.7, 'idotp=%.3f' %
                                                          df[(df['charge'] == charge) & (df['tp_idx'] == 0)][
                                                              'ic'].values[
-                                                             0].undeut_ground_dot_product,
+                                                             0].idotp,
                                                          horizontalalignment='right', verticalalignment='center',
                                                          fontsize=12)
             ax_charge_states_ics_prefiltered[i].set_ylim(-len(tps) + 0.95, 1.05)
