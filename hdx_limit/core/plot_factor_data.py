@@ -213,7 +213,7 @@ def plot_factor_data(retention_labels, drift_labels, mz_labels, bins_per_isotope
                             drift_labels=drift_labels,
                             mz_labels=mz_labels,
                             bins_per_isotope_peak=bins_per_isotope_peak,
-                            tensor_auc=factor.factor_auc/tensor_auc,
+                            tensor_auc=factor.factor_auc/factor.tensor_gauss_auc,
                             row_number=num + 2,
                             factor=factor,
                             tensor3=None,
@@ -227,6 +227,8 @@ def plot_factor_data(retention_labels, drift_labels, mz_labels, bins_per_isotope
     if n_factors > 1:
 
         # generate factor masses, factor rts, factor dts, and factor mzs
+        tensor_gauss_auc = 0
+        factor_auc_list = []
         total_factor_masses = []
         factor_dts = []
         factor_rts = []
@@ -238,13 +240,18 @@ def plot_factor_data(retention_labels, drift_labels, mz_labels, bins_per_isotope
                 factor_rts.append(factor['factor_rt'] / max(factor['factor_rt']))
                 factor_mzs.append(factor['factor_mz'] / max(factor['factor_mz']))
                 total_factor_masses.append(sum(factor['factor_integrated_mz']))
+                factor_auc_list.append(factor['factor_auc'])
+                tensor_gauss_auc = factor['tensor_gauss_auc']
             else:
                 factor_dts.append(factor.dts / max(factor.dts))
                 factor_rts.append(factor.rts / max(factor.rts))
                 factor_mzs.append(factor.mz_data / max(factor.mz_data))
+                factor_auc_list.append(factor.factor_auc)
                 total_factor_masses.append(sum(factor.integrated_mz_data))
+                tensor_gauss_auc = factor.tensor_gauss_auc
 
-
+        factor_auc_list = np.array(factor_auc_list)
+        factor_auc_frac_array = factor_auc_list/tensor_gauss_auc
         total_factor_masses = np.array(total_factor_masses)
         factor_dts = np.array(factor_dts).T
         factor_rts = np.array(factor_rts).T
@@ -270,9 +277,10 @@ def plot_factor_data(retention_labels, drift_labels, mz_labels, bins_per_isotope
 
         # plot overall mass of each factor
         ax = fig.add_subplot(gs[-6:-3, 2])
-        plt.bar(range(n_factors), total_factor_masses / sum(total_factor_masses))
+        # plt.bar(range(n_factors), total_factor_masses / sum(total_factor_masses))
+        plt.bar(range(n_factors), factor_auc_frac_array)
         plt.xlabel('Factor index', labelpad=1)
-        plt.ylabel('Relative factor mass')
+        plt.ylabel('Fraction of Gauss Tensor')
         ax.spines['right'].set_visible(False)
         ax.spines['top'].set_visible(False)
         ax.set_yticklabels([])
