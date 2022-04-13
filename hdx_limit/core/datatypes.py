@@ -565,6 +565,7 @@ class DataTensor:
                                                      self.bins_per_isotope_peak)
             self.full_gauss_grids = self.gauss(self.full_grid_out)
             self.tensor_auc = (np.sum(self.full_grid_out) / self.normalization_factor)[0]
+            self.tensor_gauss_auc = (np.sum(self.full_gauss_grids) / self.normalization_factor)[0]
 
         # Handle concatenated tensor case, check for required inputs TODO: Remove? Deprecated, but Gabe has said to keep this before, ask again.
         else:
@@ -728,6 +729,7 @@ class DataTensor:
                                 n_concatenated=self.n_concatenated,
                                 concat_dt_idxs=concat_dt_idxs,
                                 tensor_auc=self.tensor_auc,
+                                tensor_gauss_auc=self.tensor_gauss_auc,
                                 normalization_factor=self.normalization_factor)
             pmem("Factorize: Gen Factor # %s end" % num)
             factor_list.append(factor_obj)
@@ -862,6 +864,7 @@ class Factor:
         n_concatenated,
         concat_dt_idxs,
         tensor_auc,
+        tensor_gauss_auc,
         normalization_factor
     ):
         """Creates an instance of the Factor class from one factor of a PARAFAC run.
@@ -899,6 +902,7 @@ class Factor:
         self.mz_labels = mz_labels
         self.auc = sum(mz_data)
         self.tensor_auc = tensor_auc
+        self.tensor_gauss_auc = tensor_gauss_auc
         self.factor_idx = factor_idx
         self.n_factors = n_factors
         self.bins_per_isotope_peak = bins_per_isotope_peak
@@ -1094,6 +1098,7 @@ class Factor:
                                        concat_dt_idxs=self.concat_dt_idxs,
                                        normalization_factor=self.normalization_factor,
                                        tensor_auc=self.tensor_auc,
+                                       tensor_gauss_auc=self.tensor_gauss_auc,
                                        factor_auc=self.factor_auc,
                                        factor_auc_with_gauss_extrapol=self.factor_auc_with_gauss_extrapol,
                                        nnfac_output=self.nnfac_output)
@@ -1202,6 +1207,7 @@ class IsotopeCluster:
         concat_dt_idxs,
         normalization_factor,
             tensor_auc,
+            tensor_gauss_auc,
             factor_auc,
             factor_auc_with_gauss_extrapol,
             nnfac_output,
@@ -1358,6 +1364,7 @@ class IsotopeCluster:
         self.concat_dt_idxs = concat_dt_idxs
         self.normalization_factor = normalization_factor
         self.tensor_auc = tensor_auc
+        self.tensor_gauss_auc = tensor_gauss_auc
         self.factor_auc = factor_auc
         self.factor_auc_with_gauss_extrapol = factor_auc_with_gauss_extrapol
         self.nnfac_output = nnfac_output
