@@ -41,6 +41,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.backends.backend_pdf import PdfPages
+from hdx_limit.core.plot_factor_data import plot_factor_data_from_data_tensor
 from hdx_limit.core.plot_ics_data import plot_ics_from_ic_list
 from hdx_limit.core.processing import TensorGenerator, generate_tensor_factors
 from hdx_limit.core.io import limit_write
@@ -122,20 +123,18 @@ def main(library_info_path,
                                           mz_centers=centers,
                                           normalization_factor=normalization_factor,
                                           factor_output_fpath=factor_out_path,
-                                          factor_plot_output_path=factor_plot_output_path,
+                                          factor_plot_output_path=None,
                                           timepoint_label=None,
                                           filter_factors=filter_factors,
                                           factor_rt_r2_cutoff=factor_rt_r2_cutoff,
                                           factor_dt_r2_cutoff=factor_dt_r2_cutoff,
-                                          use_rtdt_recenter=use_rtdt_recenter,
-                                          calc_idotp=calc_idotp,
-                                          sequence=prot_seq)
+                                          use_rtdt_recenter=use_rtdt_recenter)
 
     all_ics = []
 
     ic_peak_width_auto = 0.8 * my_row['integrated_mz_width'].values[0]
 
-    for factor in data_tensor.DataTensor.factors:
+    for ind, factor in enumerate(data_tensor.DataTensor.factors):
 
         # Generate isotope cluster class.
 
@@ -161,6 +160,24 @@ def main(library_info_path,
 
     if isotope_clusters_out_path is not None:
         limit_write(all_ics, isotope_clusters_out_path)
+
+    if factor_plot_output_path is not None:
+
+        if calc_idotp:
+
+            max_idotp_list = []
+            for factor in data_tensor.DataTensor.factors:
+                idotp_list = [x.idotp for x in factor.isotope_clusters]
+                max_idotp_list.append(max(idotp_list))
+
+            plot_factor_data_from_data_tensor(data_tensor=data_tensor,
+                                              idotp_list=max_idotp_list,
+                                              output_path=factor_plot_output_path)
+
+        else:
+            plot_factor_data_from_data_tensor(data_tensor=data_tensor,
+                                              idotp_list=None,
+                                              output_path=factor_plot_output_path)
 
     if ic_plot_output_path is not None:
         plot_ics_from_ic_list(all_ics, ic_plot_output_path)
