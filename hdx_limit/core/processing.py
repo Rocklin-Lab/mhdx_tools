@@ -134,7 +134,9 @@ def generate_tensor_factors(tensor_fpath,
                             filter_factors=False,
                             factor_rt_r2_cutoff=0.90,
                             factor_dt_r2_cutoff=0.90,
-                            use_rtdt_recenter=False):
+                            use_rtdt_recenter=False,
+                            calc_idotp=False,
+                            sequence=None):
     """Generates a DataTensor from values extracted from a .mzML, along with several analytical parameters.
 
         Args:
@@ -199,6 +201,8 @@ def generate_tensor_factors(tensor_fpath,
     if factor_plot_output_path != None:
         data_tensor.gauss_params = gauss_params
         plot_factor_data_from_data_tensor(data_tensor=data_tensor,
+                                          calc_idotp=calc_idotp,
+                                          sequence=sequence,
                                           output_path=factor_plot_output_path)
 
     return data_tensor

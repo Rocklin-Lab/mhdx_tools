@@ -103,6 +103,13 @@ def main(library_info_path,
             if fn in tensor_input_path:
                 my_tp = tp
 
+    # set up vars for calculating idotp if 0 timepoint index
+    calc_idotp = False
+    prot_seq = None
+    if my_tp == 0:
+        calc_idotp = True
+        prot_seq = my_row['sequence'].values[0]
+
     data_tensor = generate_tensor_factors(tensor_fpath=tensor_input_path,
                                           library_info_df=library_info,
                                           timepoint_index=my_tp,
@@ -120,14 +127,9 @@ def main(library_info_path,
                                           filter_factors=filter_factors,
                                           factor_rt_r2_cutoff=factor_rt_r2_cutoff,
                                           factor_dt_r2_cutoff=factor_dt_r2_cutoff,
-                                          use_rtdt_recenter=use_rtdt_recenter)
-
-    # set up vars for calculating idotp if 0 timepoint index
-    calc_idotp = False
-    prot_seq = None
-    if my_tp == 0:
-        calc_idotp = True
-        prot_seq = my_row['sequence'].values[0]
+                                          use_rtdt_recenter=use_rtdt_recenter,
+                                          calc_idotp=calc_idotp,
+                                          sequence=prot_seq)
 
     all_ics = []
 

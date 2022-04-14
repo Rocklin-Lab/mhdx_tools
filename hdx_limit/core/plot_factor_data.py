@@ -36,11 +36,11 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import matplotlib.gridspec as gridspec
 from scipy.ndimage.filters import gaussian_filter
-
+from hdx_limit.core.datatypes import calculate_isotope_dist_dot_product
 
 
 def plot_factor_row(fig, gs, retention_labels, drift_labels, mz_labels, bins_per_isotope_peak, row_number,
-                    tensor_auc=None, factor=None, tensor3=None, name='', from_dict=True):
+                    tensor_auc=None, factor=None, tensor3=None, name='', calc_idotp=False, sequence=None, from_dict=True):
     """
     plot the factor data (3d rt, dt, mz), mz data, integrated mz data
     :param retention_labels: retention labels
@@ -115,6 +115,22 @@ def plot_factor_row(fig, gs, retention_labels, drift_labels, mz_labels, bins_per
     ax.spines['top'].set_visible(False)
     ax.spines['left'].set_visible(False)
 
+    # calculate idotp
+    if calc_idotp:
+        end_ind = min(20, len(factor_integrated_mz))
+        exp_intg_mz = factor_integrated_mz[:end_ind]
+        idotp = calculate_isotope_dist_dot_product(sequence=sequence,
+                                                   undeut_integrated_mz_array=exp_intg_mz)
+        plt.text(
+            0.1,
+            1.3,
+            "\n%.3f" % idotp,
+            horizontalalignment="right",
+            verticalalignment="top",
+            transform=ax.transAxes,
+            color="black",
+            )
+
     # plot integrated mz data
 
     ax = fig.add_subplot(gs[row_number, 2])
@@ -128,8 +144,10 @@ def plot_factor_row(fig, gs, retention_labels, drift_labels, mz_labels, bins_per
     plt.grid(axis='x', linewidth=0.25)
 
 
+
+
 def plot_factor_data(retention_labels, drift_labels, mz_labels, bins_per_isotope_peak, tensor3, tensor_auc, factors,
-                     output_path, gauss_filter_params=(3, 1), title='', from_dict=True):
+                     output_path, gauss_filter_params=(3, 1), title='', from_dict=True, calc_idotp=False, sequence=None):
     """
     plot factor data
     :param retention_labels: retention time labels
@@ -170,7 +188,8 @@ def plot_factor_data(retention_labels, drift_labels, mz_labels, bins_per_isotope
                     row_number=0,
                     factor=None,
                     tensor3=tensor3,
-                    name='Raw')
+                    name='Raw',
+                    calc_idotp=False)
 
 
     # plot the gaussian filtered raw data
@@ -186,7 +205,8 @@ def plot_factor_data(retention_labels, drift_labels, mz_labels, bins_per_isotope
                     row_number=1,
                     factor=None,
                     tensor3=gauss_filtered_tensor3,
-                    name='Gaussian Filtered')
+                    name='Gaussian Filtered',
+                    calc_idotp=False)
 
 
     # plot factor data
@@ -205,7 +225,9 @@ def plot_factor_data(retention_labels, drift_labels, mz_labels, bins_per_isotope
                             factor=factor,
                             tensor3=None,
                             name='Factor %s ' % factor['factor_num'],
-                            from_dict=from_dict)
+                            from_dict=from_dict,
+                            calc_idotp=calc_idotp,
+                            sequence=sequence)
         else:
             plot_factor_row(fig=fig,
                             gs=gs,
@@ -218,7 +240,9 @@ def plot_factor_data(retention_labels, drift_labels, mz_labels, bins_per_isotope
                             factor=factor,
                             tensor3=None,
                             name='Factor %s ' % factor.factor_idx,
-                            from_dict=from_dict)
+                            from_dict=from_dict,
+                            calc_idotp=calc_idotp,
+                            sequence=sequence)
 
 
 
@@ -327,7 +351,7 @@ def plot_factor_data(retention_labels, drift_labels, mz_labels, bins_per_isotope
     plt.close()
 
 
-def plot_factor_data_from_data_tensor(data_tensor, output_path):
+def plot_factor_data_from_data_tensor(data_tensor, calc_idotp=False, sequence=None, output_path=None):
 
     title = ''
     if hasattr(data_tensor.DataTensor, 'charge_states'):
@@ -349,10 +373,12 @@ def plot_factor_data_from_data_tensor(data_tensor, output_path):
                      output_path=output_path,
                      gauss_filter_params=data_tensor.gauss_params,
                      title=title,
-                     from_dict=False)
+                     from_dict=False,
+                     calc_idotp=calc_idotp,
+                     sequence=sequence)
 
 
-def plot_factor_data_from_data_dict(factor_data, output_path):
+def plot_factor_data_from_data_dict(factor_data, calc_idotp=False, sequence=None,output_path=None):
     """
 
     :param factor_data:
@@ -376,10 +402,13 @@ def plot_factor_data_from_data_dict(factor_data, output_path):
                      bins_per_isotope_peak=factor_data['bins_per_isotope_peak'],
                      tensor3=factor_data['tensor_3d_grid'],
                      factors=factor_data['factors'],
+                     tensor_auc=factor_data['tensor_auc'],
                      output_path=output_path,
                      gauss_filter_params=factor_data['gauss_params'],
                      title=title,
-                     from_dict=True)
+                     from_dict=True,
+                     calc_idotp=calc_idotp,
+                     sequence=sequence)
 
 
 def plot_factor_data_from_data_dict_file(factor_data_filepath, output_path=None):
