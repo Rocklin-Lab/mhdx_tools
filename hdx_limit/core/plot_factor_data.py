@@ -117,7 +117,7 @@ def plot_factor_row(fig, gs, retention_labels, drift_labels, mz_labels, bins_per
 
     # calculate idotp
     if calc_idotp:
-        end_ind = min(20, len(factor_integrated_mz))
+        end_ind = min(15, len(factor_integrated_mz))
         exp_intg_mz = factor_integrated_mz[:end_ind]
         idotp = calculate_isotope_dist_dot_product(sequence=sequence,
                                                    undeut_integrated_mz_array=exp_intg_mz)
