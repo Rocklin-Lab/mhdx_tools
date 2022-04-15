@@ -28,16 +28,18 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, cluster_radius=0
     charge: charge
     auc: area under curve, i.e., XIC
     winner: bool if belongs to winner ics set
-    maxint: max intensity amoung ics of same charge state
+    maxint: max intensity among ics of same charge state
     '''
 
     cols = ['ic', 'tp_idx', 'com', 'rt', 'dt', 'charge', 'auc', 'winner', 'maxint', 'tensor_auc', 'factor_auc',
             'ic_auc', 'prefiltered']
 
     tmp = []
-    for tp in atc[1:]:
+    for tp in atc:
         for ic in tp:
             tp_idx = tps.index(ic.timepoint_idx)
+            if tp_idx == 0 and ic.idotp < 0.99:
+                continue
             com = ic.baseline_integrated_mz_com
             rt = ic.retention_labels[0] + (ic.retention_labels[1] - ic.retention_labels[0]) * ic.rt_com
             dt = ic.drift_labels[0] + (ic.drift_labels[1] - ic.drift_labels[0]) * ic.dt_coms
@@ -79,6 +81,18 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, cluster_radius=0
 
     # Remove lines with NAN values. This is pretty rare!
     df.dropna(inplace=True)
+
+    # Compute dot product between winner ic and all other ics from that timepoint
+    df['ic_winner_corr'] = -1
+    for i, line in df[(df['winner'] == 1)].iterrows():
+        df.loc[df['tp_idx'] == line['tp_idx'], 'ic_winner_corr'] = [round(np.linalg.norm(
+            np.dot(line['ic'].baseline_integrated_mz / max(line['ic'].baseline_integrated_mz),
+                   row['ic'].baseline_integrated_mz / max(row['ic'].baseline_integrated_mz))
+        ) / np.linalg.norm(line['ic'].baseline_integrated_mz / max(line['ic'].baseline_integrated_mz)) / np.linalg.norm(
+            row['ic'].baseline_integrated_mz / max(row['ic'].baseline_integrated_mz)), 3
+                                                                          )
+                                                                    for i, row in
+                                                                    df[df['tp_idx'] == line['tp_idx']].iterrows()]
 
     # Normlize auc relative to max intensity of ics with same charge
     df['auc_size'] = 0
@@ -137,6 +151,7 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, cluster_radius=0
 
 
 def ajf_plot(df, winner, tps, output_path):
+    ic_winner_corr_cutoff = 0.95
     pal = sns.color_palette('bright')
     n_cols = 6 * len(set(df.charge)) + 6
     min_clust = min(df['clusters'])
@@ -179,14 +194,18 @@ def ajf_plot(df, winner, tps, output_path):
                         palette='bright', ax=ax_scatter_atc[i],
                         s=5 * (df[(df['charge'] == charge) & (df['prefiltered'] == 0)]['auc_size']), alpha=0.7)
         ax_scatter_atc[i].set_ylim(-0.4, 0.4)
-        ax_scatter_atc[i].set_xlim(df[df['charge'] == charge]['dt'].min() - 0.05,
-                                   df[df['charge'] == charge]['dt'].max() + 0.05)
+        ax_scatter_atc[i].set_xlim(df[df['charge'] == charge]['ic'].tolist()[0].drift_labels[0],
+                                   df[df['charge'] == charge]['ic'].tolist()[0].drift_labels[-1])
         ax_scatter_atc[i].tick_params(axis="y", labelsize=10)
         ax_scatter_atc[i].tick_params(axis="x", labelsize=10)
         ax_scatter_atc[i].set_xlabel('DT', fontsize=10)
         ax_scatter_atc[i].set_ylabel('RT', fontsize=10)
         ax_scatter_atc[i].grid()
         ax_scatter_atc[i].legend('', frameon=False)
+        for i, line in df[(df['tp_idx'] == 0) & (df['charge'] == charge) & (df['winner'] == 0)
+                          & (df['prefiltered'] == 0)].iterrows():
+            ax_scatter_atc[charge_states.index(int(line['charge']))].text(float(line['dt']), float(line['rt_corr']),
+                                                                          'x', fontsize=10, color='black', )
     if winner is not None:
         # Label winners and undeuterated ics on scatter plots
         for ic in winner:
@@ -195,9 +214,7 @@ def ajf_plot(df, winner, tps, output_path):
             rt = df[df['ic'] == ic]['rt_corr']
             dt = df[df['ic'] == ic]['dt']
             ax_scatter_atc[charge_states.index(int(charge))].text(dt, rt, str(tp_idx), fontsize=8)
-        for i, line in df[df['tp_idx'] == 0].iterrows():
-            ax_scatter_atc[charge_states.index(int(line['charge']))].text(float(line['dt']), float(line['rt_corr']),
-                                                                          'x', fontsize=10, color='black', )
+
     if prefiltered_ics is not None:
         # Define top RT/DT scatter plots for PREFILTERED ICS
         ax_scatter_prefiltered = {}
@@ -208,14 +225,19 @@ def ajf_plot(df, winner, tps, output_path):
                             palette='bright', ax=ax_scatter_prefiltered[i],
                             s=5 * (df[(df['charge'] == charge) & (df['prefiltered'] == 1)]['auc_size']), alpha=0.7)
             ax_scatter_prefiltered[i].set_ylim(-0.4, 0.4)
-            ax_scatter_prefiltered[i].set_xlim(df[df['charge'] == charge]['dt'].min() - 0.05,
-                                               df[df['charge'] == charge]['dt'].max() + 0.05)
+            ax_scatter_prefiltered[i].set_xlim(df[df['charge'] == charge]['ic'].tolist()[0].drift_labels[0],
+                                               df[df['charge'] == charge]['ic'].tolist()[0].drift_labels[-1])
             ax_scatter_prefiltered[i].tick_params(axis="y", labelsize=10)
             ax_scatter_prefiltered[i].tick_params(axis="x", labelsize=10)
             ax_scatter_prefiltered[i].set_xlabel('DT', fontsize=10)
             ax_scatter_prefiltered[i].set_ylabel('RT', fontsize=10)
             ax_scatter_prefiltered[i].grid()
             ax_scatter_prefiltered[i].legend('', frameon=False)
+            for i, line in df[(df['tp_idx'] == 0) & (df['charge'] == charge) & (df['winner'] == 0)
+                          & (df['prefiltered'] == 1)].iterrows():
+                ax_scatter_prefiltered[charge_states.index(int(line['charge']))].text(float(line['dt']),
+                                                                                  float(line['rt_corr']), 'x',
+                                                                                  fontsize=10, color='black', )
         if winner is not None:
             # Label winners and undeuterated ics on scatter plots
             for ic in winner:
@@ -224,10 +246,7 @@ def ajf_plot(df, winner, tps, output_path):
                 rt = df[df['ic'] == ic]['rt_corr']
                 dt = df[df['ic'] == ic]['dt']
                 ax_scatter_prefiltered[charge_states.index(int(charge))].text(dt, rt, str(tp_idx), fontsize=8)
-            for i, line in df[df['tp_idx'] == 0].iterrows():
-                ax_scatter_prefiltered[charge_states.index(int(line['charge']))].text(float(line['dt']),
-                                                                                      float(line['rt_corr']), 'x',
-                                                                                      fontsize=10, color='black', )
+
 
     # Add legend for cluster information
     legend_elements = [Circle(1, label='cluster %i' % i,
@@ -329,11 +348,18 @@ def ajf_plot(df, winner, tps, output_path):
                                                                    hspace=0.1)
         ax_charge_states_ics_atc[i] = fig.add_subplot(ax_charge_states_atc[i][:, :2])
         for _, line in df[(df['charge'] == charge) & (df['prefiltered'] == 0)].iterrows():
-            ax_charge_states_ics_atc[i].plot(
-                (line['ic'].baseline_integrated_mz / max(line['ic'].baseline_integrated_mz)) * (
-                        np.log2(line['auc']) / np.log2(df[(df['charge'] == line['charge'])]['auc'].max())) - int(
-                    line['tp_idx']),
-                c=pal[int(line['clusters']) - min_clust])
+            if line['ic_winner_corr'] > ic_winner_corr_cutoff:
+                ax_charge_states_ics_atc[i].plot(
+                    (line['ic'].baseline_integrated_mz / max(line['ic'].baseline_integrated_mz)) * (
+                            np.log2(line['auc']) / np.log2(df[(df['charge'] == line['charge'])]['auc'].max())) - int(
+                        line['tp_idx']),
+                    c=pal[int(line['clusters']) - min_clust], lw=4)
+            else:
+                ax_charge_states_ics_atc[i].plot(
+                    (line['ic'].baseline_integrated_mz / max(line['ic'].baseline_integrated_mz)) * (
+                            np.log2(line['auc']) / np.log2(df[(df['charge'] == line['charge'])]['auc'].max())) - int(
+                        line['tp_idx']),
+                    c=pal[int(line['clusters']) - min_clust])
         if prefiltered_ics is not None:
             for _, line in df[(df['charge'] == charge) & (df['prefiltered'] == 1) & (df['tp_idx'] == 0)].iterrows():
                 ax_charge_states_ics_atc[i].plot(
@@ -391,11 +417,19 @@ def ajf_plot(df, winner, tps, output_path):
                                                                                hspace=0.1)
             ax_charge_states_ics_prefiltered[i] = fig.add_subplot(ax_charge_states_prefiltered[i][:, :2])
             for _, line in df[(df['charge'] == charge) & (df['prefiltered'] == 1)].iterrows():
-                ax_charge_states_ics_prefiltered[i].plot(
-                    (line['ic'].baseline_integrated_mz / max(line['ic'].baseline_integrated_mz)) * (
-                            np.log2(line['auc']) / np.log2(df[(df['charge'] == line['charge'])]['auc'].max())) - int(
-                        line['tp_idx']),
-                    c=pal[int(line['clusters']) - min_clust])
+                if line['ic_winner_corr'] > ic_winner_corr_cutoff:
+                    ax_charge_states_ics_prefiltered[i].plot(
+                        (line['ic'].baseline_integrated_mz / max(line['ic'].baseline_integrated_mz)) * (
+                                np.log2(line['auc']) / np.log2(df[(df['charge'] == line['charge'])]['auc'].max())) - int(
+                            line['tp_idx']),
+                        c=pal[int(line['clusters']) - min_clust], lw=4)
+                else:
+                    ax_charge_states_ics_prefiltered[i].plot(
+                        (line['ic'].baseline_integrated_mz / max(line['ic'].baseline_integrated_mz)) * (
+                                np.log2(line['auc']) / np.log2(
+                            df[(df['charge'] == line['charge'])]['auc'].max())) - int(
+                            line['tp_idx']),
+                        c=pal[int(line['clusters']) - min_clust])
             if winner is not None:
                 for _, line in df[(df['charge'] == charge) & (df['winner'] == 1)].iterrows():
                     ax_charge_states_ics_prefiltered[i].plot(
@@ -457,7 +491,7 @@ def ajf_plot(df, winner, tps, output_path):
                                         'auc_size']),
                                 alpha=0.7,
                                 ax=ax_charge_states_scatter_atc[i + j])
-            for _, line in df[(df['charge'] == charge) & (df['tp_idx'] == 0)].iterrows():
+            for _, line in df[(df['charge'] == charge) & (df['tp_idx'] == 0) & (df['prefiltered'] == 0)].iterrows():
                 ax_charge_states_scatter_atc[i + j].text(float(line['dt']), float(line['rt_corr']),
                                                          'x', fontsize=10, color='black', ha='center', va='center')
             sns.scatterplot(data=df[(df['charge'] == charge) & (df['tp_idx'] == j) & (df['prefiltered'] == 0)], x='dt',
@@ -477,8 +511,12 @@ def ajf_plot(df, winner, tps, output_path):
             ax_charge_states_scatter_atc[i + j].axhline(0, lw=0.5, alpha=0.5, c='black')
             ax_charge_states_scatter_atc[i + j].legend('', frameon=False)
             ax_charge_states_scatter_atc[i + j].set_ylim(-0.4, 0.4)
-            ax_charge_states_scatter_atc[i + j].set_xlim(df[df['charge'] == charge]['dt'].min() - 0.05,
-                                                         df[df['charge'] == charge]['dt'].max() + 0.05)
+            ax_charge_states_scatter_atc[i + j].set_xlim(df[df['charge'] == charge]['ic'].tolist()[0].drift_labels[0],
+                                                         df[df['charge'] == charge]['ic'].tolist()[0].drift_labels[-1])
+
+            if len(df[(df['winner'] == 1) & (df['charge'] == charge) & (df['tp_idx'] == j)]) > 0:
+                for key, spine in ax_charge_states_scatter_atc[i + j].spines.items():
+                    spine.set_linewidth(3)
 
     if prefiltered_ics is not None:
         # Plot rt/dt scatter plots PREFILTERED
@@ -512,8 +550,13 @@ def ajf_plot(df, winner, tps, output_path):
                 ax_charge_states_scatter_prefiltered[i + j].axhline(0, lw=0.5, alpha=0.5, c='black')
                 ax_charge_states_scatter_prefiltered[i + j].legend('', frameon=False)
                 ax_charge_states_scatter_prefiltered[i + j].set_ylim(-0.4, 0.4)
-                ax_charge_states_scatter_prefiltered[i + j].set_xlim(df[df['charge'] == charge]['dt'].min() - 0.05,
-                                                                     df[df['charge'] == charge]['dt'].max() + 0.05)
+                ax_charge_states_scatter_prefiltered[i + j].set_xlim(
+                    df[df['charge'] == charge]['ic'].tolist()[0].drift_labels[0],
+                    df[df['charge'] == charge]['ic'].tolist()[0].drift_labels[-1])
+
+                if len(df[(df['winner'] == 1) & (df['charge'] == charge) & (df['tp_idx'] == j)]) > 0:
+                    for key, spine in ax_charge_states_scatter_prefiltered[i + j].spines.items():
+                        spine.set_linewidth(3)
 
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
 
