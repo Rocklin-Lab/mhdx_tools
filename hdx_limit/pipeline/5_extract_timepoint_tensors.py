@@ -148,9 +148,9 @@ def main(library_info_path,
 
     library_info["n"] = range(len(library_info))
 
-    # 13.78116 is a hardcoded average IMS pulse time TODO: This should be exposed to argument layer with default as well
+    #convert im bins into milliseconds
     library_info["Drift Time MS1"] = (library_info["im_mono"] / 200.0 *
-                                      13.781163434903)
+                                      timepoints_dict['dt_max'])
 
     # Decide which RT / DT use for tensor extraction
     if use_time_warping:
