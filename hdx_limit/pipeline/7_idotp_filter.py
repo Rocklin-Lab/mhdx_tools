@@ -45,6 +45,27 @@ from hdx_limit.core.io import limit_read
 mpl.use("Agg")
 
 
+def check_drift_labels(drift_labels, min_length=3, low_dt_value=0.5):
+    """
+    check if the drift labels are okay
+    Args:
+        drift_labels: drift labels array
+        min_length: min length of the array
+        low_dt_value: min dt value
+
+    Returns:
+
+    """
+    if len(drift_labels) >= min_length:
+        if drift_labels[0] > low_dt_value:
+            check = True
+        else:
+            check = False
+    else:
+        check = False
+    return check
+
+
 def generate_dataframe_ics(configfile,
                            all_ics_inputs,
                            idotp_cutoff=0.99):
@@ -65,18 +86,20 @@ def generate_dataframe_ics(configfile,
         protein_ics[key] = [i for sublist in protein_ics[key] for i in sublist]
 
     # Extract values for dt, rt, auc, charge and file index from each IC and store in a dataframe
+
     data = []
     for key in protein_ics:
         for ic in protein_ics[key]:
-            rt = ic.retention_labels[0] + (ic.retention_labels[1] - ic.retention_labels[0]) * ic.rt_com
-            dt = ic.drift_labels[0] + (ic.drift_labels[1] - ic.drift_labels[0]) * ic.dt_coms
-            auc = ic.ic_auc_with_gauss_extrapol
-            charge = ic.charge_states[0]
-            file_index = configfile[0].index([i for i in configfile[0] if '_'.join(
-                ic.info_tuple[0].split('/')[-1].split('.')[-5:-4][0].split('_')[-4:]) in i][0])
-            idotp = ic.idotp
+            if check_drift_labels(drift_labels=ic.drift_labels, min_length=3, low_dt_value=0.5):
+                dt = ic.drift_labels[0] + (ic.drift_labels[1] - ic.drift_labels[0]) * ic.dt_coms
+                rt = ic.retention_labels[0] + (ic.retention_labels[1] - ic.retention_labels[0]) * ic.rt_com
+                auc = ic.ic_auc_with_gauss_extrapol
+                charge = ic.charge_states[0]
+                file_index = configfile[0].index([i for i in configfile[0] if '_'.join(
+                    ic.info_tuple[0].split('/')[-1].split('.')[-5:-4][0].split('_')[-4:]) in i][0])
+                idotp = ic.idotp
 
-            data.append([key, ic, rt, dt, auc, charge, file_index, idotp])
+                data.append([key, ic, rt, dt, auc, charge, file_index, idotp])
 
     df = pd.DataFrame(data, columns=['name', 'ic', 'rt', 'dt', 'auc', 'charge', 'file_index', 'idotp'])
     df['auc_log'] = 2 * np.log10(df['auc'])
