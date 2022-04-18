@@ -112,41 +112,41 @@ def generate_dataframe_ics(configfile,
         iqr = percentile75 - percentile25
         lb, ub = percentile25 - 1.5 * iqr, percentile75 + 1.5 * iqr
         if len(df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                        df['dt'] <= 13)]) > 0:
+                        df['dt'] <= configfile['dt_max'])]) > 0:
             df.loc[(df['name'] == name) & (df['charge'] == charge), 'DT_weighted_avg'] = sum(
                 df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                            df['dt'] <= 13.)]['dt'] *
+                            df['dt'] <= configfile['dt_max'])]['dt'] *
                 df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                            df['dt'] <= 13.)]['auc']) / sum(
+                            df['dt'] <= configfile['dt_max'])]['auc']) / sum(
                 df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                            df['dt'] <= 13.)]['auc'])
+                            df['dt'] <= configfile['dt_max'])]['auc'])
             # How many signals do we see? How many undeuterated files generated passing ICs?
             df.loc[df['name'] == name, 'n_signals'] = len(
                 df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                            df['dt'] <= 13.)])
+                            df['dt'] <= configfile['dt_max'])])
             df.loc[df['name'] == name, 'n_UN'] = len(
                 set(df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                            df['dt'] <= 13.)]['file_index'].values))
+                            df['dt'] <= configfile['dt_max'])]['file_index'].values))
             if len(df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                    df['dt'] <= 13)]) > 1:
+                    df['dt'] <= configfile['dt_max'])]) > 1:
                 # DT standard deviation
                 df.loc[(df['name'] == name) & (df['charge'] == charge), 'dt_std'] = df[(df['name'] == name) & (
-                        df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (df['dt'] <= 13.)]['dt'].std()
+                        df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (df['dt'] <= configfile['dt_max'])]['dt'].std()
                 # DT weighted standard deviation
                 values = df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                            df['dt'] <= 13.)]['dt']
+                            df['dt'] <= configfile['dt_max'])]['dt']
                 weights = df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                            df['dt'] <= 13.)]['auc']
+                            df['dt'] <= configfile['dt_max'])]['auc']
                 avg_value = df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                            df['dt'] <= 13.)]['DT_weighted_avg']
+                            df['dt'] <= configfile['dt_max'])]['DT_weighted_avg']
                 df.loc[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                            df['dt'] <= 13.), 'dt_weighted_std'] = np.sqrt(
+                            df['dt'] <= configfile['dt_max']), 'dt_weighted_std'] = np.sqrt(
                     (weights * (values - avg_value) ** 2) / sum(weights) * (len(values) - 1))
             else:
                 df.loc[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                            df['dt'] <= 13.), 'dt_std'] = 0
+                            df['dt'] <= configfile['dt_max']), 'dt_std'] = 0
                 df.loc[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                            df['dt'] <= 13.), 'dt_weighted_std'] = 0
+                            df['dt'] <= configfile['dt_max']), 'dt_weighted_std'] = 0
         else:
             df.loc[(df['name'] == name) & (df['charge'] == charge), 'DT_weighted_avg'] = -1
 
@@ -179,7 +179,7 @@ def generate_dataframe_ics(configfile,
 
         # Compute DT weighted avg in bin dimension (this value should be used to extract tensors for consistency with
     # 5_extract_timepoint_tensor code
-    df['DT_weighted_avg_bins'] = df['DT_weighted_avg'] * 200.0 / 13.781163434903
+    df['DT_weighted_avg_bins'] = df['DT_weighted_avg'] * 200.0 / configfile['dt_max']
 
     # Scatter plot for each protein
     # Create folder to save pdf files
@@ -276,8 +276,8 @@ def plot_deviations(df):
     sns.histplot(df['n_signals'].values, ax=ax[0][1], kde=True)
     ax[0][1].set_xlabel('n_signals')
 
-    sns.histplot(df['im_mono'].values * 13.781163434903 / 200 - df['DT_weighted_avg'].values, ax=ax[1][0])
-    sns.histplot(df['im_mono'].values * 13.781163434903 / 200 - df['DT_weighted_avg'].values, ax=ax[1][0], kde=True)
+    sns.histplot(df['im_mono'].values * configfile['dt_max'] / 200 - df['DT_weighted_avg'].values, ax=ax[1][0])
+    sns.histplot(df['im_mono'].values * configfile['dt_max'] / 200 - df['DT_weighted_avg'].values, ax=ax[1][0], kde=True)
     ax[1][0].set_xlabel('DT error')
 
     sns.histplot(df['RT'].values - df['RT_weighted_avg'].values, ax=ax[1][1])
