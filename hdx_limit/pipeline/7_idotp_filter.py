@@ -45,7 +45,7 @@ from hdx_limit.core.io import limit_read
 mpl.use("Agg")
 
 
-def check_drift_labels(drift_labels, min_length=3, low_dt_value=0.5):
+def check_drift_labels(drift_labels, min_length=3, low_dt_value=0.2):
     """
     check if the drift labels are okay
     Args:
@@ -90,7 +90,7 @@ def generate_dataframe_ics(configfile,
     data = []
     for key in protein_ics:
         for ic in protein_ics[key]:
-            if check_drift_labels(drift_labels=ic.drift_labels, min_length=3, low_dt_value=0.5):
+            if check_drift_labels(drift_labels=ic.drift_labels):
                 dt = ic.drift_labels[0] + (ic.drift_labels[1] - ic.drift_labels[0]) * ic.dt_coms
                 rt = ic.retention_labels[0] + (ic.retention_labels[1] - ic.retention_labels[0]) * ic.rt_com
                 auc = ic.ic_auc_with_gauss_extrapol
