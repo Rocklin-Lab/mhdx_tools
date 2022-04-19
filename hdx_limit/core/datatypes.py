@@ -1107,11 +1107,8 @@ class Factor:
                 if calculate_idotp:
                     newIC.idotp = calculate_isotope_dist_dot_product(sequence=sequence,
                                                                      undeut_integrated_mz_array=newIC.baseline_integrated_mz)
-
-                if (newIC.baseline_peak_error / newIC.baseline_auc <
-                        0.2):  # TODO: HARDCODE
-                    self.isotope_clusters.append(newIC)
-                    cluster_idx += 1
+                self.isotope_clusters.append(newIC)
+                cluster_idx += 1
         return
 
 

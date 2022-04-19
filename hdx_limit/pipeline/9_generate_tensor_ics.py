@@ -166,7 +166,7 @@ def main(library_info_path,
         if calc_idotp:
 
             max_idotp_list = []
-            for factor in data_tensor.DataTensor.factors:
+            for ind, factor in enumerate(data_tensor.DataTensor.factors):
                 idotp_list = [x.idotp for x in factor.isotope_clusters]
                 max_idotp_list.append(max(idotp_list))
 
