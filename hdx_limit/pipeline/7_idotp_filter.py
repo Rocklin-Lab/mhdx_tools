@@ -93,13 +93,15 @@ def generate_dataframe_ics(configfile,
             if check_drift_labels(drift_labels=ic.drift_labels):
                 dt = ic.drift_labels[0] + (ic.drift_labels[1] - ic.drift_labels[0]) * ic.dt_coms
                 rt = ic.retention_labels[0] + (ic.retention_labels[1] - ic.retention_labels[0]) * ic.rt_com
-                auc = ic.ic_auc_with_gauss_extrapol
-                charge = ic.charge_states[0]
-                file_index = configfile[0].index([i for i in configfile[0] if '_'.join(
-                    ic.info_tuple[0].split('/')[-1].split('.')[-5:-4][0].split('_')[-4:]) in i][0])
-                idotp = ic.idotp
+                if dt < configfile['dt_max']:
+                    if rt < configfile['rt_max']:
+                        auc = ic.ic_auc_with_gauss_extrapol
+                        charge = ic.charge_states[0]
+                        file_index = configfile[0].index([i for i in configfile[0] if '_'.join(
+                            ic.info_tuple[0].split('/')[-1].split('.')[-5:-4][0].split('_')[-4:]) in i][0])
+                        idotp = ic.idotp
 
-                data.append([key, ic, rt, dt, auc, charge, file_index, idotp])
+                        data.append([key, ic, rt, dt, auc, charge, file_index, idotp])
 
     df = pd.DataFrame(data, columns=['name', 'ic', 'rt', 'dt', 'auc', 'charge', 'file_index', 'idotp'])
     df['auc_log'] = 2 * np.log10(df['auc'])
