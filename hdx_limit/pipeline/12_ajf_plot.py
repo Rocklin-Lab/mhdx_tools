@@ -30,13 +30,13 @@ if __name__ == '__main__':
             print('PREFILTERED IS NONE')
         if not os.stat(winner_multi_path).st_size == 0:
             winner_multi = limit_read(winner_multi_path)
-            df_output_multi = winner_multi_path.replace('.cpickle.zlib', '.df.csv')
+            df_output_multi = winner_multi_path.replace('.cpickle.zlib', '.df.pkl')
         else:
             winner_multi = None
             print('WINNER MULTI IS NONE')
         if not os.stat(winner_mono_path).st_size == 0:
             winner_mono = limit_read(winner_mono_path)
-            df_output_mono = winner_mono_path.replace('.cpickle.zlib', '.df.csv')
+            df_output_mono = winner_mono_path.replace('.cpickle.zlib', '.df.pkl')
         else:
             winner_mono = None
             print('WINNER MONO IS NONE')
@@ -118,13 +118,13 @@ if __name__ == '__main__':
             print('PREFILTERED IS NONE')
         if not os.stat(args.winner_mono).st_size == 0:
             winner_mono = limit_read(args.winner_mono)
-            df_output_mono = args.winner_mono.replace('.cpickle.zlib', 'df.csv')
+            df_output_mono = args.winner_mono.replace('.cpickle.zlib', 'df.pkl')
         else:
             winner_mono = None
             print('WINNER MONO IS NONE')
         if not os.stat(args.winner_multi).st_size == 0:
             winner_multi = limit_read(args.winner_multi)
-            df_output_multi = args.winner_multi.replace('.cpickle.zlib', 'df.csv')
+            df_output_multi = args.winner_multi.replace('.cpickle.zlib', 'df.pkl')
         else:
             winner_multi = None
             print('WINNER MULTI IS NONE')

@@ -581,7 +581,7 @@ def plot_ajf_(configfile, atc, prefiltered_ics, winner, output_path, df_output_p
 
     df = create_df_and_clusterize(atc, prefiltered_ics, winner, tps=configfile['timepoints'])
     if df_output_path is not None:
-        df.to_csv(df_output_path)
+        df.to_pickle(df_output_path)
     ajf_plot(df, winner=winner, tps=configfile['timepoints'], output_path=output_path)
 
 
