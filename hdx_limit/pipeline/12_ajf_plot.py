@@ -118,13 +118,13 @@ if __name__ == '__main__':
             print('PREFILTERED IS NONE')
         if not os.stat(args.winner_mono).st_size == 0:
             winner_mono = limit_read(args.winner_mono)
-            df_output_mono = args.winner_mono.replace('.cpickle.zlib', 'df.pkl')
+            df_output_mono = args.winner_mono.replace('.cpickle.zlib', '.df.pkl')
         else:
             winner_mono = None
             print('WINNER MONO IS NONE')
         if not os.stat(args.winner_multi).st_size == 0:
             winner_multi = limit_read(args.winner_multi)
-            df_output_multi = args.winner_multi.replace('.cpickle.zlib', 'df.pkl')
+            df_output_multi = args.winner_multi.replace('.cpickle.zlib', '.df.pkl')
         else:
             winner_multi = None
             print('WINNER MULTI IS NONE')
