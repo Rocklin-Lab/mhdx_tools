@@ -82,6 +82,9 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, cluster_radius=0
     # Remove lines with NAN values. This is pretty rare!
     df.dropna(inplace=True)
 
+    # Remove unreasonable ics based on large AUC extrapolations
+    df = df[df['auc'] < 1e10]
+
     # Compute dot product between winner ic and all other ics from that timepoint
     df['ic_winner_corr'] = -1
     for i, line in df[(df['winner'] == 1)].iterrows():
@@ -121,7 +124,7 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, cluster_radius=0
     # db.fit(df[['rt_norm', 'dt_norm']])
     # clusters = db.fit_predict(df[['rt_norm', 'dt_norm']])
     # df['clusters'] = clusters
-    n = df[df['prefiltered'] == 0].groupby(by='tp_idx', sort=True).count().max()[0]
+    n = df[(df['prefiltered'] == 0) & (df['tp_idx'] != 0)].groupby(by='tp_idx', sort=True).count().max()[0]
     if n > 9:
         n = 9
     kmeans = KMeans(n_clusters=n)
@@ -204,8 +207,9 @@ def ajf_plot(df, winner, tps, output_path):
         ax_scatter_atc[i].legend('', frameon=False)
         for i, line in df[(df['tp_idx'] == 0) & (df['charge'] == charge) & (df['winner'] == 0)
                           & (df['prefiltered'] == 0)].iterrows():
-            ax_scatter_atc[charge_states.index(int(line['charge']))].text(float(line['dt']), float(line['rt_corr']),
-                                                                          'x', fontsize=10, color='black', )
+            if line['ic'].idotp >= 0.99:
+                ax_scatter_atc[charge_states.index(int(line['charge']))].text(float(line['dt']), float(line['rt_corr']),
+                                                                              'x', fontsize=10, color='black', )
     if winner is not None:
         # Label winners and undeuterated ics on scatter plots
         for ic in winner:
@@ -398,10 +402,10 @@ def ajf_plot(df, winner, tps, output_path):
         ax_charge_states_ics_atc[i].text(x_max, 0.9,
                                          'max_auc=%.1e' % df[df['charge'] == charge]['auc'].max(),
                                          horizontalalignment='right', verticalalignment='center', fontsize=12)
-        if prefiltered_ics is not None and len(df[(df['charge'] == charge) & (df['tp_idx'] == 0)]) > 0:
+        if len(df[(df['charge'] == charge) & (df['tp_idx'] == 0) & (df['prefiltered'] == 1)]) > 0:
             ax_charge_states_ics_atc[i].text(x_max, 0.7,
-                                             'idotp=%.3f' %
-                                             df[(df['charge'] == charge) & (df['tp_idx'] == 0)]['ic'].values[
+                                             'idotp=%.3f' % df[(df['charge'] == charge) & (df['tp_idx'] == 0) & (
+                                                         df['prefiltered'] == 1)]['ic'].values[
                                                  0].idotp,
                                              horizontalalignment='right', verticalalignment='center', fontsize=12)
         ax_charge_states_ics_atc[i].set_ylim(-len(tps) + 0.95, 1.05)
@@ -466,10 +470,10 @@ def ajf_plot(df, winner, tps, output_path):
                                                      'max_auc=%.1e' % df[df['charge'] == charge]['auc'].max(),
                                                      horizontalalignment='right', verticalalignment='center',
                                                      fontsize=12)
-            if len(df[(df['charge'] == charge) & (df['tp_idx'] == 0)]) > 0:
+            if len(df[(df['charge'] == charge) & (df['tp_idx'] == 0) & (df['prefiltered'] == 1)]) > 0:
                 ax_charge_states_ics_prefiltered[i].text(x_max, 0.7, 'idotp=%.3f' %
-                                                         df[(df['charge'] == charge) & (df['tp_idx'] == 0)][
-                                                             'ic'].values[
+                                                         df[(df['charge'] == charge) & (df['tp_idx'] == 0) & (
+                                                                     df['prefiltered'] == 1)]['ic'].values[
                                                              0].idotp,
                                                          horizontalalignment='right', verticalalignment='center',
                                                          fontsize=12)
@@ -492,8 +496,9 @@ def ajf_plot(df, winner, tps, output_path):
                                 alpha=0.7,
                                 ax=ax_charge_states_scatter_atc[i + j])
             for _, line in df[(df['charge'] == charge) & (df['tp_idx'] == 0) & (df['prefiltered'] == 0)].iterrows():
-                ax_charge_states_scatter_atc[i + j].text(float(line['dt']), float(line['rt_corr']),
-                                                         'x', fontsize=10, color='black', ha='center', va='center')
+                if line['ic'].idotp >= 0.99:
+                    ax_charge_states_scatter_atc[i + j].text(float(line['dt']), float(line['rt_corr']),
+                                                             'x', fontsize=10, color='black', ha='center', va='center')
             sns.scatterplot(data=df[(df['charge'] == charge) & (df['tp_idx'] == j) & (df['prefiltered'] == 0)], x='dt',
                             y='rt_corr',
                             hue=df['clusters'] - min_clust, palette='bright',
@@ -506,7 +511,8 @@ def ajf_plot(df, winner, tps, output_path):
             ax_charge_states_scatter_atc[i + j].set_yticks([])
             ax_charge_states_scatter_atc[i + j].set_xticks([])
             ax_charge_states_scatter_atc[i + j].axvline(
-                (df[df['charge'] == charge]['dt'].max() + df[df['charge'] == charge]['dt'].min()) / 2, lw=0.5,
+                (df[df['charge'] == charge]['ic'].tolist()[0].drift_labels[0] +
+                 df[df['charge'] == charge]['ic'].tolist()[0].drift_labels[-1]) / 2, lw=0.5,
                 alpha=0.5, color='black')
             ax_charge_states_scatter_atc[i + j].axhline(0, lw=0.5, alpha=0.5, c='black')
             ax_charge_states_scatter_atc[i + j].legend('', frameon=False)
@@ -545,7 +551,8 @@ def ajf_plot(df, winner, tps, output_path):
                 ax_charge_states_scatter_prefiltered[i + j].set_yticks([])
                 ax_charge_states_scatter_prefiltered[i + j].set_xticks([])
                 ax_charge_states_scatter_prefiltered[i + j].axvline(
-                    (df[df['charge'] == charge]['dt'].max() + df[df['charge'] == charge]['dt'].min()) / 2, lw=0.5,
+                    (df[df['charge'] == charge]['ic'].tolist()[0].drift_labels[0] +
+                     df[df['charge'] == charge]['ic'].tolist()[0].drift_labels[-1]) / 2, lw=0.5,
                     alpha=0.5, color='black')
                 ax_charge_states_scatter_prefiltered[i + j].axhline(0, lw=0.5, alpha=0.5, c='black')
                 ax_charge_states_scatter_prefiltered[i + j].legend('', frameon=False)
@@ -563,7 +570,7 @@ def ajf_plot(df, winner, tps, output_path):
     plt.close('all')
 
 
-def plot_ajf_(configfile, atc, prefiltered_ics, winner, output_path):
+def plot_ajf_(configfile, atc, prefiltered_ics, winner, output_path, df_output_path):
 
     if not os.path.isdir(os.path.dirname(output_path)):
         os.makedirs(os.path.dirname(output_path))
@@ -573,6 +580,8 @@ def plot_ajf_(configfile, atc, prefiltered_ics, winner, output_path):
         exit()
 
     df = create_df_and_clusterize(atc, prefiltered_ics, winner, tps=configfile['timepoints'])
+    if df_output_path is not None:
+        df.to_csv(df_output_path)
     ajf_plot(df, winner=winner, tps=configfile['timepoints'], output_path=output_path)
 
 
@@ -609,11 +618,19 @@ if __name__ == '__main__':
         help=
         "Output path"
     )
+    parser.add_argument(
+        "-d",
+        "--df_output_path",
+        help=
+        "df output path",
+        default=None
+    )
 
     args = parser.parse_args()
 
 
     configfile = yaml.load(open(args.configfile, "rb").read(), Loader=yaml.Loader)
+
     if not os.stat(args.atc).st_size == 0:
         atc = limit_read(args.atc)
     else:
@@ -634,4 +651,5 @@ if __name__ == '__main__':
              atc=atc,
              prefiltered_ics=prefiltered_ics,
              winner=winner,
-             output_path=args.output)
+             output_path=args.output,
+             df_output_path=args.df_output_path)
