@@ -15,6 +15,9 @@ if __name__ == '__main__':
         output_multi = snakemake.output[0]
         output_mono = snakemake.output[1]
 
+        df_output_multi = None
+        df_output_mono = None
+
         if not os.stat(atc_path).st_size == 0:
             atc = limit_read(atc_path)
         else:
@@ -27,13 +30,13 @@ if __name__ == '__main__':
             print('PREFILTERED IS NONE')
         if not os.stat(winner_multi_path).st_size == 0:
             winner_multi = limit_read(winner_multi_path)
-            df_output_multi = winner_multi_path.replace('.cpickle.zlib', 'df.csv')
+            df_output_multi = winner_multi_path.replace('.cpickle.zlib', '.df.csv')
         else:
             winner_multi = None
             print('WINNER MULTI IS NONE')
         if not os.stat(winner_mono_path).st_size == 0:
             winner_mono = limit_read(winner_mono_path)
-            df_output_mono = winner_mono_path.replace('.cpickle.zlib', 'df.csv')
+            df_output_mono = winner_mono_path.replace('.cpickle.zlib', '.df.csv')
         else:
             winner_mono = None
             print('WINNER MONO IS NONE')
@@ -100,8 +103,8 @@ if __name__ == '__main__':
 
         configfile = yaml.load(open(args.configfile, "rb").read(), Loader=yaml.Loader)
 
-        basepath_mono = None
-        basepath_multi = None
+        df_output_mono = None
+        df_output_multi = None
 
         if not os.stat(args.atc).st_size == 0:
             atc = limit_read(args.atc)
