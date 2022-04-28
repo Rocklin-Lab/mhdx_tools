@@ -27,11 +27,13 @@ if __name__ == '__main__':
             print('PREFILTERED IS NONE')
         if not os.stat(winner_multi_path).st_size == 0:
             winner_multi = limit_read(winner_multi_path)
+            df_output_multi = args.winner_multi.replace('.cpickle.zlib', 'df.csv')
         else:
             winner_multi = None
             print('WINNER MULTI IS NONE')
         if not os.stat(winner_mono_path).st_size == 0:
             winner_mono = limit_read(winner_mono_path)
+            df_output_mono = args.winner_mono.replace('.cpickle.zlib', 'df.csv')
         else:
             winner_mono = None
             print('WINNER MONO IS NONE')
@@ -40,13 +42,15 @@ if __name__ == '__main__':
                   atc=atc,
                   prefiltered_ics=prefiltered_ics,
                   winner=winner_multi,
-                  output_path=output_multi)
+                  output_path=output_multi,
+                  df_output_path=df_output_multi)
 
         plot_ajf_(configfile=configfile,
                   atc=atc,
                   prefiltered_ics=prefiltered_ics,
                   winner=winner_mono,
-                  output_path=output_mono)
+                  output_path=output_mono,
+                  df_output_path=df_output_mono)
     else:
         parser = argparse.ArgumentParser()
         parser.add_argument(
@@ -111,13 +115,13 @@ if __name__ == '__main__':
             print('PREFILTERED IS NONE')
         if not os.stat(args.winner_mono).st_size == 0:
             winner_mono = limit_read(args.winner_mono)
-            basepath_mono = args.winner_mono.replace('.cpickle.zlib', 'df.csv')
+            df_output_mono = args.winner_mono.replace('.cpickle.zlib', 'df.csv')
         else:
             winner_mono = None
             print('WINNER MONO IS NONE')
         if not os.stat(args.winner_multi).st_size == 0:
             winner_multi = limit_read(args.winner_multi)
-            basepath_multi = args.winner_multi.replace('.cpickle.zlib', 'df.csv')
+            df_output_multi = args.winner_multi.replace('.cpickle.zlib', 'df.csv')
         else:
             winner_multi = None
             print('WINNER MULTI IS NONE')
@@ -127,11 +131,11 @@ if __name__ == '__main__':
                   prefiltered_ics=prefiltered_ics,
                   winner=winner_mono,
                   output_path=args.output_mono,
-                  df_output_path=basepath_mono)
+                  df_output_path=df_output_mono)
 
         plot_ajf_(configfile=configfile,
                   atc=atc,
                   prefiltered_ics=prefiltered_ics,
                   winner=winner_multi,
                   output_path=args.output_multi,
-                  df_output_path=basepath_multi)
+                  df_output_path=df_output_multi)
