@@ -124,6 +124,10 @@ if __name__ == '__main__':
     plot_distribution(df_mono_complete, 'complexity_prefiltered', 'complexity prefiltered', ax[2][1])
     plot_distribution(df_multi_complete, 'complexity_atc', 'complexity atc', ax[2][2])
     plot_distribution(df_multi_complete, 'complexity_prefiltered', 'complexity prefiltered', ax[2][3])
+
+    plt.figtext(0.25, 1.01, 'Monobody', va="center", ha="center", size=20, weight='bold')
+    plt.figtext(0.75, 1.01, 'Multibody', va="center", ha="center", size=20, weight='bold')
+
     plt.tight_layout()
 
     plt.savefig(os.getcwd() + '/results/plots/ic_time_series/stats.pdf', dpi=300, format='pdf')
