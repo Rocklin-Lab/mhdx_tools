@@ -168,7 +168,10 @@ def main(library_info_path,
             max_idotp_list = []
             for ind, factor in enumerate(data_tensor.DataTensor.factors):
                 idotp_list = [x.idotp for x in factor.isotope_clusters]
-                max_idotp_list.append(max(idotp_list))
+                if len(idotp_list) > 0:
+                    max_idotp_list.append(max(idotp_list))
+                else:
+                    max_idotp_list.append(None)
 
             plot_factor_data_from_data_tensor(data_tensor=data_tensor,
                                               idotp_list=max_idotp_list,
