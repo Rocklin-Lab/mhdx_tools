@@ -130,4 +130,4 @@ if __name__ == '__main__':
 
     plt.tight_layout()
 
-    plt.savefig(os.getcwd() + '/results/plots/ic_time_series/stats.pdf', dpi=300, format='pdf')
+    plt.savefig(os.getcwd() + '/results/plots/ic_time_series/stats.pdf', dpi=300, format='pdf', bbox_inches='tight')
