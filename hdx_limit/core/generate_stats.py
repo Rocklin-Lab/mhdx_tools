@@ -62,11 +62,11 @@ if __name__ == '__main__':
         winner_intensity_frac = df_tmp[df_tmp['winner'] == 1]['ic_auc'].sum() / df_tmp[df_tmp['winner'] == 1][
             'tensor_auc'].sum()
         coverage_atc = len(
-            df_tmp[(df_tmp['prefiltered'] == 0) & (df_tmp['winner'] == 0) & (df_tmp['ic_winner_corr'] >= 0.95)]) / len(
-            np.unique(df_tmp['tp_idx'].values))
+            df_tmp[(df_tmp['prefiltered'] == 0) & (df_tmp['winner'] == 0) & (df_tmp['ic_winner_corr'] >= 0.95)][
+                ['tp_idx', 'charge']].drop_duplicates()) / len(np.unique(df_tmp['tp_idx'].values))
         coverage_prefiltered = len(
-            df_tmp[(df_tmp['prefiltered'] == 1) & (df_tmp['winner'] == 0) & (df_tmp['ic_winner_corr'] >= 0.95)]) / len(
-            np.unique(df_tmp['tp_idx'].values))
+            df_tmp[(df_tmp['prefiltered'] == 1) & (df_tmp['winner'] == 0) & (df_tmp['ic_winner_corr'] >= 0.95)][
+                ['tp_idx', 'charge']].drop_duplicates()) / len(np.unique(df_tmp['tp_idx'].values))
         complexity_atc = len(df_tmp[(df_tmp['prefiltered'] == 0) & (df_tmp['winner'] == 0)]) / len(
             np.unique(df_tmp['tp_idx'].values))
         complexity_prefiltered = len(df_tmp[(df_tmp['prefiltered'] == 1) & (df_tmp['winner'] == 0)]) / len(
