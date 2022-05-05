@@ -49,7 +49,7 @@ if __name__ == '__main__':
     # Generate stats dataframe
     # Compute the following:
     # 'winner_intensity_frac': intensity of winners relative to parent tensors
-    # 'coverage_atc': average number of charge states  similar to winner ICs considering all timepoints clusters (ATC)
+    # 'coverage_atc': average number of charge states similar to winner ICs considering all timepoints clusters (ATC)
     # 'coverage_prefiltered': average number of charge states similar to winner ICs considering prefiltered ICs
     # 'complexity_atc': average number of ICs per timepoint before filtering out ICs
     # 'complexity_prefiltered': average number of ICs per timepoint after filtering out ICs
