@@ -355,6 +355,9 @@ def main(configfile,
         if not my_row['DT_weighted_avg'].values[0] < 0.1:
             out_df = pd.concat([out_df, my_row], ignore_index=True)
 
+    # Save full dataframe
+    out_df.to_json('results/plots/tensor-recenter/full_dataframe.json')
+
     if library_info_out_path is not None:
         out_df.drop_duplicates(subset=['name_recentered', 'charge'], ignore_index=True, inplace=True)
         out_df.to_json(library_info_out_path)
