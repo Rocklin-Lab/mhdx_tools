@@ -337,6 +337,9 @@ def main(configfile,
                                 all_ics_inputs=all_ics_inputs,
                                 idotp_cutoff=idotp_cutoff)
 
+    # Save full dataframe
+    df.to_json('results/plots/tensor-recenter/full_dataframe.json')
+
     cols_idotp = ['idotp', 'integrated_mz_width', 'mz_centers', 'theor_mz_dist']
     cols_ics_recenter = ['RT_weighted_avg', 'DT_weighted_avg_bins', 'DT_weighted_avg', 'rt_std', 'dt_std',
                          'rt_weighted_std', 'dt_weighted_std', 'n_signals', 'n_UN']
@@ -355,8 +358,6 @@ def main(configfile,
         if not my_row['DT_weighted_avg'].values[0] < 0.1:
             out_df = pd.concat([out_df, my_row], ignore_index=True)
 
-    # Save full dataframe
-    out_df.to_json('results/plots/tensor-recenter/full_dataframe.json')
 
     if library_info_out_path is not None:
         out_df.drop_duplicates(subset=['name_recentered', 'charge'], ignore_index=True, inplace=True)
