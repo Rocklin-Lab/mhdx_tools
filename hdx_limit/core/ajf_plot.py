@@ -565,7 +565,10 @@ def ajf_plot(df, winner, tps, output_path):
                     for key, spine in ax_charge_states_scatter_prefiltered[i + j].spines.items():
                         spine.set_linewidth(3)
 
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    if output_path is not None:
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    else:
+        plt.show()
 
     plt.close('all')
 
