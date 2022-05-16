@@ -149,7 +149,7 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, output=None):
     return df
 
 
-def ajf_plot(df, winner, tps, output_path):
+def ajf_plot(df, winner, tps, output_path=None):
     ic_winner_corr_cutoff = 0.95
     pal = sns.color_palette('bright')
     n_cols = 6 * len(set(df.charge)) + 6
@@ -563,11 +563,9 @@ def ajf_plot(df, winner, tps, output_path):
 
     if output_path is not None:
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.close('all')
     else:
         plt.show()
-
-    plt.close('all')
-
 
 def plot_ajf_(configfile, atc, prefiltered_ics, winner, output_path, df_output_path):
 
