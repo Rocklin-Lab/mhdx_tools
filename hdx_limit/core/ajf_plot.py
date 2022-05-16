@@ -17,7 +17,7 @@ sys.path.append(os.getcwd() + '/workflow/scripts/hdx_limit/')
 from hdx_limit.core.io import limit_read
 
 
-def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, cluster_radius=0.75, output=None):
+def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, output=None):
     '''
     Create and returns dataframe from prefiltered_ics and winner ics
     ic: ic object
@@ -120,10 +120,6 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, cluster_radius=0
     df['rt_norm'] = (df['rt_corr'] - df['rt_corr'].mean()) / df['rt_corr'].std()
 
     # Clusterize based on rt and dt
-    # db = DBSCAN(eps=cluster_radius)
-    # db.fit(df[['rt_norm', 'dt_norm']])
-    # clusters = db.fit_predict(df[['rt_norm', 'dt_norm']])
-    # df['clusters'] = clusters
     n = df[(df['prefiltered'] == 0) & (df['tp_idx'] != 0)].groupby(by='tp_idx', sort=True).count().max()[0]
     if n > 9:
         n = 9
