@@ -309,7 +309,6 @@ def plot_deviations(df):
 def remove_duplicates_from_df(df, rt_threshold=0.2, dt_threshold=0.05):
     # rt_threshold: delta rt in minutes
     # dt_threshold: delta dt in as a fraction of weighted average value
-
     new_df = pd.DataFrame(columns=df.columns)
 
     for i, line in df.sort_values(by=['n_UN', 'ab_cluster_total'], ascending=[False, False]).iterrows():
