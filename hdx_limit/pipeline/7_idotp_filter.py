@@ -306,6 +306,22 @@ def plot_deviations(df):
     plt.close('all')
 
 
+def remove_duplicates_from_df(df, rt_threshold=0.2, dt_threshold=0.05):
+    # rt_threshold: delta rt in minutes
+    # dt_threshold: delta dt in as a fraction of weighted average value
+
+    new_df = pd.DataFrame(columns=df.columns)
+
+    for i, line in df.sort_values(by=['n_UN', 'ab_cluster_total'], ascending=[False, False]).iterrows():
+        if len(new_df[(new_df['sequence'] == line['sequence']) & (new_df['charge'] == line['charge']) & (
+                abs(new_df['RT_weighted_avg'] - line['RT_weighted_avg']) < rt_threshold) & (
+                              abs(new_df['DT_weighted_avg'] - line['DT_weighted_avg']) < dt_threshold * line[
+                          'DT_weighted_avg'])]) == 0:
+            new_df = pd.concat([new_df, pd.DataFrame([line])])
+
+    return new_df
+
+
 def main(configfile,
          library_info_path,
          all_idotp_inputs,
@@ -313,7 +329,8 @@ def main(configfile,
          library_info_out_path=None,
          plot_out_path=None,
          return_flag=False,
-         idotp_cutoff=0.99):
+         idotp_cutoff=0.99,
+         remove_duplicates=False):
     """Reads all library_info index idotp_check.csv files and returns or saves a list of indices with idotp >= idotp_cutoff.
 
     Args:
@@ -358,6 +375,8 @@ def main(configfile,
         if not my_row['DT_weighted_avg'].values[0] < 0.1:
             out_df = pd.concat([out_df, my_row], ignore_index=True)
 
+    if remove_duplicates:
+        out_df = remove_duplicates_from_df(out_df, rt_threshold=0.2, dt_threshold=0.05)
 
     if library_info_out_path is not None:
         out_df.drop_duplicates(subset=['name_recentered', 'charge'], ignore_index=True, inplace=True)
@@ -398,7 +417,8 @@ if __name__ == "__main__":
              all_idotp_inputs=all_idotp_inputs,
              all_ics_inputs=all_ics_inputs,
              library_info_out_path=library_info_out_path,
-             plot_out_path=plot_out_path)
+             plot_out_path=plot_out_path,
+             remove_duplicates=configfile['remove_duplicates'])
     else:
         # CLI context, set expected arguments with argparse module.
         parser = argparse.ArgumentParser(
@@ -430,6 +450,10 @@ if __name__ == "__main__":
             help=
             "lower limit on dot-product between theoretical integrated m/z of POI and int. m/z of observed signal in question. Float in range [0,1], default 0.95 "
         )
+        parser.add_argument("--r",
+                            "--remove_duplicates",
+                            default=False,
+                            help="Remove duplicates from checked_library_info")
         args = parser.parse_args()
 
         if args.all_idotp_inputs is None and args.input_dir_path is None:
@@ -450,4 +474,5 @@ if __name__ == "__main__":
              all_ics_inputs=args.all_ics_inputs,
              library_info_out_path = args.library_info_out_path,
              plot_out_path=args.plot_out_path,
-             idotp_cutoff=args.idotp_cutoff)
+             idotp_cutoff=args.idotp_cutoff,
+             remove_duplicates=args.remove_duplicates)
