@@ -180,6 +180,8 @@ def main(library_info_path,
         use_rtdt_recenter=configfile["use_rtdt_recenter"],
     )
 
+    limit_write(p1.all_tp_clusters, all_timepoints_clusters_input_path)
+
     # Starting condition output arguments.
     if prefiltered_ics_out_path is not None:
         limit_write(p1.prefiltered_ics, prefiltered_ics_out_path)
