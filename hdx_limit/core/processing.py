@@ -408,7 +408,7 @@ class PathOptimizer:
         self.baseline_peak_error_weight = 10 #100 before
         self.delta_mz_rate_backward_weight = 0.165
         self.delta_mz_rate_forward_weight = 0.162
-        self.dt_ground_rmse_weight = 7.721
+        self.dt_ground_rmse_weight = 100 #7.721
         self.dt_ground_fit_weight = 13.277
         self.rt_ground_fit_weight = 1.304
         self.rt_ground_rmse_weight = 3.859
