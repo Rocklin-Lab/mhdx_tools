@@ -307,7 +307,7 @@ def gen_stretched_times(tic_file_list, stretched_times_plot_outpath=None):
 
     return stretched_ts1_times, stretched_ts2_times
 
-def rt_correlation_plot(intermediates, output_path):
+def rt_correlation_plot(intermediates, output_path=None):
     fs = sorted(intermediates)
 
     runs = {}
@@ -344,7 +344,11 @@ def rt_correlation_plot(intermediates, output_path):
         ax[i][1].set_xlim(-5,5)
 
     plt.tight_layout()
-    plt.savefig(output_path, format='pdf', dpi=300)
+
+    if output_path is not None:
+        plt.savefig(output_path, format='pdf', dpi=300)
+
+    plt.close('all')
 
 
 def main(names_and_seqs_path,
