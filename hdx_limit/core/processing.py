@@ -408,7 +408,7 @@ class PathOptimizer:
         self.baseline_peak_error_weight = 10 #100 before
         self.delta_mz_rate_backward_weight = 0.165
         self.delta_mz_rate_forward_weight = 0.162
-        self.dt_ground_rmse_weight = 100 #7.721
+        self.dt_ground_rmse_weight = 7.721
         self.dt_ground_fit_weight = 13.277
         self.rt_ground_fit_weight = 1.304
         self.rt_ground_rmse_weight = 3.859
@@ -716,17 +716,19 @@ class PathOptimizer:
                 undeut = undeut_grounds[ic.charge_states[0]]
 
                 # rt_ground_err: retention time error in seconds
-                # dt_ground_err: drift time error in milliseconds
+                # dt_ground_err: drift time error in percentage of deviation * 100
                 if use_rtdt_recenter:
                     # ic.dt_ground_err = abs(ic.dt_coms - undeut.drift_labels[len(undeut.drift_labels) // 2])
                     # ic.rt_ground_err = abs(ic.rt_com - undeut.retention_labels[len(undeut.retention_labels) // 2])
-                    ic.dt_ground_err = abs(ic.dt_coms - len(undeut.drift_labels) / 2) * (
-                                undeut.drift_labels[1] - undeut.drift_labels[0])
+                    ic.dt_ground_err = 100 * abs(ic.dt_coms - len(undeut.drift_labels) / 2) * (
+                                undeut.drift_labels[1] - undeut.drift_labels[0]) / undeut.drift_labels[
+                        len(undeut.drift_labels) // 2]
                     ic.rt_ground_err = abs(ic.rt_com - len(undeut.retention_labels) / 2) * (
                                 undeut.retention_labels[1] - undeut.retention_labels[0]) * 60
                 else:
-                    ic.dt_ground_err = abs(ic.dt_coms - undeut.dt_coms) * (
-                            undeut.drift_labels[1] - undeut.drift_labels[0])
+                    ic.dt_ground_err = 100* abs(ic.dt_coms - undeut.dt_coms) * (
+                            undeut.drift_labels[1] - undeut.drift_labels[0]) / undeut.drift_labels[
+                        len(undeut.drift_labels) // 2]
                     ic.rt_ground_err = abs(ic.rt_com - undeut.rt_com) * (
                             undeut.retention_labels[1] - undeut.retention_labels[0]) * 60
                 ic.auc_ground_err = ic.log_baseline_auc - undeut.log_baseline_auc
