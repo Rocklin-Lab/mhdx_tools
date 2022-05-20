@@ -493,9 +493,9 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        self.all_tp_clusters[0] = [self.undeut_grounds[charge] for charge in self.undeut_grounds]
+        self.prefiltered_ics[0] = [self.undeut_grounds[charge] for charge in self.undeut_grounds]
         out = []
-        for tp in self.all_tp_clusters:
+        for tp in self.prefiltered_ics:
             tp_buffer = []
             for ic1 in tp:
                 ic1_int_mz_com = np.round(ic1.baseline_integrated_mz_com)
