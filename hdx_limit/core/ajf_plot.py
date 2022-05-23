@@ -38,8 +38,8 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, output=None):
     for tp in atc:
         for ic in tp:
             tp_idx = tps.index(ic.timepoint_idx)
-            if tp_idx == 0 and ic.idotp < 0.99:
-                continue
+            # if tp_idx == 0 and ic.idotp < 0.99:
+            #     continue
             com = ic.baseline_integrated_mz_com
             rt = ic.retention_labels[0] + (ic.retention_labels[1] - ic.retention_labels[0]) * ic.rt_com
             dt = ic.drift_labels[0] + (ic.drift_labels[1] - ic.drift_labels[0]) * ic.dt_coms
