@@ -471,9 +471,6 @@ class PathOptimizer:
 
         """
         undeut_list = [ic for ic in self.prefiltered_ics[0] if ic.idotp > self.thresholds['idotp_cutoff']]
-        if len(undeut_list) == 0:
-            print('No undeuterated signals found with idotp_cutoff > %.2f'%self.thresholds['idotp_cutoff'])
-            exit()
         filtered_atc = [
             [ic for ic in ics if (ic.baseline_peak_error <= self.thresholds['baseline_peak_error'] and
                                   ic.dt_ground_err <= self.thresholds['dt_ground_err'] and
