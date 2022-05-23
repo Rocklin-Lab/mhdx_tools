@@ -481,7 +481,7 @@ class PathOptimizer:
                                       'baseline_integrated_FWHM'] and
                                   ic.nearest_neighbor_correlation >= self.thresholds['nearest_neighbor_correlation']
                                   and ic.baseline_integrated_mz_com <= self.max_peak_center
-                                  + undeut_list[0].baseline_integrated_mz_com - 1)
+                                  + undeut_list[0].baseline_integrated_mz_com - 2)
              ] for ics in self.prefiltered_ics[1:] if ics[0].timepoint_idx in self.timepoints]
         filtered_atc = np.array([undeut_list] + filtered_atc)
         filtered_indexes = np.array([True if len(ics) > 0 else False for ics in filtered_atc])
