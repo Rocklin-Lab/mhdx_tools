@@ -405,7 +405,7 @@ class PathOptimizer:
             
         """
         # Set score weights
-        self.baseline_peak_error_weight = 10 #100 before
+        self.baseline_peak_error_weight = 10  # 100 before
         self.delta_mz_rate_backward_weight = 0.165
         self.delta_mz_rate_forward_weight = 0.162
         self.dt_ground_rmse_weight = 7.721
@@ -422,7 +422,8 @@ class PathOptimizer:
         self.library_info = library_info
         self.timepoints = timepoints
         self.n_undeut_runs = n_undeut_runs
-        self.first_center = [ic for ic in all_tp_clusters[0] if ic.idotp > self.thresholds['idotp_cutoff']][0].baseline_integrated_mz_com
+        self.first_center = [ic for ic in all_tp_clusters[0] if ic.idotp > self.thresholds['idotp_cutoff']][
+            0].baseline_integrated_mz_com
 
         if use_rtdt_recenter:
             self.max_peak_center = len(
