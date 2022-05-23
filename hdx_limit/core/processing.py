@@ -426,12 +426,14 @@ class PathOptimizer:
             self.max_peak_center = len(
                 self.library_info.loc[self.library_info["name_recentered"] ==
                                       self.name]["sequence"].values[0]
-            )
+            ) - self.library_info.loc[self.library_info["name_recentered"] ==
+                                      self.name]["sequence"].values[0].count('P') - 2
         else:
             self.max_peak_center = len(
                 self.library_info.loc[self.library_info["name"] ==
                                       self.name]["sequence"].values[0]
-            )
+            ) - self.library_info.loc[self.library_info["name"] ==
+                                      self.name]["sequence"].values[0].count('P') - 2
 
         self.old_data_dir = old_data_dir
         self.old_files = None
@@ -481,7 +483,7 @@ class PathOptimizer:
                                       'baseline_integrated_FWHM'] and
                                   ic.nearest_neighbor_correlation >= self.thresholds['nearest_neighbor_correlation']
                                   and ic.baseline_integrated_mz_com <= self.max_peak_center
-                                  + undeut_list[0].baseline_integrated_mz_com - 2)
+                                  + undeut_list[0].baseline_integrated_mz_com)
              ] for ics in self.prefiltered_ics[1:] if ics[0].timepoint_idx in self.timepoints]
         filtered_atc = np.array([undeut_list] + filtered_atc)
         filtered_indexes = np.array([True if len(ics) > 0 else False for ics in filtered_atc])
