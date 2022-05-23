@@ -424,7 +424,6 @@ class PathOptimizer:
         self.n_undeut_runs = n_undeut_runs
         self.first_center = [ic for ic in all_tp_clusters[0] if ic.idotp > self.thresholds['idotp_cutoff']][0].baseline_integrated_mz_com
 
-
         if use_rtdt_recenter:
             self.max_peak_center = len(
                 self.library_info.loc[self.library_info["name_recentered"] ==
