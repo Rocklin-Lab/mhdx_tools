@@ -423,8 +423,11 @@ class PathOptimizer:
         self.timepoints = timepoints
         self.n_undeut_runs = n_undeut_runs
         self.thresholds = thresholds
-        self.first_center = [ic for ic in all_tp_clusters[0] if ic.idotp > self.thresholds['idotp_cutoff']][
-            0].baseline_integrated_mz_com
+        self.undeuts = [ic for ic in self.all_tp_clusters[0] if ic.idotp > self.thresholds['idotp_cutoff']]
+        if len(self.undeuts) == 0:
+            print('No undeuts with idop > %.2f was found!'%self.thresholds['idotp_cutoff'])
+            exit()
+        self.first_center = self.undeuts[0].baseline_integrated_mz_com
 
         if use_rtdt_recenter:
             self.max_peak_center = len(
