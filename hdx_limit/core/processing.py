@@ -422,6 +422,7 @@ class PathOptimizer:
         self.library_info = library_info
         self.timepoints = timepoints
         self.n_undeut_runs = n_undeut_runs
+        self.thresholds = thresholds
         self.first_center = [ic for ic in all_tp_clusters[0] if ic.idotp > self.thresholds['idotp_cutoff']][
             0].baseline_integrated_mz_com
 
@@ -452,7 +453,6 @@ class PathOptimizer:
         self.precalculate_fit_to_ground(use_rtdt_recenter=use_rtdt_recenter)
         self.prefiltered_ics = self.all_tp_clusters
         if user_prefilter:
-            self.thresholds = thresholds
             self.filters_from_user()
             if pareto_prefilter and len(self.prefiltered_ics) >= self.thresholds['min_timepoints']:
                 self.prefiltered_ics = self.weak_pareto_dom_filter()
