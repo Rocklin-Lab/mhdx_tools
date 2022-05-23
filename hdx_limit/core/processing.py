@@ -1305,9 +1305,7 @@ class PathOptimizer:
                 (new_com - ics[i - 1].baseline_integrated_mz_com), 0.1
             ]) / (timepoints[i] - timepoints[i - 1])
             if (current_rate / previous_rate) > 1.2:
-                print(tp)
                 forward += (current_rate / previous_rate)**2.0
-                print(forward, current_rate, ic.baseline_integrated_mz_com)
             previous_rate = current_rate
         return backward / len(ics), forward / len(ics)
 
