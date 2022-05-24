@@ -264,45 +264,106 @@ def generate_dataframe_ics(configfile,
     return df
 
 
-def plot_deviations(df):
+def plot_stats(df):
+    '''
+    Args:
+        df: dataframe containing all ICs produced during first round of factorization and used to do tensor-recentering
+    Returns:
+        Saves a pdf, UN_STATS.pdf, containing, dRTs, dDTs, # files with undeuterated signals detects and # of signals
+        passing idotp threshold per tensor
+    '''
 
-    sns.set_context('talk')
 
-    fig, ax = plt.subplots(4, 2, figsize=(10, 12), dpi=200)
+    # sns.set_context('talk')
+    #
+    # fig, ax = plt.subplots(4, 2, figsize=(10, 12), dpi=200)
+    #
+    # sns.histplot(df['n_UN'].values, ax=ax[0][0])
+    # sns.histplot(df['n_UN'].values, ax=ax[0][0], kde=True)
+    # ax[0][0].set_xlabel('n_UN')
+    #
+    # sns.histplot(df['n_signals'].values, ax=ax[0][1])
+    # sns.histplot(df['n_signals'].values, ax=ax[0][1], kde=True)
+    # ax[0][1].set_xlabel('n_signals')
+    #
+    # sns.histplot(df['im_mono'].values * configfile['dt_max'] / 200 - df['DT_weighted_avg'].values, ax=ax[1][0])
+    # sns.histplot(df['im_mono'].values * configfile['dt_max'] / 200 - df['DT_weighted_avg'].values, ax=ax[1][0], kde=True)
+    # ax[1][0].set_xlabel('DT error')
+    #
+    # sns.histplot(df['RT'].values - df['RT_weighted_avg'].values, ax=ax[1][1])
+    # sns.histplot(df['RT'].values - df['RT_weighted_avg'].values, ax=ax[1][1], kde=True)
+    # ax[1][1].set_xlabel('RT error')
+    #
+    # sns.histplot(df['dt_weighted_std'].values, ax=ax[2][0])
+    # sns.histplot(df['dt_weighted_std'].values, ax=ax[2][0], kde=True)
+    # ax[2][0].set_xlabel('DT_weighted_std')
+    #
+    # sns.histplot(df['dt_std'].values, ax=ax[2][1])
+    # sns.histplot(df['dt_std'].values, ax=ax[2][1], kde=True)
+    # ax[2][1].set_xlabel('DT_std')
+    #
+    # sns.histplot(df['rt_weighted_std'].values, ax=ax[3][0])
+    # sns.histplot(df['rt_weighted_std'].values, ax=ax[3][0], kde=True)
+    # ax[3][0].set_xlabel('RT_weighted_std')
+    #
+    # sns.histplot(df['rt_std'].values, ax=ax[3][1], bins=100)
+    # ax[3][1].set_xlabel('RT_std')
+    #
+    # plt.tight_layout()
 
-    sns.histplot(df['n_UN'].values, ax=ax[0][0])
-    sns.histplot(df['n_UN'].values, ax=ax[0][0], kde=True)
-    ax[0][0].set_xlabel('n_UN')
+    l_dDT = []
+    l_dRT = []
+    for name, charge in df[['name', 'charge']].drop_duplicates().values:
+        avgDT = df[(df['name'] == name) & (df['charge'] == charge)]['dt'].mean()
+        l_dDT.append(
+            [100 * (a - avgDT) / avgDT for a in df[(df['name'] == name) & (df['charge'] == charge)]['dt'].values])
+    for name in df['name'].drop_duplicates().values:
+        avgRT = df[(df['name'] == name)]['rt'].mean()
+        l_dRT.append([a - avgRT for a in df[(df['name'] == name)]['rt'].values])
+    l_dRT = [item for sublist in l_dRT for item in sublist]
+    l_dDT = [item for sublist in l_dDT for item in sublist]
 
-    sns.histplot(df['n_signals'].values, ax=ax[0][1])
-    sns.histplot(df['n_signals'].values, ax=ax[0][1], kde=True)
-    ax[0][1].set_xlabel('n_signals')
 
-    sns.histplot(df['im_mono'].values * configfile['dt_max'] / 200 - df['DT_weighted_avg'].values, ax=ax[1][0])
-    sns.histplot(df['im_mono'].values * configfile['dt_max'] / 200 - df['DT_weighted_avg'].values, ax=ax[1][0], kde=True)
-    ax[1][0].set_xlabel('DT error')
+    fig, ax = plt.subplots(2, 2, figsize=(10, 6), dpi=200)
 
-    sns.histplot(df['RT'].values - df['RT_weighted_avg'].values, ax=ax[1][1])
-    sns.histplot(df['RT'].values - df['RT_weighted_avg'].values, ax=ax[1][1], kde=True)
-    ax[1][1].set_xlabel('RT error')
+    ax_twin_0 = ax[0][0].twinx()
+    ax_twin_1 = ax[0][1].twinx()
 
-    sns.histplot(df['dt_weighted_std'].values, ax=ax[2][0])
-    sns.histplot(df['dt_weighted_std'].values, ax=ax[2][0], kde=True)
-    ax[2][0].set_xlabel('DT_weighted_std')
+    sns.histplot(60 * np.absolute(l_dRT), ax=ax[0][0], kde=True, alpha=0.7, binwidth=1)
+    sns.histplot(np.absolute(l_dDT), ax=ax[0][1], kde=True, alpha=0.7, binwidth=0.25)
+    sns.ecdfplot(60 * np.absolute(l_dRT), color='red', ax=ax_twin_0, ls='--')
+    sns.ecdfplot(np.absolute(l_dDT), color='red', ax=ax_twin_1, ls='--')
 
-    sns.histplot(df['dt_std'].values, ax=ax[2][1])
-    sns.histplot(df['dt_std'].values, ax=ax[2][1], kde=True)
-    ax[2][1].set_xlabel('DT_std')
+    ax[0][0].set_xlim(0, 5 * 60 * np.absolute(l_dRT).std())
+    ax[0][0].set_xlabel('abs($\Delta$RT) / seconds', weight='bold')
+    ax[0][0].set_ylabel('Count', weight='bold')
+    ax_twin_0.set_ylabel('Proportion', color='red', weight='bold')
+    ax_twin_0.set_yticks(np.arange(0, 1.1, 0.1))
+    ax[0][0].grid(visible=True, axis='x', alpha=0.5)
+    ax_twin_0.grid(visible=True, alpha=0.5, axis='both')
+    ax[0][1].set_xlim(0, 5 * np.absolute(l_dDT).std())
+    ax[0][1].set_xlabel('abs($\Delta$DT) / miliseconds', weight='bold')
+    ax[0][1].set_ylabel('Count', weight='bold')
+    ax[0][1].grid(visible=True, axis='x', alpha=0.5)
+    ax_twin_1.grid(visible=True, alpha=0.5)
+    ax_twin_1.set_ylabel('Proportion', color='red', weight='bold')
+    ax_twin_1.set_yticks(np.arange(0, 1.1, 0.1), color='red')
 
-    sns.histplot(df['rt_weighted_std'].values, ax=ax[3][0])
-    sns.histplot(df['rt_weighted_std'].values, ax=ax[3][0], kde=True)
-    ax[3][0].set_xlabel('RT_weighted_std')
+    ax_twin_0.tick_params(axis='y', colors='red')
+    ax_twin_1.tick_params(axis='y', colors='red')
 
-    sns.histplot(df['rt_std'].values, ax=ax[3][1], bins=100)
-    ax[3][1].set_xlabel('RT_std')
+    sns.histplot(df[['name', 'charge', 'n_UN', 'n_signals']].drop_duplicates()['n_UN'], binwidth=1, discrete=True,
+                 ax=ax[1][0])
+    sns.histplot(df[['name', 'charge', 'n_UN', 'n_signals']].drop_duplicates()['n_signals'], binwidth=1, discrete=True,
+                 ax=ax[1][1])
+
+    ax[1][0].set_xlabel('# files with undeuterated signals', weight='bold')
+    ax[1][0].set_ylabel('Count', weight='bold')
+    ax[1][1].set_xlabel('# undeuterated signals detected per tensor', weight='bold')
+    ax[1][1].set_ylabel('Count', weight='bold')
 
     plt.tight_layout()
-    plt.savefig('results/plots/deviations_UN.pdf', format='pdf', dpi=200, bbox_inches='tight')
+    plt.savefig('results/plots/STATS_UN.pdf', format='pdf', dpi=200, bbox_inches='tight')
     plt.close('all')
 
 
@@ -356,6 +417,9 @@ def main(configfile,
     # Save full dataframe
     df.to_json('results/plots/tensor-recenter/full_dataframe.json')
 
+    # Plot
+    plot_deviations(df)
+
     cols_idotp = ['idotp', 'integrated_mz_width', 'mz_centers', 'theor_mz_dist']
     cols_ics_recenter = ['RT_weighted_avg', 'DT_weighted_avg_bins', 'DT_weighted_avg', 'rt_std', 'dt_std',
                          'rt_weighted_std', 'dt_weighted_std', 'n_signals', 'n_UN']
@@ -392,7 +456,6 @@ def main(configfile,
 
     # Plot deviation plots. Add this to a proper output in the snakemake scope later
     df = pd.read_json(library_info_out_path)
-    plot_deviations(df)
 
     if return_flag:
         return out_df
