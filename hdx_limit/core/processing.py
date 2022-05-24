@@ -423,9 +423,9 @@ class PathOptimizer:
         self.timepoints = timepoints
         self.n_undeut_runs = n_undeut_runs
         self.thresholds = thresholds
-        self.undeuts = [ic for ic in self.all_tp_clusters[0] if ic.idotp > self.thresholds['idotp_cutoff']]
+        self.undeuts = [ic for ic in self.all_tp_clusters[0] if ic.idotp >= self.thresholds['idotp_cutoff']]
         if len(self.undeuts) == 0:
-            print('%s: no undeuts with idotp > %.2f was found!'%(self.name, self.thresholds['idotp_cutoff']))
+            print('Error %s: no undeuts with idotp > %.2f was found!'%(self.name, self.thresholds['idotp_cutoff']))
             sys.exit()
         self.first_center = self.undeuts[0].baseline_integrated_mz_com
 
