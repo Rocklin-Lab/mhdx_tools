@@ -101,6 +101,9 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, output=None):
     df['auc_size'] = 0
     for i, line in df.iterrows():
         df.loc[i, 'auc_size'] = np.log2(df.loc[i]['auc'])  # / df[df['charge'] == df.loc[i]['charge']]['auc'].min()
+    # Remove after asking Suggie why values seems weird and correcting that
+    for i, line in df[df['auc_size'] < 0].iterrows():
+        df.loc[i, 'auc_size'] = 1
 
     # z-score dt
     df['dt_norm'] = 0
