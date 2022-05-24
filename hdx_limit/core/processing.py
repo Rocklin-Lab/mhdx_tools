@@ -1304,11 +1304,11 @@ class PathOptimizer:
                 new_com = (
                     ics[i - 1].baseline_integrated_mz_com + 0.01
                 )  # pretend we went forwards for calculating current rate
+            if round(timepoints[i] - timepoints[i - 1], 2) <= 0.1:
+                continue
             current_rate = max([
                 (new_com - ics[i - 1].baseline_integrated_mz_com), 0.1
             ]) / (timepoints[i] - timepoints[i - 1])
-            if round(current_rate, 2) == 1.00:
-                continue
             if (current_rate / previous_rate) > 1.2:
                 forward += (current_rate / previous_rate)**2.0
             previous_rate = current_rate
