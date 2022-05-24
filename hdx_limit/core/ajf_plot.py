@@ -84,8 +84,11 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, output=None):
 
     # Remove unreasonable ics based on large AUC extrapolations
     df = df[df['auc'] < 1e10]
+    #    Remove after asking Suggie why values seems weird and correcting that
+    for i, line in df[df['auc'] <= 2].iterrows():
+        df.loc[i, 'auc'] = 2
 
-    # Compute dot product between winner ic and all other ics from that timepoint
+        # Compute dot product between winner ic and all other ics from that timepoint
     df['ic_winner_corr'] = -1
     for i, line in df[(df['winner'] == 1)].iterrows():
         df.loc[df['tp_idx'] == line['tp_idx'], 'ic_winner_corr'] = [round(np.linalg.norm(
@@ -101,9 +104,6 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, output=None):
     df['auc_size'] = 0
     for i, line in df.iterrows():
         df.loc[i, 'auc_size'] = np.log2(df.loc[i]['auc'])  # / df[df['charge'] == df.loc[i]['charge']]['auc'].min()
-    # Remove after asking Suggie why values seems weird and correcting that
-    for i, line in df[df['auc_size'] < 0].iterrows():
-        df.loc[i, 'auc_size'] = 1
 
     # z-score dt
     df['dt_norm'] = 0
