@@ -423,7 +423,7 @@ class PathOptimizer:
         self.timepoints = timepoints
         self.n_undeut_runs = n_undeut_runs
         self.thresholds = thresholds
-        self.undeuts = [ic for ic in self.all_tp_clusters[0] if ic.idotp >= self.thresholds['idotp_cutoff']]
+        self.undeuts = [ic for ic in self.all_tp_clusters[0] if round(ic.idotp,2) >= self.thresholds['idotp_cutoff']]
         if len(self.undeuts) == 0:
             print('Error %s: no undeuts with idotp > %.2f was found!'%(self.name, self.thresholds['idotp_cutoff']))
             sys.exit()
@@ -473,7 +473,7 @@ class PathOptimizer:
         out_name (type): Description of any returned objects.
 
         """
-        undeut_list = [ic for ic in self.prefiltered_ics[0] if ic.idotp > self.thresholds['idotp_cutoff']]
+        undeut_list = [ic for ic in self.prefiltered_ics[0] if round(ic.idotp,2) >= self.thresholds['idotp_cutoff']]
         filtered_atc = [
             [ic for ic in ics if (ic.baseline_peak_error <= self.thresholds['baseline_peak_error'] and
                                   ic.dt_ground_err <= self.thresholds['dt_ground_err'] and
