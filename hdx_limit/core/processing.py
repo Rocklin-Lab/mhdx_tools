@@ -454,7 +454,7 @@ class PathOptimizer:
 
         self.select_undeuterated(use_rtdt_recenter=use_rtdt_recenter)
         self.precalculate_fit_to_ground(use_rtdt_recenter=use_rtdt_recenter)
-        self.prefiltered_ics = self.all_tp_clusters
+        self.prefiltered_ics = self.all_tp_clusters.copy()
         if user_prefilter:
             self.filters_from_user()
             if pareto_prefilter and len(self.prefiltered_ics) >= self.thresholds['min_timepoints']:
