@@ -342,7 +342,7 @@ def plot_stats(df):
     ax[0][0].grid(visible=True, axis='x', alpha=0.5)
     ax_twin_0.grid(visible=True, alpha=0.5, axis='both')
     ax[0][1].set_xlim(0, 5 * np.absolute(l_dDT).std())
-    ax[0][1].set_xlabel('abs($\Delta$DT) / miliseconds', weight='bold')
+    ax[0][1].set_xlabel('abs(%$\Delta$DT)', weight='bold')
     ax[0][1].set_ylabel('Count', weight='bold')
     ax[0][1].grid(visible=True, axis='x', alpha=0.5)
     ax_twin_1.grid(visible=True, alpha=0.5)
