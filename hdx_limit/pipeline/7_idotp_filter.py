@@ -320,6 +320,10 @@ def plot_stats(df):
     for name in df['name'].drop_duplicates().values:
         avgRT = df[(df['name'] == name)]['rt'].mean()
         l_dRT.append([a - avgRT for a in df[(df['name'] == name)]['rt'].values])
+    # Compute std only for RT-groups where there are more than 3 samples
+    RT_std = 60 * np.absolute([item for sublist in l_dRT for item in sublist if len(sublist) > 2]).std()
+    DT_std = np.absolute([item for sublist in l_dDT for item in sublist if len(sublist) > 2]).std()
+    # Make lists flat
     l_dRT = [item for sublist in l_dRT for item in sublist]
     l_dDT = [item for sublist in l_dDT for item in sublist]
 
@@ -362,8 +366,11 @@ def plot_stats(df):
     ax[1][1].set_xlabel('# undeuterated signals detected per tensor', weight='bold')
     ax[1][1].set_ylabel('Count', weight='bold')
 
+    ax[0][0].text(0.99, 0.9, '$\Delta$RT_std=%.3f' % RT_std, transform=ax[0][0].transAxes, ha='right')
+    ax[0][1].text(0.99, 0.9, '%%$\Delta$DT_std=%.3f' % DT_std, transform=ax[0][1].transAxes, ha='right')
+
     plt.tight_layout()
-    plt.savefig('results/plots/STATS_UN.pdf', format='pdf', dpi=200, bbox_inches='tight')
+    plt.savefig('results/plots/Stats_undeuterated.pdf', format='pdf', dpi=200, bbox_inches='tight')
     plt.close('all')
 
 
