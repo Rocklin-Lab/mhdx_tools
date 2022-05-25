@@ -425,7 +425,7 @@ def main(configfile,
     df.to_json('results/plots/tensor-recenter/full_dataframe.json')
 
     # Plot
-    plot_deviations(df)
+    plot_stats(df)
 
     cols_idotp = ['idotp', 'integrated_mz_width', 'mz_centers', 'theor_mz_dist']
     cols_ics_recenter = ['RT_weighted_avg', 'DT_weighted_avg_bins', 'DT_weighted_avg', 'rt_std', 'dt_std',
