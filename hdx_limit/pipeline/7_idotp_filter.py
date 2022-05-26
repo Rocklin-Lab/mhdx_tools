@@ -323,10 +323,15 @@ def plot_stats(df):
     # Compute std only for RT-groups where there are more than 3 samples
     RT_std = 60 * np.absolute([item for sublist in l_dRT for item in sublist if len(sublist) > 2]).std()
     DT_std = np.absolute([item for sublist in l_dDT for item in sublist if len(sublist) > 2]).std()
-    # Make lists flat
+    # Make lists flat: sublist only contains entries for which at least three samples were found
+    l_dRT_sublist = 60 * np.absolute([item for sublist in l_dRT for item in sublist if len(sublist) > 2])
+    l_dDT_sublist = np.absolute([item for sublist in l_dDT for item in sublist if len(sublist) > 2])
     l_dRT = [item for sublist in l_dRT for item in sublist]
     l_dDT = [item for sublist in l_dDT for item in sublist]
 
+    # Compute stats
+    dRT_median, dRT_mean, dRT_std = np.median(l_dRT_sublist), np.mean(l_dRT_sublist), np.std(l_dRT_sublist)
+    dDT_median, dDT_mean, dDT_std = np.median(l_dDT_sublist), np.mean(l_dDT_sublist), np.std(l_dDT_sublist)
 
     fig, ax = plt.subplots(2, 2, figsize=(10, 6), dpi=200)
 
@@ -366,8 +371,13 @@ def plot_stats(df):
     ax[1][1].set_xlabel('# undeuterated signals detected per tensor', weight='bold')
     ax[1][1].set_ylabel('Count', weight='bold')
 
-    ax[0][0].text(0.99, 0.9, '$\Delta$RT_std=%.3f' % RT_std, transform=ax[0][0].transAxes, ha='right')
-    ax[0][1].text(0.99, 0.9, '%%$\Delta$DT_std=%.3f' % DT_std, transform=ax[0][1].transAxes, ha='right')
+    # Legends
+    ax[0][0].text(0.99, 0.9, 'mean=%.3f' % dRT_mean, transform=ax[0][0].transAxes, ha='right')
+    ax[0][0].text(0.99, 0.8, 'median=%.3f' % dRT_median, transform=ax[0][0].transAxes, ha='right')
+    ax[0][0].text(0.99, 0.7, 'std=%.3f' % dRT_std, transform=ax[0][0].transAxes, ha='right')
+    ax[0][1].text(0.99, 0.9, 'mean=%.3f' % dDT_mean, transform=ax[0][1].transAxes, ha='right')
+    ax[0][1].text(0.99, 0.8, 'median=%.3f' % dDT_median, transform=ax[0][1].transAxes, ha='right')
+    ax[0][1].text(0.99, 0.7, 'std=%.3f' % dDT_std, transform=ax[0][1].transAxes, ha='right')
 
     plt.tight_layout()
     plt.savefig('results/plots/Stats_undeuterated.pdf', format='pdf', dpi=200, bbox_inches='tight')
