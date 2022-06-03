@@ -264,7 +264,7 @@ def generate_dataframe_ics(configfile,
     return df
 
 
-def plot_stats(df):
+def plot_undeuterated_stats(df):
     '''
     Args:
         df: dataframe containing all ICs produced during first round of factorization and used to do tensor-recentering
@@ -435,7 +435,7 @@ def main(configfile,
     df.to_json('results/plots/tensor-recenter/full_dataframe.json')
 
     # Plot
-    plot_stats(df)
+    plot_undeuterated_stats(df)
 
     cols_idotp = ['idotp', 'integrated_mz_width', 'mz_centers', 'theor_mz_dist']
     cols_ics_recenter = ['RT_weighted_avg', 'DT_weighted_avg_bins', 'DT_weighted_avg', 'rt_std', 'dt_std',
