@@ -376,7 +376,7 @@ def gen_factors_with_corr_check(input_grid,
 
     factor_output = None
 
-    while max_num_factors > 2 and last_corr_check > corr_threshold:
+    while max_num_factors >= 2 and last_corr_check > corr_threshold:
 
         max_num_factors -= 1
 
