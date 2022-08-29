@@ -439,11 +439,12 @@ def main(names_and_seqs_path,
     catdf = catdf.query("dup == False")
 
     # Adds sequences to dataframe.
+    catdf['sequence'] = None
     for i, line in name_and_seq.iterrows():
         catdf.loc[catdf['name'] == line['name'], 'sequence'] = line['sequence']
 
     # Applies index after sorting and removing duplicates.
-    catdf['idx'] = 0
+    catdf['idx'] = None
     for i in range(len(catdf)):
         catdf.loc[i, 'idx'] = i
 
@@ -459,7 +460,7 @@ def main(names_and_seqs_path,
             mean = np.mean(catdf.iloc[list(cluster)][rt_key].values)
             for line in list(cluster):
                 catdf.iat[line, 0] = catdf.iloc[line]["name"] + "_" + str(
-                    round(mean, 5))
+                    round(mean, 2))
 
     # Drops duplicate charge states, keeps lower error duplicates.
     catdf = catdf.sort_values(["name", "charge", "abs_ppm"])
