@@ -464,14 +464,12 @@ class PathOptimizer:
         self.generate_sample_paths()
 
     def filters_from_user(self):
-        """Description of function.
-
+        """Purpose: function will filter out isotopic clusters with low quality attributes as defined in configfile
         Args:
-        arg_name (type): Description of input variable.
-
+            No input args required
         Returns:
-        out_name (type): Description of any returned objects.
-
+            an updated list of timepoints (self.timepoints) and a list of prefiltered isotopic clusters
+            (self.prefiltered)
         """
         undeut_list = [ic for ic in self.prefiltered_ics[0] if round(ic.idotp,2) >= self.thresholds['idotp_cutoff']]
         filtered_atc = [
@@ -493,13 +491,13 @@ class PathOptimizer:
         self.timepoints = list(np.array(self.timepoints)[filtered_indexes])
 
     def weak_pareto_dom_filter(self):
-        """Description of function.
+        """Purpose: for each isotopic cluster with same center of mass, function will filter out isotopic clusters
+        which have all attributes worse than any other isotopic clusters in the set.
 
         Args:
-            arg_name (type): Description of input variable.
-
+             No input args required
         Returns:
-            out_name (type): Description of any returned objects.
+             an updated list isotopic clusters passing weak_parato_dom_filter
 
         """
         self.prefiltered_ics[0] = [self.undeut_grounds[charge] for charge in self.undeut_grounds]
