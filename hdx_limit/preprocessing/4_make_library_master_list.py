@@ -356,7 +356,7 @@ def main(names_and_seqs_path,
          intermediates,
          tics,
          mzml_sum_paths,
-         timepoints,
+         configfile,
          return_flag=None,
          out_path=None,
          rt_group_cutoff=0.2,
@@ -372,7 +372,7 @@ def main(names_and_seqs_path,
         undeut_mzml (string): path/to/undeuterated.mzML
         intermediates (list of strings): list of paths to imtbx intermediate files
         tics (list of strings): list of paths to all .tic files
-        timepoints (dict): dictionary with 'timepoints' key containing list of hdx timepoints in integer seconds, which are keys mapping to lists of each timepoint's replicate .mzML filenames 
+        configfile (dict): dictionary with 'timepoints' key containing list of hdx timepoints in integer seconds, which are keys mapping to lists of each timepoint's replicate .mzML filenames
         return_flag (any non-None type): option to return main output in python, for notebook context
         out_path (string): path/to/file for main output library_info.csv
         rt_group_cutoff (float): radius in LC-RT to consider signals a part of an rt-cluster
@@ -428,12 +428,9 @@ def main(names_and_seqs_path,
     catdf["dup"] = dups
     catdf = catdf.query("dup == False")
 
-
     # Adds sequences to dataframe.
-    catdf["sequence"] = [
-        list(name_and_seq.loc[name_and_seq["name"] == catdf.iloc[i]["name"]]
-             ["sequence"].values)[0] for i in range(len(catdf))
-    ]
+    for i, line in name_and_seq.iterrows():
+        catdf.loc[catdf['name'] == line['name'], 'sequence'] = line['sequence']
 
     # Applies index after sorting and removing duplicates.
     catdf["idx"] = [i for i in range(len(catdf))]
@@ -471,10 +468,10 @@ def main(names_and_seqs_path,
 
     # Creates RT_n_m names, where n is the index of the timepoint the source tic came from, and m is the filename index of the tic sourcefile in config[timepoint].
     rt_columns = []
-    for i in range(len(timepoints["timepoints"])):
+    for i in range(len(configfile["timepoints"])):
         base = "RT_%s" % i
-        if len(timepoints[timepoints["timepoints"][i]]) > 1:
-            for j in range(len(timepoints[timepoints["timepoints"][i]])):
+        if len(configfile[configfile["timepoints"][i]]) > 1:
+            for j in range(len(configfile[configfile["timepoints"][i]])):
                 rt_columns.append(base + "_%s" % j)
         else:
             rt_columns.append(base + "_0")
@@ -517,7 +514,7 @@ def main(names_and_seqs_path,
     for i in range(len(all_tp_mean_preds)):
         catdf["rt_group_mean_" + rt_columns[i]] = all_tp_mean_preds[i]
 
-    ref_mzml_path = [mzml_path for mzml_path in mzml_sum_paths if timepoints[0][0] in mzml_path][0] # Default first undeuterated replicate. 
+    ref_mzml_path = [mzml_path for mzml_path in mzml_sum_paths if configfile[0][0] in mzml_path][0] # Default first undeuterated replicate.
     ref_sum = float(open(ref_mzml_path, 'r').read())
     # Initializes normalization_factors dict with reference mzml.
     normalization_factors = {"mzml": ["_".join(ref_mzml_path.split("/")[-1].split("_")[:-1])], "sum": [ref_sum], "normalization_factor": [1]}
@@ -558,17 +555,17 @@ if __name__ == "__main__":
 
     if "snakemake" in globals():
         names_and_seqs_path = snakemake.input[0]
-        open_timepoints = yaml.load(open(snakemake.input[1], "rt"),Loader=yaml.FullLoader)
+        configfile = yaml.load(open(snakemake.input[1], "rt"),Loader=yaml.FullLoader)
         undeut_mzml = [fn for fn in snakemake.input if fn.endswith('.mzML.gz')][0]
         tics = [fn for fn in snakemake.input if '.tic' in fn]
-        intermediates = [fn for fn in snakemake.input if '_intermediate.csv' in fn]
+        intermediates = sorted([fn for fn in snakemake.input if '_intermediate.csv' in fn])
         mzml_sum_paths = [fn for fn in snakemake.input if '_sum.txt' in fn]
         out_path = snakemake.output[0]
         stretched_times_plot_outpath = snakemake.output[1]
         normalization_factors_outpath = snakemake.output[2]
         normalization_factors_plot_outpath = snakemake.output[3]
         rt_correlation_plot_outpath = snakemake.output[4]
-        use_time_warping = open_timepoints['use_time_warping']
+        use_time_warping = configfile['use_time_warping']
 
         main(names_and_seqs_path=names_and_seqs_path,
              out_path=out_path,
@@ -576,7 +573,7 @@ if __name__ == "__main__":
              intermediates=intermediates,
              tics=tics,
              mzml_sum_paths=mzml_sum_paths,
-             timepoints=open_timepoints,
+             configfile=configfile,
              stretched_times_plot_outpath=stretched_times_plot_outpath,
              normalization_factors_outpath=normalization_factors_outpath,
              normalization_factors_plot_outpath=normalization_factors_plot_outpath,
@@ -624,10 +621,10 @@ if __name__ == "__main__":
             help="used in snakemake, list of all mzml_sum.txt file paths")
         parser.add_argument(
             "-e",
-            "--timepoints",
+            "--configfile",
             required=True,
             help=
-            "path/to/.yaml file with snakemake.config timepoints and .mzML filenames by timepoint"
+            "path/to/.yaml file with snakemake.configfile and .mzML filenames by timepoint"
         )
         parser.add_argument(
             "-c",
@@ -658,16 +655,16 @@ if __name__ == "__main__":
                             help="Use time warping to clusterize data")
         args = parser.parse_args()
 
-        # Generates explicit filenames and open timepoints .yaml.
+        # Generates explicit filenames and open configfile .yaml.
         if args.mzml_dir is not None and args.undeut_match_string is not None and args.undeut_mzMLs is None:
             args.undeut_mzml = list(
                 glob.glob(args.mzml_dir + "*" + args.undeut_match_string + "*" + ".mzML"))
         if args.intermediates_dir is not None and args.intermediates is None:
-            args.intermediates = list(
-                glob.glob(args.intermediates_dir + "*intermediate.csv"))
+            args.intermediates = sorted(list(
+                glob.glob(args.intermediates_dir + "*intermediate.csv")))
         if args.tics_dir is not None and args.tics is None:
             args.tics = list(glob.glob(args.tics_dir + "*.ims.mz.tic.cpickle.zlib"))
-        open_timepoints = yaml.load(open(args.timepoints, "rt"),
+        configfile = yaml.load(open(args.configfile, "rt"),
                                     Loader=yaml.FullLoader)
 
         main(args.names_and_seqs_path,
@@ -676,7 +673,7 @@ if __name__ == "__main__":
              intermediates=args.intermediates,
              tics=args.tics,
              mzml_sum_paths=args.mzml_sum_paths,
-             timepoints=open_timepoints,
+             configfile=configfile,
              rt_group_cutoff=args.rt_group_cutoff,
              stretched_times_plot_outpath=args.stretched_times_plot_outpath,
              normalization_factors_outpath=args.normalization_factors_outpath,

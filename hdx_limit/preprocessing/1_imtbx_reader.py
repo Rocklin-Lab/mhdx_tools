@@ -809,8 +809,8 @@ def main(isotopes_path,
         kde_plot(sum_df, adjusted_mz_kde_path)
 
     # check for duplicate RT-groups THIS MAY BE USELESS TODO
-    no_duplicates, hits = find_rt_duplicates(sum_df);
-    print("No rt Duplicates: " + str(no_duplicates));
+    no_duplicates, hits = find_rt_duplicates(sum_df)
+    print("No rt Duplicates: " + str(no_duplicates))
     if not no_duplicates:
         print("DUPLICATES: " + hits)
 
@@ -834,6 +834,9 @@ if __name__ == "__main__":
         adjusted_mz_kde_path = snakemake.output[2]
         protein_calibration_outpath = snakemake.output[3]
         polyfit_deg = configfile['polyfit_deg']
+        ppm_tolerance = configfile['ppm_tolerance']
+        ppm_refilter = configfile['ppm_refilter']
+        intensity_tolerance = configfile['intensity_tolerance']
         if configfile['lockmass']:
             print('Lockmass polyfit True')
             lockmass_calibration_dict = snakemake.input[3]
@@ -858,7 +861,10 @@ if __name__ == "__main__":
              protein_polyfit=protein_polyfit,
              polyfit_deg=polyfit_deg,
              lockmass_calibration_dict=lockmass_calibration_dict,
-             runtime=runtime)
+             runtime=runtime,
+             ppm_tolerance=ppm_tolerance,
+             ppm_refilter=ppm_refilter,
+             intensity_tolerance=intensity_tolerance)
 
     else:
         # Sets expected command line arguments.
