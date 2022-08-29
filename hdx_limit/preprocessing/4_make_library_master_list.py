@@ -337,7 +337,11 @@ def rt_correlation_plot(intermediates, output_path=None):
 
     for i in range(len(combinations)):
         ax[i][0].scatter(df_rt[combinations[i][0]], df_rt[combinations[i][1]],
-                         alpha=0.6, s=50,  edgecolors='black', lw=0.7)
+                         alpha=0.5, s=50,  edgecolors='black', lw=0.7)
+
+        r, p = sp.stats.pearsonr(x=df_rt[combinations[i][0]], y=df_rt[combinations[i][1]])
+        ax[i][0].text(.01, .95, 'pearson_r={:.2f}'.format(r), transform=ax[i][0].transAxes)
+
         sns.kdeplot(data=np.array(df_rt[combinations[i][0]])-np.array(df_rt[combinations[i][1]]), ax=ax[i][1])
 
         ax[i][0].plot([i for i in range(30)], [i for i in range(30)], '--r', lw=1)
