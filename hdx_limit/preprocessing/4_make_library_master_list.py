@@ -53,6 +53,7 @@ from scipy.signal import find_peaks
 from matplotlib import pyplot as plt
 from scipy.spatial.distance import euclidean
 from hdx_limit.core.io import limit_read
+import scipy as sp
 
 matplotlib.use("Agg")
 
