@@ -445,8 +445,7 @@ def main(names_and_seqs_path,
 
     # Applies index after sorting and removing duplicates.
     catdf['idx'] = None
-    for i in range(len(catdf)):
-        catdf.loc[i, 'idx'] = i
+    catdf["idx"] = [i for i in range(len(catdf))]
 
     # Clusters RT values and renames.
     name_dict = OrderedDict.fromkeys(catdf["name"].values)
