@@ -308,6 +308,10 @@ def gen_stretched_times(tic_file_list, stretched_times_plot_outpath=None):
     return stretched_ts1_times, stretched_ts2_times
 
 def rt_correlation_plot(intermediates, output_path=None):
+
+    if len(intermediates) > 6:
+        intermediates = intermediates[:6]
+
     fs = sorted(intermediates)
 
     runs = {}
@@ -347,6 +351,8 @@ def rt_correlation_plot(intermediates, output_path=None):
 
     if output_path is not None:
         plt.savefig(output_path, format='pdf', dpi=300)
+    else:
+        plt.show()
 
     plt.close('all')
 
@@ -433,7 +439,8 @@ def main(names_and_seqs_path,
         catdf.loc[catdf['name'] == line['name'], 'sequence'] = line['sequence']
 
     # Applies index after sorting and removing duplicates.
-    catdf["idx"] = [i for i in range(len(catdf))]
+    for i in range(len(catdf)):
+        catdf.loc[i, 'idx'] = i
 
     # Clusters RT values and renames.
     name_dict = OrderedDict.fromkeys(catdf["name"].values)
