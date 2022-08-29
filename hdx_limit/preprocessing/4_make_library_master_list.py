@@ -443,6 +443,7 @@ def main(names_and_seqs_path,
         catdf.loc[catdf['name'] == line['name'], 'sequence'] = line['sequence']
 
     # Applies index after sorting and removing duplicates.
+    catdf['idx'] = 0
     for i in range(len(catdf)):
         catdf.loc[i, 'idx'] = i
 
