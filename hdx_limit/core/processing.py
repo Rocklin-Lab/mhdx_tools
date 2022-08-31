@@ -473,7 +473,7 @@ class PathOptimizer:
         out_name (type): Description of any returned objects.
 
         """
-        undeut_list = [ic for ic in self.prefiltered_ics[0] if ic.idotp > self.thresholds['idotp_cutoff']]
+        undeut_list = [ic for ic in self.prefiltered_ics[0] if round(ic.idotp,2) >= self.thresholds['idotp_cutoff']]
         filtered_atc = [
             [ic for ic in ics if (ic.baseline_peak_error <= self.thresholds['baseline_peak_error'] and
                                   ic.dt_ground_err <= self.thresholds['dt_ground_err'] and
