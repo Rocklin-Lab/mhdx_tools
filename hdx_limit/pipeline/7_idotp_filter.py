@@ -255,7 +255,7 @@ def generate_dataframe_ics(configfile,
             ax[j + 1].set_ylabel('RT')
 
         name_recentered = '_'.join(name.split('_')[:-1]) + '_' + str(
-            round(df[(df['name'] == name)]['RT_weighted_avg'].values[0], 5))
+            round(df[(df['name'] == name)]['RT_weighted_avg'].values[0], 2))
 
         plt.tight_layout()
         plt.savefig('results/plots/tensor-recenter/' + name_recentered + '.pdf', format='pdf', dpi=200)
