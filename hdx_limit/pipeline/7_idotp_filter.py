@@ -370,7 +370,7 @@ def main(configfile,
         df[(df['name'] == name) & (df['charge'] == charge)].sort_values(by='idotp', ascending=False)[
             cols_ics_recenter].values[0]
         my_row['name_recentered'] = '_'.join(name.split('_')[:-1]) + '_' + str(
-            round(my_row['RT_weighted_avg'].values[0], 5))
+            round(my_row['RT_weighted_avg'].values[0], 2))
         if not my_row['DT_weighted_avg'].values[0] < 0.1:
             out_df = pd.concat([out_df, my_row], ignore_index=True)
 
