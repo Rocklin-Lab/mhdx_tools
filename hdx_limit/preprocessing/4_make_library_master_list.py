@@ -440,12 +440,12 @@ def main(names_and_seqs_path,
     catdf = catdf.query("dup == False")
 
     # Adds sequences to dataframe.
-    catdf.loc[:]['sequence'] = None
+    catdf.loc[:, 'sequence'] = None
     for i, line in name_and_seq.iterrows():
         catdf.loc[catdf['name'] == line['name'], 'sequence'] = line['sequence']
 
     # Applies index after sorting and removing duplicates.
-    catdf.loc[:]['idx'] = [i for i in range(len(catdf))]
+    catdf.loc[:, 'idx'] = [i for i in range(len(catdf))]
 
     # Clusters RT values and renames.
     name_dict = OrderedDict.fromkeys(catdf["name"].values)
