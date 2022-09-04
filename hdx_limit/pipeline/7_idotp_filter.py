@@ -68,16 +68,16 @@ def check_drift_labels(drift_labels, min_length=3, low_dt_value=0.2):
 
 def generate_dataframe_ics(configfile,
                            all_ics_inputs,
-                           idotp_cutoff=0.99):
+                           idotp_cutoff=0.98):
     # Create dictionary containing all ics passing idotp_cutoff
     protein_ics = {}
     for f in all_ics_inputs:
         if f.split('/')[-2:-1][0] not in protein_ics:
-            ics = [ic for ic in limit_read(f) if ic.idotp >= idotp_cutoff]
+            ics = [ic for ic in limit_read(f) if round(ic.idotp,2) >= idotp_cutoff]
             if len(ics) > 0:
                 protein_ics[f.split('/')[-2:-1][0]] = [ics]
         else:
-            ics = [ic for ic in limit_read(f) if ic.idotp >= idotp_cutoff]
+            ics = [ic for ic in limit_read(f) if round(ic.idotp,2) >= idotp_cutoff]
             if len(ics) > 0:
                 protein_ics[f.split('/')[-2:-1][0]].append(ics)
 
@@ -86,7 +86,6 @@ def generate_dataframe_ics(configfile,
         protein_ics[key] = [i for sublist in protein_ics[key] for i in sublist]
 
     # Extract values for dt, rt, auc, charge and file index from each IC and store in a dataframe
-
     data = []
     for key in protein_ics:
         for ic in protein_ics[key]:
@@ -105,6 +104,10 @@ def generate_dataframe_ics(configfile,
 
     df = pd.DataFrame(data, columns=['name', 'ic', 'rt', 'dt', 'auc', 'charge', 'file_index', 'idotp'])
     df['auc_log'] = 2 * np.log10(df['auc'])
+
+    # Remove ics with bad RT/DT factorization (high gaussian_fit_rmses)
+    df[(df['rt_gaussian_rmse'] < configfile["RT_gaussian_rmse_threshold"]) &
+       (df['dt_gaussian_rmse'] < configfile["DT_gaussian_rmse_threshold"])].reset_index(drop=True, inplace=True)
 
     # Find DT weighted average
     for name, charge in set([(n, c) for (n, c) in df[['name', 'charge']].values]):
@@ -183,10 +186,14 @@ def generate_dataframe_ics(configfile,
     # 5_extract_timepoint_tensor code
     df['DT_weighted_avg_bins'] = df['DT_weighted_avg'] * 200.0 / configfile['dt_max']
 
+    return df
+
+def plot_rtdt_recenter(df):
+
     # Scatter plot for each protein
     # Create folder to save pdf files
-    if not os.path.isdir('results/plots/tensor-recenter/'):
-        os.makedirs('results/plots/tensor-recenter/')
+    if not os.path.isdir('results/plots/7_idotp_filter/tensor-recenter/'):
+        os.makedirs('results/plots/7_idotp_filter/tensor-recenter/')
 
     for name in list(set(df['name'].values)):
 
@@ -261,8 +268,6 @@ def generate_dataframe_ics(configfile,
         plt.savefig('results/plots/tensor-recenter/' + name_recentered + '.pdf', format='pdf', dpi=200)
         plt.close('all')
 
-    return df
-
 
 def plot_deviations(df):
 
@@ -302,7 +307,7 @@ def plot_deviations(df):
     ax[3][1].set_xlabel('RT_std')
 
     plt.tight_layout()
-    plt.savefig('results/plots/deviations_UN.pdf', format='pdf', dpi=200, bbox_inches='tight')
+    plt.savefig('results/plots/7_idotp_filter/deviations_UN.pdf', format='pdf', dpi=200, bbox_inches='tight')
     plt.close('all')
 
 
@@ -328,7 +333,7 @@ def main(configfile,
          library_info_out_path=None,
          plot_out_path=None,
          return_flag=False,
-         idotp_cutoff=0.99,
+         idotp_cutoff=0.98,
          remove_duplicates=False):
     """Reads all library_info index idotp_check.csv files and returns or saves a list of indices with idotp >= idotp_cutoff.
 
@@ -355,6 +360,9 @@ def main(configfile,
 
     # Save full dataframe
     df.to_json('results/plots/tensor-recenter/full_dataframe.json')
+
+    if configfile["plot_rtdt_recenter"]:
+        plot_rtdt_recenter(df)
 
     cols_idotp = ['idotp', 'integrated_mz_width', 'mz_centers', 'theor_mz_dist']
     cols_ics_recenter = ['RT_weighted_avg', 'DT_weighted_avg_bins', 'DT_weighted_avg', 'rt_std', 'dt_std',
