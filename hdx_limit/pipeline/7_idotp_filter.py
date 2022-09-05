@@ -191,12 +191,19 @@ def generate_dataframe_ics(configfile,
 
     return df
 
-def plot_rtdt_recenter(df):
+def plot_rtdt_recenter(df,
+                       output_folder=None):
 
     # Scatter plot for each protein
     # Create folder to save pdf files
-    if not os.path.isdir('results/plots/7_idotp_filter/tensor-recenter/'):
-        os.makedirs('results/plots/7_idotp_filter/tensor-recenter/')
+    if output_folder is None:
+        if not os.path.isdir('results/plots/7_idotp_filter/tensor-recenter/'):
+            os.makedirs('results/plots/7_idotp_filter/tensor-recenter')
+        output_folder = 'results/plots/7_idotp_filter/tensor-recenter'
+    else:
+        if not os.path.isdir(output_folder):
+            os.makedirs(output_folder)
+
 
     for name in list(set(df['name'].values)):
 
@@ -268,11 +275,21 @@ def plot_rtdt_recenter(df):
             round(df[(df['name'] == name)]['RT_weighted_avg'].values[0], 2))
 
         plt.tight_layout()
-        plt.savefig('results/plots/tensor-recenter/' + name_recentered + '.pdf', format='pdf', dpi=200)
+        plt.savefig(output_folder + '/' + name_recentered + '.pdf', format='pdf', dpi=200)
         plt.close('all')
 
 
-def plot_deviations(df):
+def plot_deviations(df,
+                    output_path=None):
+
+    if output_path is None:
+        if not os.path.isdir('results/plots/7_idotp_filter/'):
+            os.makedirs('results/plots/7_idotp_filter/')
+        output_path = 'results/plots/7_idotp_filter/deviations_UN.pdf'
+    else:
+        if not os.path.isdir( os.path.dirname(output_path)):
+            os.makedirs(os.path.dirname(output_path))
+
 
     sns.set_context('talk')
 
@@ -310,7 +327,7 @@ def plot_deviations(df):
     ax[3][1].set_xlabel('RT_std')
 
     plt.tight_layout()
-    plt.savefig('results/plots/7_idotp_filter/deviations_UN.pdf', format='pdf', dpi=200, bbox_inches='tight')
+    plt.savefig(output_path, format='pdf', dpi=200, bbox_inches='tight')
     plt.close('all')
 
 
@@ -363,10 +380,11 @@ def main(configfile,
                                 idotp_cutoff=configfile["idotp_cutoff"])
 
     # Save full dataframe
-    if os.path.isdir('results/plots/7_idotp_filter/'):
+    if not os.path.isdir('results/plots/7_idotp_filter/'):
         os.makedirs('results/plots/7_idotp_filter/')
     limit_write(df, 'results/plots/7_idotp_filter/full_dataframe.cpickle.zlib')
 
+    # Generate RT/DT recentering plots
     if configfile["plot_rtdt_recenter"]:
         plot_rtdt_recenter(df)
 
@@ -405,7 +423,7 @@ def main(configfile,
         for f in all_idotp_inputs:
             idotps.append(pd.read_json(f)['idotp'].values[0])
         sns.displot(idotps)
-        plt.axvline(idotp_cutoff, 0, 1)
+        plt.axvline(configfile["idotp_cutoff"], 0, 1)
         plt.savefig(plot_out_path)
         plt.close('all')
 
