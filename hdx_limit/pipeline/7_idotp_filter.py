@@ -106,8 +106,8 @@ def generate_dataframe_ics(configfile,
     df['auc_log'] = 2 * np.log10(df['auc'])
 
     # Remove ics with bad RT/DT factorization (high gaussian_fit_rmses)
-    df[(df['rt_gaussian_rmse'] < configfile["RT_gaussian_rmse_threshold"]) &
-       (df['dt_gaussian_rmse'] < configfile["DT_gaussian_rmse_threshold"])].reset_index(drop=True, inplace=True)
+    df = df[(df['rt_gaussian_rmse'] < configfile["RT_gaussian_rmse_threshold"]) &
+            (df['dt_gaussian_rmse'] < configfile["DT_gaussian_rmse_threshold"])].reset_index(drop=True)
 
     # Find DT weighted average
     for name, charge in set([(n, c) for (n, c) in df[['name', 'charge']].values]):
@@ -275,11 +275,11 @@ def plot_deviations(df):
 
     fig, ax = plt.subplots(4, 2, figsize=(10, 12), dpi=200)
 
-    sns.histplot(df['n_UN'].values, ax=ax[0][0])
+    sns.histplot(df['n_UN'].values, ax=ax[0][0], discrete=True)
     sns.histplot(df['n_UN'].values, ax=ax[0][0], kde=True)
     ax[0][0].set_xlabel('n_UN')
 
-    sns.histplot(df['n_signals'].values, ax=ax[0][1])
+    sns.histplot(df['n_signals'].values, ax=ax[0][1], discrete=True)
     sns.histplot(df['n_signals'].values, ax=ax[0][1], kde=True)
     ax[0][1].set_xlabel('n_signals')
 
