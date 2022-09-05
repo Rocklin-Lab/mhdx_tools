@@ -333,9 +333,7 @@ def main(configfile,
          all_ics_inputs,
          library_info_out_path=None,
          plot_out_path=None,
-         return_flag=False,
-         idotp_cutoff=0.98,
-         remove_duplicates=False):
+         return_flag=False):
     """Reads all library_info index idotp_check.csv files and returns or saves a list of indices with idotp >= idotp_cutoff.
 
     Args:
@@ -357,7 +355,7 @@ def main(configfile,
 
     df = generate_dataframe_ics(configfile=configfile,
                                 all_ics_inputs=all_ics_inputs,
-                                idotp_cutoff=idotp_cutoff)
+                                idotp_cutoff=configfile["idotp_cutoff"])
 
     # Save full dataframe
     if os.path.isdir('results/plots/7_idotp_filter/'):
@@ -385,8 +383,10 @@ def main(configfile,
         if not my_row['DT_weighted_avg'].values[0] < 0.1:
             out_df = pd.concat([out_df, my_row], ignore_index=True)
 
-    if remove_duplicates:
-        out_df = remove_duplicates_from_df(out_df, rt_threshold=0.2, dt_threshold=0.05)
+    if configfile["remove_duplicates"]:
+        out_df = remove_duplicates_from_df(out_df,
+                                           rt_threshold=configfile["rt_threshold"],
+                                           dt_threshold=configfile["dt_threshold"])
 
     if library_info_out_path is not None:
         out_df.drop_duplicates(subset=['name_recentered', 'charge'], ignore_index=True, inplace=True)
@@ -427,8 +427,7 @@ if __name__ == "__main__":
              all_idotp_inputs=all_idotp_inputs,
              all_ics_inputs=all_ics_inputs,
              library_info_out_path=library_info_out_path,
-             plot_out_path=plot_out_path,
-             remove_duplicates=configfile['remove_duplicates'])
+             plot_out_path=plot_out_path)
     else:
         # CLI context, set expected arguments with argparse module.
         parser = argparse.ArgumentParser(
@@ -484,5 +483,4 @@ if __name__ == "__main__":
              all_ics_inputs=args.all_ics_inputs,
              library_info_out_path = args.library_info_out_path,
              plot_out_path=args.plot_out_path,
-             idotp_cutoff=args.idotp_cutoff,
-             remove_duplicates=args.remove_duplicates)
+             idotp_cutoff=args.idotp_cutoff)
