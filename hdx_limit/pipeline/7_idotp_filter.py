@@ -92,6 +92,8 @@ def generate_dataframe_ics(configfile,
             if check_drift_labels(drift_labels=ic.drift_labels):
                 dt = ic.drift_labels[0] + (ic.drift_labels[1] - ic.drift_labels[0]) * ic.dt_coms
                 rt = ic.retention_labels[0] + (ic.retention_labels[1] - ic.retention_labels[0]) * ic.rt_com
+                rt_gaussian_rmse = ic.rt_gaussian_rmse
+                dt_gaussian_rmse = ic.dt_gaussian_rmse
                 if dt < configfile['dt_max']:
                     if rt < configfile['rt_max']:
                         auc = ic.ic_auc_with_gauss_extrapol
@@ -100,9 +102,10 @@ def generate_dataframe_ics(configfile,
                             ic.info_tuple[0].split('/')[-1].split('.')[-5:-4][0].split('_')[-4:]) in i][0])
                         idotp = ic.idotp
 
-                        data.append([key, ic, rt, dt, auc, charge, file_index, idotp])
+                        data.append([key, ic, rt, dt, rt_gaussian_rmse, dt_gaussian_rmse, auc, charge, file_index, idotp])
 
-    df = pd.DataFrame(data, columns=['name', 'ic', 'rt', 'dt', 'auc', 'charge', 'file_index', 'idotp'])
+    df = pd.DataFrame(data, columns=['name', 'ic', 'rt', 'dt', 'rt_gaussian_rmse', 'dt_gaussian_rmse', 'auc', 'charge',
+                                     'file_index', 'idotp'])
     df['auc_log'] = 2 * np.log10(df['auc'])
 
     # Remove ics with bad RT/DT factorization (high gaussian_fit_rmses)
@@ -324,6 +327,8 @@ def remove_duplicates_from_df(df, rt_threshold=0.2, dt_threshold=0.05):
                           'DT_weighted_avg'])]) == 0:
             new_df = pd.concat([new_df, pd.DataFrame([line])])
 
+    new_df.drop_duplicates(subset=['name_recentered', 'charge'], ignore_index=True, inplace=True)
+
     return new_df
 
 
@@ -367,7 +372,8 @@ def main(configfile,
 
     cols_idotp = ['idotp', 'integrated_mz_width', 'mz_centers', 'theor_mz_dist']
     cols_ics_recenter = ['RT_weighted_avg', 'DT_weighted_avg_bins', 'DT_weighted_avg', 'rt_std', 'dt_std',
-                         'rt_weighted_std', 'dt_weighted_std', 'n_signals', 'n_UN']
+                         'rt_weighted_std', 'dt_weighted_std', 'rt_gaussian_rmse', 'dt_gaussian_rmse',
+                         'n_signals', 'n_UN']
 
     out_df = pd.DataFrame(columns=list(library_info.columns) + cols_idotp + cols_ics_recenter + ['name_recentered'])
 
@@ -376,7 +382,9 @@ def main(configfile,
         my_row = library_info.loc[(library_info["name"] == name) & (library_info["charge"] == charge)].copy()
         my_row[cols_idotp] = open_idotp_f[cols_idotp].values
         my_row[cols_ics_recenter] = \
-        df[(df['name'] == name) & (df['charge'] == charge)].sort_values(by='idotp', ascending=False)[
+        df[(df['name'] == name) & (df['charge'] == charge)].sort_values(by=['idotp', 'rt_gaussian_rmse',
+                                                                            'dt_gaussian_rmse'],
+                                                                        ascending=[False, True, True])[
             cols_ics_recenter].values[0]
         my_row['name_recentered'] = '_'.join(name.split('_')[:-1]) + '_' + str(
             round(my_row['RT_weighted_avg'].values[0], 2))
