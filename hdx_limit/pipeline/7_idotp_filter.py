@@ -41,7 +41,7 @@ import numpy as np
 import yaml
 import os
 import matplotlib.pyplot as plt
-from hdx_limit.core.io import limit_read
+from hdx_limit.core.io import limit_read, limit_write
 mpl.use("Agg")
 
 
@@ -314,6 +314,7 @@ def plot_deviations(df):
 def remove_duplicates_from_df(df, rt_threshold=0.2, dt_threshold=0.05):
     # rt_threshold: delta rt in minutes
     # dt_threshold: delta dt in as a fraction of weighted average value
+
     new_df = pd.DataFrame(columns=df.columns)
 
     for i, line in df.sort_values(by=['n_UN', 'ab_cluster_total'], ascending=[False, False]).iterrows():
@@ -359,7 +360,9 @@ def main(configfile,
                                 idotp_cutoff=idotp_cutoff)
 
     # Save full dataframe
-    df.to_json('results/plots/tensor-recenter/full_dataframe.json')
+    if os.path.isdir('results/plots/7_idotp_filter/'):
+        os.makedirs('results/plots/7_idotp_filter/')
+    limit_write(df, 'results/plots/7_idotp_filter/full_dataframe.cpickle.zlib')
 
     if configfile["plot_rtdt_recenter"]:
         plot_rtdt_recenter(df)
