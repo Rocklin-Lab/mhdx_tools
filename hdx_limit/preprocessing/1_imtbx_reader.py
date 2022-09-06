@@ -341,7 +341,6 @@ def gen_mz_error_calib_output(
     int_tol=1e4,
     cluster_corr_tol=0.99,
     mass_to_correct="mz_mono",
-
 ):
     """Generate calibration using the dataframe from imtbx.
 
@@ -730,7 +729,7 @@ def main(isotopes_path,
         if protein_polyfit and protein_calibration_outpath is not None:
             calib_dict_protein_polyfit = gen_mz_error_calib_output(
                 testq=testq,
-                allseq=allseq,
+                allseq=allseq[~allseq['name'].str.contains('decoy')],
                 calib_pk_fpath=protein_calibration_outpath,
                 polyfit_degree=polyfit_deg,
                 ppm_tol=ppm_tolerance,
@@ -743,7 +742,7 @@ def main(isotopes_path,
         elif protein_calibration_outpath is not None:
             gen_mz_error_calib_output(
                 testq=testq,
-                allseq=allseq,
+                allseq=allseq[~allseq['name'].str.contains('decoy')],
                 calib_pk_fpath=protein_calibration_outpath,
                 polyfit_degree=polyfit_deg,
                 ppm_tol=ppm_tolerance,
@@ -753,7 +752,7 @@ def main(isotopes_path,
     elif protein_polyfit and protein_calibration_outpath is not None:
         calib_dict_protein_polyfit = gen_mz_error_calib_output(
                 testq=testq,
-                allseq=allseq,
+                allseq=allseq[~allseq['name'].str.contains('decoy')],
                 calib_pk_fpath=protein_calibration_outpath,
                 polyfit_degree=polyfit_deg,
                 ppm_tol=ppm_tolerance,
@@ -767,7 +766,7 @@ def main(isotopes_path,
         if protein_calibration_outpath is not None:
             gen_mz_error_calib_output(
                 testq=testq,
-                allseq=allseq,
+                allseq=allseq[~allseq['name'].str.contains('decoy')],
                 calib_pk_fpath=protein_calibration_outpath,
                 polyfit_degree=polyfit_deg,
                 ppm_tol=ppm_tolerance,
