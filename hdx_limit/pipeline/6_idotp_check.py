@@ -471,7 +471,7 @@ if __name__ == "__main__":
         ic_rel_ht_threshold = config_dict["ic_rel_height_threshold"]
 
         normalization_factors = pd.read_csv(args.normalization_factors)
-        my_mzml = [filename for timepoint in config_dict["timepoints"] for filename in config_dict[timepoint] if filename in undeut_tensor_path_list[0]][0]
+        my_mzml = [filename for timepoint in config_dict["timepoints"] for filename in config_dict[timepoint] if filename in args.undeut_tensor_path_list[0]][0]
         normalization_factor = normalization_factors.loc[normalization_factors["mzml"]==my_mzml]["normalization_factor"].values
 
         main(library_info_path=args.library_info_path,
