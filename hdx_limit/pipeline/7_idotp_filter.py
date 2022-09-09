@@ -153,7 +153,7 @@ if __name__ == "__main__":
         library_info_out_path = snakemake.output[0]
         idotp_plot_out_path = snakemake.output[1]
         UN_deviations_plot_output_path = snakemake.output[2]
-
+        fdr_plot_output_path = snakemake.output[3]
 
         configfile = yaml.load(open(configfile_path, 'rb'), Loader=yaml.Loader)
 
@@ -162,7 +162,9 @@ if __name__ == "__main__":
              all_idotp_inputs=all_idotp_inputs,
              all_ics_inputs=all_ics_inputs,
              library_info_out_path=library_info_out_path,
-             idotp_plot_out_path=idotp_plot_out_path)
+             idotp_plot_out_path=idotp_plot_out_path,
+             UN_deviations_plot_output_path=UN_deviations_plot_output_path,
+             fdr_plot_output_path=fdr_plot_output_path)
     else:
         # CLI context, set expected arguments with argparse module.
         parser = argparse.ArgumentParser(
@@ -186,6 +188,12 @@ if __name__ == "__main__":
         parser.add_argument("--p",
                             "--idotp_plot_out_path",
                             help="path/to/idotp_distribution.png")
+        parser.add_argument("-u",
+                            "--UN_deviations_plot_output_path",
+                            help="path/to/undeuterated_deviations")
+        parser.add_argument("-f",
+                            "--fdr_plot_output_path",
+                            help="path/to/fdr_plot")
         parser.add_argument(
             "-c",
             "--idotp_cutoff",
@@ -217,5 +225,7 @@ if __name__ == "__main__":
              all_idotp_inputs=args.all_idotp_inputs,
              all_ics_inputs=args.all_ics_inputs,
              library_info_out_path = args.library_info_out_path,
-             idotp_plot_out_path=args.idotp_plot_out_path
+             idotp_plot_out_path=args.idotp_plot_out_path,
+             fdr_plot_output_path=args.fdr_plot_output_path,
+             UN_deviations_plot_output_path=args.UN_deviations_plot_output_path
              )
