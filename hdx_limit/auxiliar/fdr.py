@@ -7,11 +7,11 @@ import matplotlib.pyplot as plt
 
 def fdr_sequences(df):
 
-    '''
+    """
     Estimates target decoy fdr based on unique sequences identified.
     Expects initial set to have TWICE the number of expected True Positive Targets
     If no identification is found, returns zero
-    '''
+    """
 
     decoy_hits = math.ceil(len(set(df[df['name'].str.contains('decoy')]['sequence'].values)) / 2)
     hits = len(set(df[~df['name'].str.contains('decoy')]['sequence'].values))
@@ -27,11 +27,11 @@ def fdr_sequences(df):
 
 def fdr_signals(df):
 
-    '''
+    """
     Estimates target decoy fdr based on all signals identified.
     Expects initial set to have TWICE the number of expected True Positive Targets
     If no identification is found, returns zero
-    '''
+    """
 
     decoy_hits = math.ceil(len(df[df['name'].str.contains('decoy')]) / 2)
     hits = len(df[~df['name'].str.contains('decoy')])
@@ -147,10 +147,10 @@ def get_fdr_df(df,
 
         l.append([
             value,
-            FDR_sequences(df_tmp),
+            fdr_sequences(df_tmp),
             len(set(df_tmp[df_tmp['name'].str.contains('decoy')]['sequence'].values)),
             len(set(df_tmp[~df_tmp['name'].str.contains('decoy')]['sequence'].values)),
-            FDR_signals(df_tmp),
+            fdr_signals(df_tmp),
             len(df_tmp[df_tmp['name'].str.contains('decoy')]['sequence'].values),
             len(df_tmp[~df_tmp['name'].str.contains('decoy')]['sequence'].values),
             len(df_tmp)
