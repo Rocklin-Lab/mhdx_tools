@@ -245,7 +245,7 @@ def plot_fdr_stats(df,
                       step=step_hist,
                       discrete=discrete)
 
-        plot_FDR_scatter(data=df_FDR, x=key, y1='n_TP_signals', y2='FDR_signals', x_label=label, y_label_1='# signals',
+        plot_fdr_scatter(data=df_FDR, x=key, y1='n_TP_signals', y2='FDR_signals', x_label=label, y_label_1='# signals',
                          y_label_2='% FDR', ax=ax[i][3])
 
     plt.tight_layout()
