@@ -46,6 +46,7 @@ mpl.use("Agg")
 from hdx_limit.core.io import limit_read, limit_write
 from hdx_limit.auxiliar.plots import plot_rtdt_recenter, plot_deviations
 from hdx_limit.auxiliar.filters import generate_dataframe_ics, remove_duplicates_from_df
+from hdx_limit.auxiliar.fdr import plot_fdr_stats
 
 def main(configfile,
          library_info_path,
@@ -54,6 +55,7 @@ def main(configfile,
          library_info_out_path=None,
          idotp_plot_out_path=None,
          UN_deviations_plot_output_path=None,
+         fdr_plot_output_path=None,
          return_flag=False):
     """Reads all library_info index idotp_check.csv files and returns or saves a list of indices with idotp >= idotp_cutoff.
 
@@ -103,6 +105,15 @@ def main(configfile,
             round(my_row['RT_weighted_avg'].values[0], 2))
         if not my_row['DT_weighted_avg'].values[0] < 0.1:
             out_df = pd.concat([out_df, my_row], ignore_index=True)
+
+    for name in set(df['name_recentered']):
+        df.loc[df['name_recentered'] == name, 'n_charges'] = len(df[df['name_recentered'] == name])
+    df['decoy'] = df['name_recentered'].str.contains('decoy')
+    df['log2_ab_cluster_total'] = np.log2(df['ab_cluster_total'].values.astype('float32'))
+
+    if fdr_plot_output_path is not None:
+        plot_fdr_stats(df,
+                       output_path=fdr_plot_output_path)
 
     # Remove duplicates based on RT and DT proximity
     if configfile["remove_duplicates"]:
