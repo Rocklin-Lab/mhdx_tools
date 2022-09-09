@@ -106,10 +106,10 @@ def main(configfile,
         if not my_row['DT_weighted_avg'].values[0] < 0.1:
             out_df = pd.concat([out_df, my_row], ignore_index=True)
 
-    for name in set(df['name_recentered']):
-        df.loc[df['name_recentered'] == name, 'n_charges'] = len(df[df['name_recentered'] == name])
-    df['decoy'] = df['name_recentered'].str.contains('decoy')
-    df['log2_ab_cluster_total'] = np.log2(df['ab_cluster_total'].values.astype('float32'))
+    for name in set(out_df['name_recentered']):
+        out_df.loc[df['name_recentered'] == name, 'n_charges'] = len(out_df[out_df['name_recentered'] == name])
+    out_df['decoy'] = out_df['name_recentered'].str.contains('decoy')
+    out_df['log2_ab_cluster_total'] = np.log2(out_df['ab_cluster_total'].values.astype('float32'))
 
     if fdr_plot_output_path is not None:
         plot_fdr_stats(df,
