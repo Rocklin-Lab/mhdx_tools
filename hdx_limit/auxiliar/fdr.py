@@ -7,6 +7,12 @@ import matplotlib.pyplot as plt
 
 def fdr_sequences(df):
 
+    '''
+    Estimates target decoy fdr based on unique sequences identified.
+    Expects initial set to have TWICE the number of expected True Positive Targets
+    If no identification is found, returns zero
+    '''
+
     decoy_hits = math.ceil(len(set(df[df['name'].str.contains('decoy')]['sequence'].values)) / 2)
     hits = len(set(df[~df['name'].str.contains('decoy')]['sequence'].values))
 
@@ -20,6 +26,13 @@ def fdr_sequences(df):
 
 
 def fdr_signals(df):
+
+    '''
+    Estimates target decoy fdr based on all signals identified.
+    Expects initial set to have TWICE the number of expected True Positive Targets
+    If no identification is found, returns zero
+    '''
+
     decoy_hits = math.ceil(len(df[df['name'].str.contains('decoy')]) / 2)
     hits = len(df[~df['name'].str.contains('decoy')])
 
@@ -41,6 +54,17 @@ def plot_fdr_scatter(data,
                      y_label_2,
                      ax):
 
+    """
+    Generate FDR scatter plot
+    x: independent variable
+    y1: key for either number of sequences or number of signals
+    y2: FDR
+    x_label: label for x axis
+    y_label_1: label for left y axis
+    y_label_2: label for right y axis
+    ax: plot position
+    """
+
     sns.scatterplot(data=data, x=x, y=y1, color='Blue', edgecolor='Black', ax=ax)
 
     ax.set_ylabel(y_label_1, color='Blue')
@@ -60,10 +84,21 @@ def plot_fdr_hist(df,
                   x,
                   ax,
                   label=None,
-                  step=None,
                   discrete=True,
                   xmin=None,
-                  xmax=None):
+                  xmax=None,
+                  step=None):
+    """
+    Generate histograms for variable of interest.
+    x: independent variable
+    label: x label
+    discrete: if true return bin=1 histogram
+    xmin: min x value
+    xmax: max x value
+    step: x ticks interval
+    ax: plot position
+    """
+
     sns.histplot(data=df, x=x,
                  hue='decoy', multiple="dodge", discrete=discrete, palette='bright', ax=ax, legend=False)
 
@@ -85,6 +120,19 @@ def get_fdr_df(df,
                max_value,
                step=None,
                greater=True):
+    """
+    generate fdr dataframe
+    df: dataframe
+    key: which independent variable will be evaluated
+    min_value: min value evaluated
+    max_value: max value evaluated
+    step: evaluation interval
+    grater: Keep entries greater than value evaluated?
+
+    returns dataframe with FDR for unique sequences and all signals
+    """
+
+
     l = []
 
     if step is None:
