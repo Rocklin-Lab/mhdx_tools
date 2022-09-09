@@ -130,7 +130,7 @@ def main(configfile,
             idotps.append(pd.read_json(f)['idotp'].values[0])
         sns.displot(idotps)
         plt.axvline(configfile["idotp_cutoff"], 0, 1)
-        plt.savefig(idotp_plot_out_path)
+        plt.savefig(idotp_plot_out_path, formart='png', dpi=150)
         plt.close('all')
 
     # Plot deviation plots. Add this to a proper output in the snakemake scope later
