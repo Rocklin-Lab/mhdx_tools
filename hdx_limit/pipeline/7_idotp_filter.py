@@ -107,7 +107,7 @@ def main(configfile,
             out_df = pd.concat([out_df, my_row], ignore_index=True)
 
     for name in set(out_df['name_recentered']):
-        out_df.loc[df['name_recentered'] == name, 'n_charges'] = len(out_df[out_df['name_recentered'] == name])
+        out_df.loc[out_df['name_recentered'] == name, 'n_charges'] = len(out_df[out_df['name_recentered'] == name])
     out_df['decoy'] = out_df['name_recentered'].str.contains('decoy')
     out_df['log2_ab_cluster_total'] = np.log2(out_df['ab_cluster_total'].values.astype('float32'))
 
