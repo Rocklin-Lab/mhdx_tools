@@ -94,6 +94,7 @@ def plot_rtdt_recenter(df,
 
 
 def plot_deviations(df,
+                    configfile,
                     output_path=None,
                     dpi=200):
 

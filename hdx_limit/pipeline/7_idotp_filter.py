@@ -136,6 +136,7 @@ def main(configfile,
     # Plot deviation plots. Add this to a proper output in the snakemake scope later
     if UN_deviations_plot_output_path is not None:
         plot_deviations(out_df,
+                        configfile=configfile,
                         output_path=UN_deviations_plot_output_path)
 
     if return_flag:
