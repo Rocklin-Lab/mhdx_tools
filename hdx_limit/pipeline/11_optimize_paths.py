@@ -186,7 +186,7 @@ def main(library_info_path,
     if prefiltered_ics_out_path is not None:
         limit_write(p1.prefiltered_ics, prefiltered_ics_out_path)
 
-    if len(p1.prefiltered_ics) >= configfile["thresholds"]["min_timepoints"]:
+    if (len(p1.prefiltered_ics) >= configfile["thresholds"]["min_timepoints"]) and (len(p1.prefiltered_ics[0]) > 0):
 
         # Checks if arguments require monobody scoring run.
         if (any(arg is not None for arg in monobody_path_arguments)) or (monobody_return_flag is not False):
@@ -264,7 +264,9 @@ def main(library_info_path,
                 write_baseline_integrated_mz_to_csv(p1.winner, multi_winner_csv_out_path)
 
     else:
-        print('Not enough timepoints with ics to evaluate path. Creating empty files')
+        print('Not enough timepoints with ics to evaluate path.'
+              'Or no tp=0 with idotp greater than thershold found'
+              'Creating empty files')
         if mono_path_plot_out_path is not None:
             Path(mono_path_plot_out_path).touch()
         if mono_html_plot_out_path is not None:
