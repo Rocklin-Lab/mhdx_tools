@@ -83,7 +83,9 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, output=None):
     df.dropna(inplace=True)
 
     # Remove unreasonable ics based on large AUC extrapolations
+    # And small AUCs
     df = df[df['auc'] < 1e10]
+    df = df[df['auc'] > 1e1]
 
     # Compute dot product between winner ic and all other ics from that timepoint
     df['ic_winner_corr'] = -1
@@ -149,7 +151,8 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, output=None):
     return df
 
 
-def ajf_plot(df, winner, tps, output_path=None):
+def ajf_plot(df, winner, tps, output_path=None, dpi=300):
+
     ic_winner_corr_cutoff = 0.95
     pal = sns.color_palette('bright')
     n_cols = 6 * len(set(df.charge)) + 6
@@ -562,7 +565,7 @@ def ajf_plot(df, winner, tps, output_path=None):
                         spine.set_linewidth(3)
 
     if output_path is not None:
-        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        plt.savefig(output_path, dpi=dpi, bbox_inches='tight')
         plt.close('all')
     else:
         plt.show()
@@ -578,8 +581,10 @@ def plot_ajf_(configfile, atc, prefiltered_ics, winner, output_path, df_output_p
         exit()
 
     df = create_df_and_clusterize(atc, prefiltered_ics, winner, tps=configfile['timepoints'])
+
     if df_output_path is not None:
         df.to_pickle(df_output_path)
+
     ajf_plot(df, winner=winner, tps=configfile['timepoints'], output_path=output_path)
 
 
