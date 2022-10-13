@@ -173,8 +173,7 @@ def main(library_info_path,
     atc = limit_read(all_timepoints_clusters_input_path)
 
     if len([ic for ic in atc[0] if ic.idotp > configfile["thresholds"]["idotp_cutoff"]]) == 0:
-        print('No tp=0 with idotp greater than thershold found'
-              'Creating empty files')
+        print('No tp=0 with idotp greater than thershold found. Creating empty files...')
         check_for_create_files(monobody_path_arguments)
         check_for_create_files(multibody_path_arguments)
         check_for_create_files([prefiltered_ics_out_path])
@@ -200,8 +199,7 @@ def main(library_info_path,
         limit_write(p1.prefiltered_ics, prefiltered_ics_out_path)
 
     if len(p1.prefiltered_ics) < configfile["thresholds"]["min_timepoints"]:
-        print('Not enough timepoints with ics to evaluate path.'
-              'Creating empty files')
+        print('Not enough timepoints with ics to evaluate path. Creating empty files...')
         check_for_create_files(monobody_path_arguments)
         check_for_create_files(multibody_path_arguments)
         sys.exit()
