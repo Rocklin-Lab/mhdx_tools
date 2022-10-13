@@ -573,7 +573,7 @@ def ajf_plot(df, winner, tps, output_path=None, dpi=300):
 def plot_ajf_(configfile, atc, prefiltered_ics, winner, output_path, df_output_path):
 
     if output_path is not None:
-        if not os.path.isdir(os.path.dirname(output_path)):
+        if (not os.path.isdir(os.path.dirname(output_path))) and (len(os.path.dirname(output_path) != 0)):
             os.makedirs(os.path.dirname(output_path))
 
     if atc is None:
