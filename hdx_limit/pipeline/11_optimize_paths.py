@@ -177,6 +177,7 @@ def main(library_info_path,
               'Creating empty files')
         check_for_create_files(monobody_path_arguments)
         check_for_create_files(multibody_path_arguments)
+        check_for_create_files([prefiltered_ics_out_path])
         sys.exit()
 
     p1 = PathOptimizer(
