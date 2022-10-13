@@ -42,6 +42,11 @@ from hdx_limit.core.gjr_plot import plot_gjr_
 from hdx_limit.core.ajf_plot import plot_ajf_
 
 
+def check_for_create_files(paths):
+    for path in paths:
+        if path is not None:
+            Path(path).touch()
+
 def write_baseline_integrated_mz_to_csv(path_object_list, output_path, norm_dist=True, return_flag=False):
     """
     write the integrated_mz_distribution for each timepoint to a .csv file
@@ -167,6 +172,13 @@ def main(library_info_path,
 
     atc = limit_read(all_timepoints_clusters_input_path)
 
+    if len([ic for ic in atc[0] if ic.idotp > configfile["thresholds"]["idotp_cutoff"]]) == 0:
+        print('No tp=0 with idotp greater than thershold found'
+              'Creating empty files')
+        check_for_create_files(monobody_path_arguments)
+        check_for_create_files(multibody_path_arguments)
+        sys.exit()
+
     p1 = PathOptimizer(
         name,
         atc,
@@ -186,122 +198,124 @@ def main(library_info_path,
     if prefiltered_ics_out_path is not None:
         limit_write(p1.prefiltered_ics, prefiltered_ics_out_path)
 
-    if (len(p1.prefiltered_ics) >= configfile["thresholds"]["min_timepoints"]) and (len(p1.prefiltered_ics[0]) > 0):
-
-        # Checks if arguments require monobody scoring run.
-        if (any(arg is not None for arg in monobody_path_arguments)) or (monobody_return_flag is not False):
-
-            p1.optimize_paths_mono()
-
-            if monobody_return_flag is not False:
-                out_dict["monobody_winner"] = p1.winner
-                out_dict["monobody_runners"] = p1.runners
-                out_dict["monobody_undeut_grounds"] = [p1.undeut_grounds, p1.undeut_ground_dot_products]
-                out_dict["monobody_winner_scores"] = p1.winner_scores
-                out_dict["monobody_rt_dt_com_cvs"] = [p1.rt_com_cv, p1.dt_com_cv]
-
-            if mono_path_plot_out_path is not None:
-                undeut_grounds = [p1.undeut_grounds, p1.undeut_ground_dot_products]
-                plot_gjr_(winner=p1.winner,
-                          undeut_grounds=undeut_grounds,
-                          output_path=mono_path_plot_out_path,
-                          prefix=name)
-            if mono_html_plot_out_path is not None:
-                p1.bokeh_plot(mono_html_plot_out_path)
-            if mono_winner_out_path is not None:
-                limit_write(p1.winner, mono_winner_out_path)
-            if mono_runner_out_path is not None:
-                limit_write(p1.runners, mono_runner_out_path)
-            if mono_undeut_ground_out_path is not None:
-                limit_write([p1.undeut_grounds, p1.undeut_ground_dot_products],
-                            mono_undeut_ground_out_path)
-            if mono_winner_scores_out_path is not None:
-                limit_write(p1.winner_scores, mono_winner_scores_out_path)
-            if mono_rtdt_com_cvs_out_path is not None:
-                limit_write([p1.rt_com_cv, p1.dt_com_cv], mono_rtdt_com_cvs_out_path)
-            if mono_winner_csv_out_path is not None:
-                write_baseline_integrated_mz_to_csv(p1.winner, mono_winner_csv_out_path)
-
-        # Checks if arguments require multibody scoring run.
-        if (any(arg is not None for arg in multibody_path_arguments)) or (multibody_return_flag is not False):
-
-            p1.optimize_paths_multi()
-
-
-            if multibody_return_flag is not False:
-                out_dict["multibody_winner"] = p1.winner
-                out_dict["multibody_runners"] = p1.runners
-                out_dict["multibody_undeut_grounds"] = [p1.undeut_grounds, p1.undeut_ground_dot_products]
-                out_dict["multibody_winner_scores"] = p1.winner_scores
-                out_dict["multibody_rt_dt_com_cvs"] = [p1.rt_com_cv, p1.dt_com_cv]
-
-            if multi_path_plot_out_path is not None:
-                undeut_grounds = [p1.undeut_grounds, p1.undeut_ground_dot_products]
-                plot_gjr_(winner=p1.winner,
-                          undeut_grounds=undeut_grounds,
-                          output_path=multi_path_plot_out_path,
-                          prefix=name)
-            if ajf_plot_out_path is not None:
-                plot_ajf_(configfile=configfile,
-                          atc=atc,
-                          prefiltered_ics=p1.prefiltered_ics,
-                          winner=p1.winner,
-                          output_path=ajf_plot_out_path)
-            if multi_html_plot_out_path is not None:
-                 p1.bokeh_plot(multi_html_plot_out_path)
-            if multi_winner_out_path is not None:
-                limit_write(p1.winner, multi_winner_out_path)
-            if multi_runner_out_path is not None:
-                limit_write(p1.runners, multi_runner_out_path)
-            if multi_undeut_ground_out_path is not None:
-                limit_write([p1.undeut_grounds, p1.undeut_ground_dot_products],
-                            multi_undeut_ground_out_path)
-            if multi_winner_scores_out_path is not None:
-                limit_write(p1.winner_scores, multi_winner_scores_out_path)
-            if multi_rtdt_com_cvs_out_path is not None:
-                limit_write([p1.rt_com_cv, p1.dt_com_cv], multi_rtdt_com_cvs_out_path)
-            if multi_winner_csv_out_path is not None:
-                write_baseline_integrated_mz_to_csv(p1.winner, multi_winner_csv_out_path)
-
-    else:
+    if len(p1.prefiltered_ics) < configfile["thresholds"]["min_timepoints"]:
         print('Not enough timepoints with ics to evaluate path.'
-              'Or no tp=0 with idotp greater than thershold found'
               'Creating empty files')
+        check_for_create_files(monobody_path_arguments)
+        check_for_create_files(multibody_path_arguments)
+        sys.exit()
+
+    # Checks if arguments require monobody scoring run.
+    if (any(arg is not None for arg in monobody_path_arguments)) or (monobody_return_flag is not False):
+
+        p1.optimize_paths_mono()
+
+        if monobody_return_flag is not False:
+            out_dict["monobody_winner"] = p1.winner
+            out_dict["monobody_runners"] = p1.runners
+            out_dict["monobody_undeut_grounds"] = [p1.undeut_grounds, p1.undeut_ground_dot_products]
+            out_dict["monobody_winner_scores"] = p1.winner_scores
+            out_dict["monobody_rt_dt_com_cvs"] = [p1.rt_com_cv, p1.dt_com_cv]
+
         if mono_path_plot_out_path is not None:
-            Path(mono_path_plot_out_path).touch()
+            undeut_grounds = [p1.undeut_grounds, p1.undeut_ground_dot_products]
+            plot_gjr_(winner=p1.winner,
+                      undeut_grounds=undeut_grounds,
+                      output_path=mono_path_plot_out_path,
+                      prefix=name)
         if mono_html_plot_out_path is not None:
-            Path(mono_html_plot_out_path).touch()
+            p1.bokeh_plot(mono_html_plot_out_path)
         if mono_winner_out_path is not None:
-            Path(mono_winner_out_path).touch()
+            limit_write(p1.winner, mono_winner_out_path)
         if mono_runner_out_path is not None:
-            Path(mono_runner_out_path).touch()
+            limit_write(p1.runners, mono_runner_out_path)
         if mono_undeut_ground_out_path is not None:
-            Path(mono_undeut_ground_out_path).touch()
+            limit_write([p1.undeut_grounds, p1.undeut_ground_dot_products],
+                        mono_undeut_ground_out_path)
         if mono_winner_scores_out_path is not None:
-            Path(mono_winner_scores_out_path).touch()
+            limit_write(p1.winner_scores, mono_winner_scores_out_path)
         if mono_rtdt_com_cvs_out_path is not None:
-            Path(mono_rtdt_com_cvs_out_path).touch()
+            limit_write([p1.rt_com_cv, p1.dt_com_cv], mono_rtdt_com_cvs_out_path)
         if mono_winner_csv_out_path is not None:
-            Path(mono_winner_csv_out_path).touch()
+            write_baseline_integrated_mz_to_csv(p1.winner, mono_winner_csv_out_path)
+
+    # Checks if arguments require multibody scoring run.
+    if (any(arg is not None for arg in multibody_path_arguments)) or (multibody_return_flag is not False):
+
+        p1.optimize_paths_multi()
+
+
+        if multibody_return_flag is not False:
+            out_dict["multibody_winner"] = p1.winner
+            out_dict["multibody_runners"] = p1.runners
+            out_dict["multibody_undeut_grounds"] = [p1.undeut_grounds, p1.undeut_ground_dot_products]
+            out_dict["multibody_winner_scores"] = p1.winner_scores
+            out_dict["multibody_rt_dt_com_cvs"] = [p1.rt_com_cv, p1.dt_com_cv]
 
         if multi_path_plot_out_path is not None:
-            Path(multi_path_plot_out_path).touch()
-        if multi_html_plot_out_path is not None:
-            Path(multi_html_plot_out_path).touch()
-        if multi_winner_out_path is not None:
-            Path(multi_winner_out_path).touch()
-        if multi_runner_out_path is not None:
-            Path(multi_runner_out_path).touch()
-        if multi_undeut_ground_out_path is not None:
-            Path(multi_undeut_ground_out_path).touch()
-        if multi_winner_scores_out_path is not None:
-            Path(multi_winner_scores_out_path).touch()
-        if multi_rtdt_com_cvs_out_path is not None:
-            Path(multi_rtdt_com_cvs_out_path).touch()
-        if multi_winner_csv_out_path is not None:
-            Path(multi_winner_csv_out_path).touch()
+            undeut_grounds = [p1.undeut_grounds, p1.undeut_ground_dot_products]
+            plot_gjr_(winner=p1.winner,
+                      undeut_grounds=undeut_grounds,
+                      output_path=multi_path_plot_out_path,
+                      prefix=name)
         if ajf_plot_out_path is not None:
-            Path(ajf_plot_out_path).touch()
+            plot_ajf_(configfile=configfile,
+                      atc=atc,
+                      prefiltered_ics=p1.prefiltered_ics,
+                      winner=p1.winner,
+                      output_path=ajf_plot_out_path)
+        if multi_html_plot_out_path is not None:
+             p1.bokeh_plot(multi_html_plot_out_path)
+        if multi_winner_out_path is not None:
+            limit_write(p1.winner, multi_winner_out_path)
+        if multi_runner_out_path is not None:
+            limit_write(p1.runners, multi_runner_out_path)
+        if multi_undeut_ground_out_path is not None:
+            limit_write([p1.undeut_grounds, p1.undeut_ground_dot_products],
+                        multi_undeut_ground_out_path)
+        if multi_winner_scores_out_path is not None:
+            limit_write(p1.winner_scores, multi_winner_scores_out_path)
+        if multi_rtdt_com_cvs_out_path is not None:
+            limit_write([p1.rt_com_cv, p1.dt_com_cv], multi_rtdt_com_cvs_out_path)
+        if multi_winner_csv_out_path is not None:
+            write_baseline_integrated_mz_to_csv(p1.winner, multi_winner_csv_out_path)
+
+    # else:
+    #     if mono_path_plot_out_path is not None:
+    #         Path(mono_path_plot_out_path).touch()
+    #     if mono_html_plot_out_path is not None:
+    #         Path(mono_html_plot_out_path).touch()
+    #     if mono_winner_out_path is not None:
+    #         Path(mono_winner_out_path).touch()
+    #     if mono_runner_out_path is not None:
+    #         Path(mono_runner_out_path).touch()
+    #     if mono_undeut_ground_out_path is not None:
+    #         Path(mono_undeut_ground_out_path).touch()
+    #     if mono_winner_scores_out_path is not None:
+    #         Path(mono_winner_scores_out_path).touch()
+    #     if mono_rtdt_com_cvs_out_path is not None:
+    #         Path(mono_rtdt_com_cvs_out_path).touch()
+    #     if mono_winner_csv_out_path is not None:
+    #         Path(mono_winner_csv_out_path).touch()
+    #
+    #     if multi_path_plot_out_path is not None:
+    #         Path(multi_path_plot_out_path).touch()
+    #     if multi_html_plot_out_path is not None:
+    #         Path(multi_html_plot_out_path).touch()
+    #     if multi_winner_out_path is not None:
+    #         Path(multi_winner_out_path).touch()
+    #     if multi_runner_out_path is not None:
+    #         Path(multi_runner_out_path).touch()
+    #     if multi_undeut_ground_out_path is not None:
+    #         Path(multi_undeut_ground_out_path).touch()
+    #     if multi_winner_scores_out_path is not None:
+    #         Path(multi_winner_scores_out_path).touch()
+    #     if multi_rtdt_com_cvs_out_path is not None:
+    #         Path(multi_rtdt_com_cvs_out_path).touch()
+    #     if multi_winner_csv_out_path is not None:
+    #         Path(multi_winner_csv_out_path).touch()
+    #     if ajf_plot_out_path is not None:
+    #         Path(ajf_plot_out_path).touch()
 
 
 if __name__ == "__main__":

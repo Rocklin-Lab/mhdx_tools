@@ -426,8 +426,7 @@ class PathOptimizer:
         self.undeuts = [ic for ic in self.all_tp_clusters[0] if ic.idotp >= self.thresholds["idotp_cutoff"]]
         if len(self.undeuts) == 0:
             print(f"Error {self.name}: no undeuts with idotp > {self.thresholds['idotp_cutoff']:.2f} was found!")
-            self.prefiltered_ics = []
-            return
+            sys.exit()
         self.first_center = self.undeuts[0].baseline_integrated_mz_com
 
         if use_rtdt_recenter:
