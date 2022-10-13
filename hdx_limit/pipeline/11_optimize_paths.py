@@ -177,6 +177,10 @@ def main(library_info_path,
         check_for_create_files(monobody_path_arguments)
         check_for_create_files(multibody_path_arguments)
         check_for_create_files([prefiltered_ics_out_path])
+
+        with open('joberr.out', 'a') as f:
+            f.write(f'{name}\tNo tp=0 with idotp greater than thershold found. Creating empty files...\n')
+
         sys.exit()
 
     p1 = PathOptimizer(
@@ -199,9 +203,13 @@ def main(library_info_path,
         limit_write(p1.prefiltered_ics, prefiltered_ics_out_path)
 
     if len(p1.prefiltered_ics) < configfile["thresholds"]["min_timepoints"]:
-        print('Not enough timepoints with ics to evaluate path. Creating empty files...')
+        print("Not enough timepoints with ics to evaluate path. Creating empty files...")
         check_for_create_files(monobody_path_arguments)
         check_for_create_files(multibody_path_arguments)
+
+        with open('joberr.out', 'a') as f:
+            f.write(f'{name}\tNot enough timepoints with ics to evaluate path. Creating empty files...\n')
+
         sys.exit()
 
     # Checks if arguments require monobody scoring run.
