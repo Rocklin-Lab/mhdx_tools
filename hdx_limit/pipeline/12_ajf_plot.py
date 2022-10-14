@@ -1,6 +1,7 @@
 import yaml
 import os
 from hdx_limit.core.io import limit_read
+from hdx_limit.core.ajf_plot import plot_ajf_
 import argparse
 
 if __name__ == '__main__':
