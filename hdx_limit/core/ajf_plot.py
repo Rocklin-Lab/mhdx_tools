@@ -7,7 +7,6 @@ from matplotlib.patches import Circle
 import seaborn as sns
 import numpy as np
 from sklearn.cluster import KMeans
-import glob as glob
 import yaml
 import math
 import argparse
@@ -82,9 +81,9 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, output=None):
     # Remove lines with NAN values. This is pretty rare!
     df.dropna(inplace=True)
 
-    # Remove unreasonable ics based on large AUC extrapolations
+    # Replace ics based on large AUC extrapolations by median value
     # And small AUCs
-    df = df[df['auc'] < 1e10]
+    df['auc'] = np.where(df['auc'] > 1e10, np.median(df[df['winner'] == 1]['auc']), df['auc'])
     df = df[df['auc'] > 1e1]
 
     # Compute dot product between winner ic and all other ics from that timepoint
