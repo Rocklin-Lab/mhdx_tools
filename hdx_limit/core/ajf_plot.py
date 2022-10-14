@@ -86,9 +86,9 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, output=None):
     df['auc'] = np.where(df['auc'] > 1e10, np.median(df[df['winner'] == 1]['auc']), df['auc'])
     df = df[df['auc'] > 1e1]
     # Replace unreasonable RT
-    df['rt'] = np.where(abs(df['rt'] - np.median(df['rt'])) > 1, np.median(df['rt'])+1, df['rt'])
-    # Replace unreasonable DT
-    df['dt'] = np.where(abs(df['dt'] - np.median(df['dt'])) > 0.6, np.median(df['rt']) + 0.6, df['dt'])
+    df['rt'] = np.where(abs(df['rt'] - np.median(df['rt'])) > 0.5, np.median(df['rt'])+0.5, df['rt'])
+    # # Replace unreasonable DT
+    # df['dt'] = np.where(abs(df['dt'] - np.median(df['dt'])) > 0.6, np.median(df['rt']) + 0.6, df['dt'])
 
     # Compute dot product between winner ic and all other ics from that timepoint
     df['ic_winner_corr'] = -1
