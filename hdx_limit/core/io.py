@@ -1,47 +1,14 @@
-"""Example Google style docstrings.
-
-This module demonstrates documentation as specified by the `Google Python
-Style Guide`_. Docstrings may extend over multiple lines. Sections are created
-with a section header and a colon followed by a block of indented text.
-
-Example:
-    Examples can be given using either the ``Example`` or ``Examples``
-    sections. Sections support any reStructuredText formatting, including
-    literal blocks::
-
-        $ python example_google.py
-
-Section breaks are created by resuming unindented text. Section breaks
-are also implicitly created anytime a new section starts.
-
-Attributes:
-    module_level_variable1 (int): Module level variables may be documented in
-        either the ``Attributes`` section of the module docstring, or in an
-        inline docstring immediately following the variable.
-
-        Either form is acceptable, but the two should not be mixed. Choose
-        one convention to document module level variables and be consistent
-        with it.
-
-Todo:
-    * For module TODOs
-    * You have to also use ``sphinx.ext.todo`` extension
-
-.. _Google Python Style Guide:
-   http://google.github.io/styleguide/pyguide.html
-
-"""
 import zlib
 import _pickle as cpickle
 import os
-
+import pandas as pd
 
 def limit_write(obj, out_path):
     """ Writes a Python object as a zlib-compressed pickle.
 
 	Args:
 		obj (any Python Object):
-		outpath (string): path/to/file.cpickle.zlib to write out
+		out_path (string): path/to/file.cpickle.zlib to write out
 
 	Returns:
 		None
@@ -65,14 +32,14 @@ def limit_read(path):
 
 
 def optimize_paths_inputs(library_info_path, input_directory_path,
-                          rt_group_name, timepoints):
+                          name, timepoints):
     """Generate explicit PathOptimizer input paths for one rt_group.
 
     Args:
         library_info_path (str): path/to/checked_library_info.json
         input_directory_path (str): /path/to/dir/ to prepend to each outpath
-        rt_group_name (str): value from 'name' column of library_info
-        timepoints (dict): dictionary containing list of hdx timepoints in seconds, where each timepoint is also an integer key corresponding to that timepoint's .mzML filenames
+        name (str): value from "name" column of library_info
+        timepoints (dict): dictionary containing list of hdx timepoints in seconds, where each timepoint is also an integer key corresponding to that timepoint"s .mzML filenames
 
     Returns:
         name_inputs (list of strings): flat list of all IsotopeCluster inputs to PathOptimizer
@@ -80,7 +47,7 @@ def optimize_paths_inputs(library_info_path, input_directory_path,
     """
     name_inputs = []
     library_info = pd.read_json(library_info_path)
-    charges = library_info.loc[library_info["name"]==name]['charge'].values
+    charges = library_info.loc[library_info["name"]==name]["charge"].values
     for key in timepoints["timepoints"]:
         if len(timepoints[key]) > 1:
             for file in timepoints[key]:
@@ -94,7 +61,7 @@ def optimize_paths_inputs(library_info_path, input_directory_path,
                         + "_" 
                         + file 
                         +".cpickle.zlib"
-                    )  # TODO: This won't work if we go to .mzML/.RAW interoperability.
+                    )  # TODO: This won"t work if we go to .mzML/.RAW interoperability.
         else:
             file = timepoints[key][0]
             for charge in charges:
@@ -116,7 +83,7 @@ def idotp_check_inputs(config, rt_group_name, charge):
 
     Args:
         config (dict): Dictionary containing timepoint-wise filepaths for .mzML replicates.
-        rt_group_name (str): Value in 'name' field of library_info.json, shared by groups of mass-agreeing signals close in rt.
+        rt_group_name (str): Value in "name" field of library_info.json, shared by groups of mass-agreeing signals close in rt.
         charge (int): Net charge of signal, unique for each member of an rt-group.  
 
     Returns:
@@ -138,7 +105,7 @@ def idotp_check_inputs(config, rt_group_name, charge):
 
 
 def check_for_create_dirs(path_args):
-    """Check a list of output paths to see if their required directories exist, creates them if they don't.
+    """Check a list of output paths to see if their required directories exist, creates them if they don"t.
 
     Args:
         path_args (list of strings): List of output paths, can be string or None.

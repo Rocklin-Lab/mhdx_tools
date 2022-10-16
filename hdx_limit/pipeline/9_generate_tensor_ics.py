@@ -1,49 +1,9 @@
-"""Example Google style docstrings.
-
-This module demonstrates documentation as specified by the `Google Python
-Style Guide`_. Docstrings may extend over multiple lines. Sections are created
-with a section header and a colon followed by a block of indented text.
-
-Example:
-    Examples can be given using either the ``Example`` or ``Examples``
-    sections. Sections support any reStructuredText formatting, including
-    literal blocks::
-
-        $ python example_google.py
-
-Section breaks are created by resuming unindented text. Section breaks
-are also implicitly created anytime a new section starts.
-
-Attributes:
-    module_level_variable1 (int): Module level variables may be documented in
-        either the ``Attributes`` section of the module docstring, or in an
-        inline docstring immediately following the variable.
-
-        Either form is acceptable, but the two should not be mixed. Choose
-        one convention to document module level variables and be consistent
-        with it.
-
-Todo:
-    * For module TODOs
-    * You have to also use ``sphinx.ext.todo`` extension
-
-.. _Google Python Style Guide:
-   http://google.github.io/styleguide/pyguide.html
-
-"""
-import os
-import sys
 import yaml
-import psutil
-import numpy as np
 import argparse
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.gridspec as gridspec
-from matplotlib.backends.backend_pdf import PdfPages
 from hdx_limit.core.plot_factor_data import plot_factor_data_from_data_tensor
 from hdx_limit.core.plot_ics_data import plot_ics_from_ic_list
-from hdx_limit.core.processing import TensorGenerator, generate_tensor_factors
+from hdx_limit.core.processing import generate_tensor_factors
 from hdx_limit.core.io import limit_write
 
 
@@ -91,10 +51,7 @@ def main(library_info_path,
     library_info = pd.read_json(library_info_path)
     my_name = tensor_input_path.split("/")[-2] # Name from protein directory.
     my_charge = int([item[6:] for item in tensor_input_path.split("/")[-1].split("_") if "charge" in item][0]) # Finds by keyword and strip text.
-    if use_rtdt_recenter:
-        my_row = library_info.loc[(library_info["name_recentered"] == my_name) & (library_info["charge"] == my_charge)]
-    else:
-        my_row = library_info.loc[(library_info["name"]==my_name) & (library_info["charge"]==my_charge)]
+    my_row = library_info.loc[(library_info["name"]==my_name) & (library_info["charge"]==my_charge)]
     my_centers = my_row["mz_centers"].values
     centers = my_centers[0]
 
@@ -127,8 +84,8 @@ def main(library_info_path,
                                           timepoint_label=None,
                                           filter_factors=filter_factors,
                                           factor_rt_r2_cutoff=factor_rt_r2_cutoff,
-                                          factor_dt_r2_cutoff=factor_dt_r2_cutoff,
-                                          use_rtdt_recenter=use_rtdt_recenter)
+                                          factor_dt_r2_cutoff=factor_dt_r2_cutoff
+                                          )
 
     all_ics = []
 

@@ -1,19 +1,14 @@
 # Rewrite calibration code
 
 import pymzml
-import _pickle as cpickle
 import pickle as pk
-import psutil
-import time
 import os
 import yaml
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 import seaborn as sns
 from scipy.optimize import curve_fit
 from sklearn.metrics import mean_squared_error
-import glob as glob
 from pathlib import Path
 import argparse
 
@@ -446,6 +441,7 @@ def main(mzml_gz_path,
                                        polyfit_deg=polyfit_deg,
                                        lockmass_compound=lockmass_compound,
                                        output_pk=output_pk, output_kde=None)
+
 
 if __name__ == "__main__":
     # If the snakemake global object is present, save expected arguments from snakemake to be passed to main().

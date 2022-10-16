@@ -1,42 +1,10 @@
-"""Example Google style docstrings.
-
-This module demonstrates documentation as specified by the `Google Python
-Style Guide`_. Docstrings may extend over multiple lines. Sections are created
-with a section header and a colon followed by a block of indented text.
-
-Example:
-    Examples can be given using either the ``Example`` or ``Examples``
-    sections. Sections support any reStructuredText formatting, including
-    literal blocks::
-
-        $ python example_google.py
-
-Section breaks are created by resuming unindented text. Section breaks
-are also implicitly created anytime a new section starts.
-
-Attributes:
-    module_level_variable1 (int): Module level variables may be documented in
-        either the ``Attributes`` section of the module docstring, or in an
-        inline docstring immediately following the variable.
-
-        Either form is acceptable, but the two should not be mixed. Choose
-        one convention to document module level variables and be consistent
-        with it.
-.. _Google Python Style Guide:
-   http://google.github.io/styleguide/pyguide.html
-
-"""
-import os
 import sys
-import copy
-import math
 import yaml
-import shutil
 import argparse
 import numpy as np
 import pandas as pd
 from pathlib import Path
-from hdx_limit.core.io import limit_read, limit_write, check_for_create_dirs
+from hdx_limit.core.io import limit_read, limit_write, check_for_create_dirs, optimize_paths_inputs
 from hdx_limit.core.processing import PathOptimizer
 from hdx_limit.core.gjr_plot import plot_gjr_
 from hdx_limit.core.ajf_plot import plot_ajf_
@@ -47,6 +15,7 @@ def check_for_create_files(paths):
         if path is not None:
             Path(path).touch()
 
+
 def write_baseline_integrated_mz_to_csv(path_object_list, output_path, norm_dist=True, return_flag=False):
     """
     write the integrated_mz_distribution for each timepoint to a .csv file
@@ -56,26 +25,26 @@ def write_baseline_integrated_mz_to_csv(path_object_list, output_path, norm_dist
     :return: None
     """
     timepoint_list = [ic.timepoint_idx for ic in path_object_list]
-    timepoint_str = ','.join([str(x) for x in timepoint_list])
-    header = 'idx,'+ timepoint_str + '\n'
+    timepoint_str = ",".join([str(x) for x in timepoint_list])
+    header = "idx,"+ timepoint_str + "\n"
     if norm_dist:
         integrated_mz_distribution_list = [ic.baseline_integrated_mz/max(ic.baseline_integrated_mz) for ic in path_object_list]
     else:
-        integrated_mz_distribution_list = [ic.baseline_integrated_mz for ic in ic_object_list]
+        integrated_mz_distribution_list = [ic.baseline_integrated_mz for ic in path_object_list]
     integrated_mz_distribution_array = np.array(integrated_mz_distribution_list)
 
-    data_string = ''
+    data_string = ""
     for ind, array in enumerate(integrated_mz_distribution_array.T):
-        arr_str = ','.join([str(x) for x in array])
-        data_string += '{},{}\n'.format(ind, arr_str)
+        arr_str = ",".join([str(x) for x in array])
+        data_string += "{},{}\n".format(ind, arr_str)
 
-    with open(output_path, 'w') as outfile:
+    with open(output_path, "w") as outfile:
         outfile.write(header + data_string)
 
     if return_flag:
         out_dict = dict()
-        out_dict['integrated_mz_distribution_array'] = integrated_mz_distribution_array
-        out_dict['timepoint_list'] = timepoint_list
+        out_dict["integrated_mz_distribution_array"] = integrated_mz_distribution_array
+        out_dict["timepoint_list"] = timepoint_list
         return out_dict
 
 
@@ -110,22 +79,20 @@ def main(library_info_path,
     Args:
         library_info_path (str): path/to/checked_library_info.json
         all_ic_input_paths (list of strings): list of paths/to/files.cpickle.zlib for all lists of IsotopeClusters from generate_tensor_ics.py
-        configfile (dict): dictionary with 'timepoints' key containing list of hdx timepoints in integer seconds, which are keys mapping to lists of each timepoint's replicate .mzML filenames
+        configfile (dict): dictionary with "timepoints" key containing list of hdx timepoints in integer seconds, which are keys mapping to lists of each timepoint"s replicate .mzML filenames
         monobody_return_flag: option to return monobody output in python, for notebook context, can be combined with multibody_return_flag.
         multibody_return_flag: option to return multibody output in python, for notebook context, can be combined with monobody_return_flag.
-        rt_group_name (str): library_info['name'] value
+        rt_group_name (str): library_info["name"] value
         old_data_dir (str): path/to/dir to provide comparison to GJR formatted results
         all_timepoint_clusters_out_path (str): path/to/file to output all clusters collected for PathOptimizer as a nested list.
         prefiltered_ics_out_path (str): path/to/file to output ICs selected from prefiltering as a nested list.
         mono_path_plot_out_path (str): path/to/dir for pdf plot of monobody scoring results
-        mono_html_plot_out_path (str): path/to/file.html for interactive bokeh plot of monobody scoring results
         mono_winner_out_path (str): path/to/file for winning path from monobody scoring
         mono_runner_out_path (str): path/to/file for top n_runners paths from monobody scoring
         mono_undeut_ground_out_path (str): path/to/file for undeuterated ground-truth IsotopeClusters from monobody scoring
         mono_winner_scores_out_path (str): path/to/file for monobody scoring winning path score values 
         mono_rtdt_com_cvs_out_path (str): path/to/file for rt and dt correlation values from monobody scoring
         multi_path_plot_out_path (str): path/to/dir for pdf plot of multibody scoring results
-        multi_html_plot_out_path (str): path/to/file.html for interactive bokeh plot of multibody results
         multi_winner_out_path (str): path/to/file for winning path from multibody scoring
         multi_runner_out_path (str): path/to/file for top n_runners paths from multibody scoring
         multi_undeut_ground_out_path (str): path/to/file for undeuterated ground-truth IsotopeClusters from multibody scoring
@@ -133,7 +100,7 @@ def main(library_info_path,
         multi_rtdt_com_cvs_out_path (str): path/to/file for rt and dt correlation values from multibody scoring
 
     Returns:
-        out_dict (dict): dictionary containing 'path_optimizer' key, and corresponding PathOptimizer object 
+        out_dict (dict): dictionary containing "path_optimizer" key, and corresponding PathOptimizer object 
 
     """
     monobody_path_arguments = [
@@ -166,20 +133,20 @@ def main(library_info_path,
     library_info = pd.read_json(library_info_path)
 
     if rt_group_name is None:
-        name = all_ic_input_paths[0].split("/")[-2]
+        name = all_timepoints_clusters_input_path[0].split("/")[-2]
     else:
         name = rt_group_name
 
     atc = limit_read(all_timepoints_clusters_input_path)
 
     if len([ic for ic in atc[0] if ic.idotp > configfile["thresholds"]["idotp_cutoff"]]) == 0:
-        print('No tp=0 with idotp greater than thershold found. Creating empty files...')
+        print("No tp=0 with idotp greater than thershold found. Creating empty files...")
         check_for_create_files(monobody_path_arguments)
         check_for_create_files(multibody_path_arguments)
         check_for_create_files([prefiltered_ics_out_path])
 
-        with open('joberr.out', 'a') as f:
-            f.write(f'{name}\tNo tp=0 with idotp greater than thershold found. Creating empty files...\n')
+        with open("joberr.out", "a") as f:
+            f.write(f"{name}\tNo tp=0 with idotp greater than thershold found. Creating empty files...\n")
 
         sys.exit()
 
@@ -207,8 +174,8 @@ def main(library_info_path,
         check_for_create_files(monobody_path_arguments)
         check_for_create_files(multibody_path_arguments)
 
-        with open('joberr.out', 'a') as f:
-            f.write(f'{name}\tNot enough timepoints with ics to evaluate path. Creating empty files...\n')
+        with open("joberr.out", "a") as f:
+            f.write(f"{name}\tNot enough timepoints with ics to evaluate path. Creating empty files...\n")
 
         sys.exit()
 
@@ -230,8 +197,6 @@ def main(library_info_path,
                       undeut_grounds=undeut_grounds,
                       output_path=mono_path_plot_out_path,
                       prefix=name)
-        if mono_html_plot_out_path is not None:
-            p1.bokeh_plot(mono_html_plot_out_path)
         if mono_winner_out_path is not None:
             limit_write(p1.winner, mono_winner_out_path)
         if mono_runner_out_path is not None:
@@ -271,8 +236,6 @@ def main(library_info_path,
                       prefiltered_ics=p1.prefiltered_ics,
                       winner=p1.winner,
                       output_path=ajf_plot_out_path)
-        if multi_html_plot_out_path is not None:
-             p1.bokeh_plot(multi_html_plot_out_path)
         if multi_winner_out_path is not None:
             limit_write(p1.winner, multi_winner_out_path)
         if multi_runner_out_path is not None:
@@ -286,44 +249,6 @@ def main(library_info_path,
             limit_write([p1.rt_com_cv, p1.dt_com_cv], multi_rtdt_com_cvs_out_path)
         if multi_winner_csv_out_path is not None:
             write_baseline_integrated_mz_to_csv(p1.winner, multi_winner_csv_out_path)
-
-    # else:
-    #     if mono_path_plot_out_path is not None:
-    #         Path(mono_path_plot_out_path).touch()
-    #     if mono_html_plot_out_path is not None:
-    #         Path(mono_html_plot_out_path).touch()
-    #     if mono_winner_out_path is not None:
-    #         Path(mono_winner_out_path).touch()
-    #     if mono_runner_out_path is not None:
-    #         Path(mono_runner_out_path).touch()
-    #     if mono_undeut_ground_out_path is not None:
-    #         Path(mono_undeut_ground_out_path).touch()
-    #     if mono_winner_scores_out_path is not None:
-    #         Path(mono_winner_scores_out_path).touch()
-    #     if mono_rtdt_com_cvs_out_path is not None:
-    #         Path(mono_rtdt_com_cvs_out_path).touch()
-    #     if mono_winner_csv_out_path is not None:
-    #         Path(mono_winner_csv_out_path).touch()
-    #
-    #     if multi_path_plot_out_path is not None:
-    #         Path(multi_path_plot_out_path).touch()
-    #     if multi_html_plot_out_path is not None:
-    #         Path(multi_html_plot_out_path).touch()
-    #     if multi_winner_out_path is not None:
-    #         Path(multi_winner_out_path).touch()
-    #     if multi_runner_out_path is not None:
-    #         Path(multi_runner_out_path).touch()
-    #     if multi_undeut_ground_out_path is not None:
-    #         Path(multi_undeut_ground_out_path).touch()
-    #     if multi_winner_scores_out_path is not None:
-    #         Path(multi_winner_scores_out_path).touch()
-    #     if multi_rtdt_com_cvs_out_path is not None:
-    #         Path(multi_rtdt_com_cvs_out_path).touch()
-    #     if multi_winner_csv_out_path is not None:
-    #         Path(multi_winner_csv_out_path).touch()
-    #     if ajf_plot_out_path is not None:
-    #         Path(ajf_plot_out_path).touch()
-
 
 if __name__ == "__main__":
 
@@ -476,9 +401,8 @@ if __name__ == "__main__":
         configfile = yaml.load(open(args.configfile_yaml, "rb").read(), Loader=yaml.Loader)
         if args.all_ic_input_paths is None:
             if args.input_directory_path is not None and args.rt_group_name is not None:
-                args.all_ic_input_paths = optimize_paths_inputs(
-                    args.library_info_path, args.input_directory_path,
-                    args.rt_group_name, configfile)
+                args.all_ic_input_paths = optimize_paths_inputs(args.library_info_path, args.input_directory_path,
+                                                                args.rt_group_name, configfile)
             else:
                 parser.print_help()
                 sys.exit()

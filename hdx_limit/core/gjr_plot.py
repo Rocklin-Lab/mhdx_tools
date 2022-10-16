@@ -1,42 +1,9 @@
-"""Example Google style docstrings.
-
-This module demonstrates documentation as specified by the `Google Python
-Style Guide`_. Docstrings may extend over multiple lines. Sections are created
-with a section header and a colon followed by a block of indented text.
-
-Example:
-    Examples can be given using either the ``Example`` or ``Examples``
-    sections. Sections support any reStructuredText formatting, including
-    literal blocks::
-
-        $ python example_google.py
-
-Section breaks are created by resuming unindented text. Section breaks
-are also implicitly created anytime a new section starts.
-
-Attributes:
-    module_level_variable1 (int): Module level variables may be documented in
-        either the ``Attributes`` section of the module docstring, or in an
-        inline docstring immediately following the variable.
-
-        Either form is acceptable, but the two should not be mixed. Choose
-        one convention to document module level variables and be consistent
-        with it.
-
-Todo:
-    * For module TODOs
-    * You have to also use ``sphinx.ext.todo`` extension
-
-.. _Google Python Style Guide:
-   http://google.github.io/styleguide/pyguide.html
-
-"""
 import zlib
 import numpy as np
 import _pickle as cpickle
 from matplotlib import pyplot as plt
 
-def plot_gjr_(winner, undeut_grounds, output_path, prefix='winner_plot'):
+def plot_gjr_(winner, undeut_grounds, output_path, prefix="winner_plot"):
     """
     plot path output given the winner ic list and undeut grounds list
     :param winner: winner list
@@ -47,7 +14,7 @@ def plot_gjr_(winner, undeut_grounds, output_path, prefix='winner_plot'):
     """
     fig = plt.figure(figsize=(20, len(winner)))
 
-    protname = prefix  # 'EHEE_rd1_0284.pdb_5.73355'
+    protname = prefix  # "EHEE_rd1_0284.pdb_5.73355"
     idotp = undeut_grounds[1][winner[0].charge_states[0]]
     for i, x in enumerate(winner):
 
@@ -65,9 +32,9 @@ def plot_gjr_(winner, undeut_grounds, output_path, prefix='winner_plot'):
         plt.xticks(range(0, len(x.baseline_integrated_mz) + 5, 5))
         ax.set_xticklabels(range(0, len(x.baseline_integrated_mz) + 5, 5), fontsize=8)
         ax.tick_params(length=3, pad=3)
-        plt.grid(axis='x', alpha=0.25)
+        plt.grid(axis="x", alpha=0.25)
         plt.ylim(0, 1.4)
-        plt.plot([x.baseline_integrated_mz_com, x.baseline_integrated_mz_com], [1.0, 1.1], color='black')
+        plt.plot([x.baseline_integrated_mz_com, x.baseline_integrated_mz_com], [1.0, 1.1], color="black")
 
         plt.text(
             x.baseline_integrated_mz_com,
@@ -110,10 +77,10 @@ def plot_gjr_(winner, undeut_grounds, output_path, prefix='winner_plot'):
                 transform=ax.transAxes,
             )
 
-        add_delta_com_text = ''
+        add_delta_com_text = ""
         if i > 0:
             delta_mz_com = (x.baseline_integrated_mz_com - winner[i - 1].baseline_integrated_mz_com)
-            add_delta_com_text = '\nd_mz %.1f' % (delta_mz_com)
+            add_delta_com_text = "\nd_mz %.1f" % (delta_mz_com)
 
         plt.text(
             1.0,
@@ -127,14 +94,14 @@ def plot_gjr_(winner, undeut_grounds, output_path, prefix='winner_plot'):
         plt.text(
             0.01,
             1.2,
-            '%s t %s' % (i, x.timepoint_idx),
+            "%s t %s" % (i, x.timepoint_idx),
             horizontalalignment="left",
             verticalalignment="top",
             transform=ax.transAxes,
         )
 
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
 
         ##########
         #
@@ -161,12 +128,12 @@ def plot_gjr_(winner, undeut_grounds, output_path, prefix='winner_plot'):
         plt.plot(plot_raw_mz_labels, plot_raw_mz / max(plot_raw_mz))
         plt.yticks([])
         plt.xticks(np.linspace(xtick_lims[0], xtick_lims[1], 3))
-        ax.set_xticklabels(['%.4f' % x for x in np.linspace(xtick_lims[0], xtick_lims[1], 3)], fontsize=8)
+        ax.set_xticklabels(["%.4f" % x for x in np.linspace(xtick_lims[0], xtick_lims[1], 3)], fontsize=8)
         if i == 0:
             plt.title("Raw isotopic distribution")
-        ax.spines['left'].set_visible(False)
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
+        ax.spines["left"].set_visible(False)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
 
         plt.text(
             0.05,
@@ -197,9 +164,9 @@ def plot_gjr_(winner, undeut_grounds, output_path, prefix='winner_plot'):
         plt.xticks([])
         if i == 0:
             plt.title("Overlapped peaks")
-        ax.spines['left'].set_visible(False)
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
+        ax.spines["left"].set_visible(False)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
 
         # peak error text
         plt.text(
@@ -227,12 +194,12 @@ def plot_gjr_(winner, undeut_grounds, output_path, prefix='winner_plot'):
         plt.yticks([])
         plt.xticks([0, len(x.rts) / 2, len(x.rts)])
         ax.tick_params(length=3, pad=3)
-        ax.set_xticklabels(['%.2f' % x for x in np.linspace(x.retention_labels[0], x.retention_labels[-1], 3)],
+        ax.set_xticklabels(["%.2f" % x for x in np.linspace(x.retention_labels[0], x.retention_labels[-1], 3)],
                            fontsize=8)
 
         xTick_objects = ax.xaxis.get_major_ticks()
-        xTick_objects[0].label1.set_horizontalalignment('left')  # left align first tick
-        xTick_objects[-1].label1.set_horizontalalignment('right')  # right align last tick
+        xTick_objects[0].label1.set_horizontalalignment("left")  # left align first tick
+        xTick_objects[-1].label1.set_horizontalalignment("right")  # right align last tick
 
         # xlabels = [tick.label for tick in ax.xaxis.get_major_ticks()]
 
@@ -253,9 +220,9 @@ def plot_gjr_(winner, undeut_grounds, output_path, prefix='winner_plot'):
         if i == 0:
             plt.title("RT (red=undeut)")
 
-        ax.spines['left'].set_visible(False)
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
+        ax.spines["left"].set_visible(False)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
 
         ##########
         #
@@ -273,11 +240,11 @@ def plot_gjr_(winner, undeut_grounds, output_path, prefix='winner_plot'):
 
         plt.xticks([0, len(x.dts) / 2, len(x.dts)])
         ax.tick_params(length=3, pad=3)
-        ax.set_xticklabels(['%.2f' % x for x in np.linspace(x.drift_labels[0], x.drift_labels[-1], 3)], fontsize=8)
+        ax.set_xticklabels(["%.2f" % x for x in np.linspace(x.drift_labels[0], x.drift_labels[-1], 3)], fontsize=8)
 
         xTick_objects = ax.xaxis.get_major_ticks()
-        xTick_objects[0].label1.set_horizontalalignment('left')  # left align first tick
-        xTick_objects[-1].label1.set_horizontalalignment('right')  # right align last tick
+        xTick_objects[0].label1.set_horizontalalignment("left")  # left align first tick
+        xTick_objects[-1].label1.set_horizontalalignment("right")  # right align last tick
 
         plt.text(
             0.05,
@@ -292,9 +259,9 @@ def plot_gjr_(winner, undeut_grounds, output_path, prefix='winner_plot'):
         plt.ylim(0, 1.4)
         if i == 0:
             plt.title("Drift time")
-        ax.spines['left'].set_visible(False)
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
+        ax.spines["left"].set_visible(False)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
 
         ##########
         #
@@ -339,9 +306,9 @@ def plot_gjr_(winner, undeut_grounds, output_path, prefix='winner_plot'):
             color="blue",
         )
 
-        ax.spines['left'].set_visible(False)
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
+        ax.spines["left"].set_visible(False)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
 
         if i == 0:
             plt.title("Magnitude")
@@ -351,7 +318,7 @@ def plot_gjr_(winner, undeut_grounds, output_path, prefix='winner_plot'):
     plt.close()
 
 
-def plot_gjr_from_files(winner_path_fpath, undeut_grounds_fpath, output_path, prefix='winner_plot'):
+def plot_gjr_from_files(winner_path_fpath, undeut_grounds_fpath, output_path, prefix="winner_plot"):
     winner = cpickle.loads(zlib.decompress(open(winner_path_fpath, "rb").read()))
 
     undeut_grounds = cpickle.loads(zlib.decompress(open(undeut_grounds_fpath, "rb").read()))
@@ -366,11 +333,11 @@ def plot_path_from_commandline():
     """
     import argparse
 
-    parser = argparse.ArgumentParser(description='Plot factor data from a given .factor data file')
-    parser.add_argument('--winners_path', '-w', action='store', help='file path to winner.cpickle.zlib')
-    parser.add_argument('--undeut_grounds_path', '-u', action='store', help='file path to undeut_grounds.cpickle.zlib')
-    parser.add_argument('--prefix', '-p', action='store', help='prefix str to add to the plot', default='winner_plot')
-    parser.add_argument('--plot_output_path', '-o', action='store', help='output path for plot .pdf')
+    parser = argparse.ArgumentParser(description="Plot factor data from a given .factor data file")
+    parser.add_argument("--winners_path", "-w", action="store", help="file path to winner.cpickle.zlib")
+    parser.add_argument("--undeut_grounds_path", "-u", action="store", help="file path to undeut_grounds.cpickle.zlib")
+    parser.add_argument("--prefix", "-p", action="store", help="prefix str to add to the plot", default="winner_plot")
+    parser.add_argument("--plot_output_path", "-o", action="store", help="output path for plot .pdf")
 
     args = parser.parse_args()
 
@@ -382,6 +349,6 @@ def plot_path_from_commandline():
     return args
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     plot_path_from_commandline()

@@ -1,46 +1,8 @@
-"""Example Google style docstrings.
-
-This module demonstrates documentation as specified by the `Google Python
-Style Guide`_. Docstrings may extend over multiple lines. Sections are created
-with a section header and a colon followed by a block of indented text.
-
-Example:
-    Examples can be given using either the ``Example`` or ``Examples``
-    sections. Sections support any reStructuredText formatting, including
-    literal blocks::
-
-        $ python example_google.py
-
-Section breaks are created by resuming unindented text. Section breaks
-are also implicitly created anytime a new section starts.
-
-Attributes:
-    module_level_variable1 (int): Module level variables may be documented in
-        either the ``Attributes`` section of the module docstring, or in an
-        inline docstring immediately following the variable.
-
-        Either form is acceptable, but the two should not be mixed. Choose
-        one convention to document module level variables and be consistent
-        with it.
-
-Todo:
-    * For module TODOs
-    * You have to also use ``sphinx.ext.todo`` extension
-
-.. _Google Python Style Guide:
-   http://google.github.io/styleguide/pyguide.html
-
-"""
-import os
-import sys
 import gzip
-import zlib
 import pymzml
 import argparse
 import collections
 import numpy as np
-import pandas as pd
-import _pickle as cpickle
 from hdx_limit.core.io import limit_write
 
 def main(mzml_path, return_flag=None, out_path=None, mzml_sum_outpath=None):
@@ -82,8 +44,8 @@ def main(mzml_path, return_flag=None, out_path=None, mzml_sum_outpath=None):
     )
 
     ms1_ims_tic = np.zeros(
-        (len(set(drift_times)) * mz_bins, len(set(scan_times))), np.int)
-    print(np.shape(ms1_ims_tic))
+        (len(set(drift_times)) * mz_bins, len(set(scan_times))), int)
+    # print(np.shape(ms1_ims_tic))
 
     id_appearance_count = collections.Counter()
     rtIndex = 0
@@ -106,8 +68,8 @@ def main(mzml_path, return_flag=None, out_path=None, mzml_sum_outpath=None):
             if ims_bin == 199:
                 rtIndex += 1
 
-                if rtIndex % 20 == 0:
-                    print(rtIndex)
+                # if rtIndex % 20 == 0:
+                #     print(rtIndex)
     mzml_sum = np.sum(ms1_ims_tic)
 
     # Converts ms1_ims_tic to tic_cumulative_sum and tic_base_sum and saves.

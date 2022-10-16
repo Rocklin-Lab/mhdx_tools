@@ -1,36 +1,3 @@
-"""Example Google style docstrings.
-
-This module demonstrates documentation as specified by the `Google Python
-Style Guide`_. Docstrings may extend over multiple lines. Sections are created
-with a section header and a colon followed by a block of indented text.
-
-Example:
-    Examples can be given using either the ``Example`` or ``Examples``
-    sections. Sections support any reStructuredText formatting, including
-    literal blocks::
-
-        $ python example_google.py
-
-Section breaks are created by resuming unindented text. Section breaks
-are also implicitly created anytime a new section starts.
-
-Attributes:
-    module_level_variable1 (int): Module level variables may be documented in
-        either the ``Attributes`` section of the module docstring, or in an
-        inline docstring immediately following the variable.
-
-        Either form is acceptable, but the two should not be mixed. Choose
-        one convention to document module level variables and be consistent
-        with it.
-
-Todo:
-    * For module TODOs
-    * You have to also use ``sphinx.ext.todo`` extension
-
-.. _Google Python Style Guide:
-   http://google.github.io/styleguide/pyguide.html
-
-"""
 import sys
 import glob
 import argparse
@@ -39,11 +6,9 @@ import seaborn as sns
 import matplotlib as mpl
 import numpy as np
 import yaml
-import os
 import matplotlib.pyplot as plt
 mpl.use("Agg")
 
-from hdx_limit.core.io import limit_read, limit_write
 from hdx_limit.auxiliar.plots import plot_rtdt_recenter, plot_deviations
 from hdx_limit.auxiliar.filters import generate_dataframe_ics, remove_duplicates_from_df
 from hdx_limit.auxiliar.fdr import plot_fdr_stats
@@ -89,9 +54,9 @@ def main(configfile,
     cols_ics_recenter = ['RT_weighted_avg', 'DT_weighted_avg_bins', 'DT_weighted_avg', 'rt_std', 'dt_std',
                          'rt_weighted_std', 'dt_weighted_std', 'rt_gaussian_rmse', 'dt_gaussian_rmse',
                          'n_signals', 'n_UN']
+    cols = list(library_info.columns) + cols_idotp + cols_ics_recenter + ['name_tmp']
 
-    out_df = pd.DataFrame(columns=list(library_info.columns) + cols_idotp + cols_ics_recenter + ['name_recentered'])
-
+    l = []
     for i, (name, charge) in enumerate(set([(i, j) for (i, j) in df[['name', 'charge']].values])):
         open_idotp_f = pd.read_json([i for i in all_idotp_inputs if '%s' % (name + '_charge' + str(charge)) in i][0])
         my_row = library_info.loc[(library_info["name"] == name) & (library_info["charge"] == charge)].copy()
@@ -101,15 +66,23 @@ def main(configfile,
                                                                             'dt_gaussian_rmse'],
                                                                         ascending=[False, True, True])[
             cols_ics_recenter].values[0]
-        my_row['name_recentered'] = '_'.join(name.split('_')[:-1]) + '_' + str(
+        my_row['name_tmp'] = '_'.join(name.split('_')[:-1]) + '_' + str(
             round(my_row['RT_weighted_avg'].values[0], 2))
         if not my_row['DT_weighted_avg'].values[0] < 0.1:
-            out_df = pd.concat([out_df, my_row], ignore_index=True)
+            # l.append(my_row.values)
+            l.append(my_row.values.tolist()[0])
+    out_df = pd.DataFrame(l, columns=cols)
 
-    for name in set(out_df['name_recentered']):
-        out_df.loc[out_df['name_recentered'] == name, 'n_charges'] = len(out_df[out_df['name_recentered'] == name])
-    out_df['decoy'] = out_df['name_recentered'].str.contains('decoy')
+    for name in set(out_df['name_tmp']):
+        out_df.loc[out_df['name_tmp'] == name, 'n_charges'] = len(out_df[out_df['name_tmp'] == name])
+    out_df['decoy'] = out_df['name_tmp'].str.contains('decoy')
     out_df['log2_ab_cluster_total'] = np.log2(out_df['ab_cluster_total'].values.astype('float32'))
+
+    if configfile["use_rtdt_recenter"]:
+        out_df.rename(columns={"name": "name_before_recentering", "name_tmp": "name"}, inplace=True)
+    else:
+        out_df.rename(columns={"name_tmp": "name_after_recentering"}, inplace=True)
+
 
     if fdr_plot_output_path is not None:
         plot_fdr_stats(out_df,
@@ -130,7 +103,7 @@ def main(configfile,
             idotps.append(pd.read_json(f)['idotp'].values[0])
         sns.displot(idotps)
         plt.axvline(configfile["idotp_cutoff"], 0, 1)
-        plt.savefig(idotp_plot_out_path, formart='png', dpi=150)
+        plt.savefig(idotp_plot_out_path, format='png', dpi=150)
         plt.close('all')
 
     # Plot deviation plots. Add this to a proper output in the snakemake scope later
