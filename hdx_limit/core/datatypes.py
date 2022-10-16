@@ -2,7 +2,6 @@ import os
 from dataclasses import dataclass
 import time
 import sys
-import math
 import copy
 import psutil
 import yaml
@@ -153,7 +152,7 @@ def getnear(x, allseq, charge=None, ppm=50):
             "sequence",
         ]]
     else:
-        low, high = x - window, x + window
+        low, high = x - 1e-6 * x, x + 1e-6 * x
         mlow, mhigh = allseq["MW"] > low, allseq["MW"] < high
         tempdf = subdf[mlow & mhigh].sort_values("MW")[[
             "MW", "name", "len", "sequence"
@@ -385,7 +384,8 @@ def find_offset(sum_df):
     try:
         xs[np.argmin(abs(xs))] == ys[np.argmax(ys)]
     except:
-        ipdb.set_trace()
+        print("Error fiding offset")
+        sys.exit()
     if xs[np.argmin(abs(xs))] == ys[np.argmax(ys)]:
         return xs[np.argmin(abs(xs))]
         # Lowest ppm peak is not most prominent, determine relative height of lowest ppm peak
