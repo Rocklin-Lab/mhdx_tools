@@ -1143,7 +1143,7 @@ class Preprocessing:
             ax[1][1].set_xlim(20, 0)
             ax[1][1].axvline(self.configfile["ppm_refilter"], c="red", ls="--")
             ax[1][1].set_xlabel("ppm threshold")
-            ax[1][1].set_ylabel("FDR %")
+            ax[1][1].set_ylabel("FDR")
 
             ax[1][2].scatter(xs, ys2, c="blue", edgecolors="black", s=50)
             ax[1][2].set_xlim(20, 0)
