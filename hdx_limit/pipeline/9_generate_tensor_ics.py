@@ -20,7 +20,7 @@ def main(library_info_path,
          return_flag=False,
          gauss_params=(3, 1),
          n_factors=15,
-         init_method='nndsvd',
+         init_method="nndsvd",
          niter_max=100000,
          tol=1e-8,
          factor_corr_threshold=0.17,
@@ -184,8 +184,6 @@ if __name__ == "__main__":
         ic_rel_ht_threshold = configfile["ic_rel_height_threshold"]
 
         normalization_factors = pd.read_csv(normalization_factors_path)
-
-        factor_output_path = None
 
         for tensor_input_path, isotope_clusters_out_path in zip(tensor_input_paths, isotope_clusters_out_paths):
 
