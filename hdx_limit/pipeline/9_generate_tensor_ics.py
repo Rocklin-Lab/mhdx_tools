@@ -155,7 +155,7 @@ if __name__ == "__main__":
     if "snakemake" in globals():
 
         configfile_path = snakemake.input[0]
-        library_info_path = snakemke.input[1]
+        library_info_path = snakemake.input[1]
         normalization_factors_path = snakemake.input[2]
 
         tensor_input_paths = [f for f in snakemake.input if ".gz.cpickle.zlib" in f]

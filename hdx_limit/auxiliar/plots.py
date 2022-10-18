@@ -102,7 +102,7 @@ def plot_deviations(df,
     if len(df.query("n_UN > 1")) == 0:
         print(f"Only one file present... generating empty: {output_path}")
         Path(output_path).touch()
-        sys.exit()
+        return 0
 
     sns.set_context("talk")
 
