@@ -220,7 +220,7 @@ if __name__ == "__main__":
                  configfile=configfile,
                  normalization_factor=normalization_factor,
                  isotope_clusters_out_path=isotope_clusters_out_path,
-                 factor_output_path=factor_output_path,
+                 factor_output_path=factor_data_output_path,
                  factor_plot_output_path=factor_plot_output_path,
                  ic_plot_output_path=ic_plot_output_path,
                  gauss_params=gauss_params,
