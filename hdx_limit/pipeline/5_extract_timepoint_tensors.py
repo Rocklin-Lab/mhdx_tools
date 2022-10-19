@@ -48,7 +48,6 @@ def main(configfile,
          mzml_gz_path,
          timepoints_dict,
          outputs=None,
-         use_time_warping=False,
          return_flag=False,
          low_mass_margin=10,
          high_mass_margin=17,
@@ -342,6 +341,8 @@ if __name__ == "__main__":
     # If the snakemake global object is present, save expected arguments from snakemake to be passed to main().
     if "snakemake" in globals():
         configfile = yaml.load(open(snakemake.input[2], "rb").read(), Loader=yaml.Loader)
+
+        configfile["use_rtdt_recenter"] = snakemake.params["use_rtdt_recenter"]
 
         # Handle how calibration files are expected based on configfile lockmass and protein_polyfit params
         # Note calibration files are expected in specific folders: resources/0_calibration
