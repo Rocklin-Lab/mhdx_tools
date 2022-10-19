@@ -187,7 +187,7 @@ if __name__ == "__main__":
 
         for tensor_input_path, isotope_clusters_out_path in zip(tensor_input_paths, isotope_clusters_out_paths):
 
-            my_mzml = tensor_input_path.split("/")[-1].split("_")[-1].strip(".gz.cpickle.zlib")
+            my_mzml = [f for tp in configfile["timepoints"] for f in configfile[tp] if f in tensor_input_path][0]
             normalization_factor = normalization_factors.loc[normalization_factors["mzml"] == my_mzml][
                 "normalization_factor"].values
 
@@ -203,7 +203,7 @@ if __name__ == "__main__":
             ic_plot_output_path = isotope_clusters_out_path.replace("resources/9_subtensor_ics",
                                                                     "results/plots/ics").replace(".cpickle.zlib",
                                                                                                  ".cpickle.zlib.ics.pdf") \
-                if configfile["save_ics_plot"] else None
+                if configfile["save_ic_plot"] else None
 
             if configfile["save_factor_data"]:
                 if not os.path.isdir(os.path.dirname(factor_data_output_path)):
