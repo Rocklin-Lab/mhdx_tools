@@ -7,11 +7,12 @@ import matplotlib as mpl
 import numpy as np
 import yaml
 import matplotlib.pyplot as plt
-mpl.use("Agg")
-
 from hdx_limit.auxiliar.plots import plot_rtdt_recenter, plot_deviations
 from hdx_limit.auxiliar.filters import generate_dataframe_ics, remove_duplicates_from_df
 from hdx_limit.auxiliar.fdr import plot_fdr_stats
+
+mpl.use("Agg")
+
 
 def main(configfile,
          library_info_path,
@@ -62,10 +63,10 @@ def main(configfile,
         my_row = library_info.loc[(library_info["name"] == name) & (library_info["charge"] == charge)].copy()
         my_row[cols_idotp] = open_idotp_f[cols_idotp].values
         my_row[cols_ics_recenter] = \
-        df[(df['name'] == name) & (df['charge'] == charge)].sort_values(by=['idotp', 'rt_gaussian_rmse',
-                                                                            'dt_gaussian_rmse'],
-                                                                        ascending=[False, True, True])[
-            cols_ics_recenter].values[0]
+            df[(df['name'] == name) & (df['charge'] == charge)].sort_values(by=['idotp', 'rt_gaussian_rmse',
+                                                                                'dt_gaussian_rmse'],
+                                                                            ascending=[False, True, True])[
+                cols_ics_recenter].values[0]
         my_row['name_tmp'] = '_'.join(name.split('_')[:-1]) + '_' + str(
             round(my_row['RT_weighted_avg'].values[0], 2))
         if not my_row['DT_weighted_avg'].values[0] < 0.1:
@@ -82,7 +83,6 @@ def main(configfile,
         out_df.rename(columns={"name": "name_before_recentering", "name_tmp": "name"}, inplace=True)
     else:
         out_df.rename(columns={"name_tmp": "name_after_recentering"}, inplace=True)
-
 
     if fdr_plot_output_path is not None:
         plot_fdr_stats(out_df,
@@ -198,7 +198,7 @@ if __name__ == "__main__":
              library_info_path=args.library_info_path,
              all_idotp_inputs=args.all_idotp_inputs,
              all_ics_inputs=args.all_ics_inputs,
-             library_info_out_path = args.library_info_out_path,
+             library_info_out_path=args.library_info_out_path,
              idotp_plot_out_path=args.idotp_plot_out_path,
              fdr_plot_output_path=args.fdr_plot_output_path,
              UN_deviations_plot_output_path=args.UN_deviations_plot_output_path
