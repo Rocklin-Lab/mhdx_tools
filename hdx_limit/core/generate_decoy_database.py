@@ -67,7 +67,7 @@ def main(name_mass_seq,
          length_max=None,
          ppm_tol=50):
 
-    df = pd.read_csv(name_mass_seq, names=["name", "sequence", "MW"])
+    df = pd.read_csv(name_mass_seq, names=["name", "sequence", "MW"], skiprows=[0])
 
     if mass_min is None:
         mass_min = min(df['MW'].values) - 50
