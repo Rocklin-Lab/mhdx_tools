@@ -3,6 +3,8 @@ import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
+import glob
+import numpy as np
 
 
 def plot_rtdt_recenter(df,
@@ -147,3 +149,76 @@ def plot_deviations(df,
         plt.savefig(output_path, format="pdf", dpi=dpi, bbox_inches="tight")
 
     plt.close("all")
+
+
+def get_data_benchmark(fs, key):
+    fs_key = [i for i in fs if key in i]
+
+    l = []
+    for f in fs_key:
+        l.append(pd.read_csv(f, sep="\t")[["s", "max_rss"]].values.tolist()[0])
+
+    return np.array(l)
+
+
+def plot_hist_kde_benchmark(array, ax, xlabel=None, title=None):
+    sns.histplot(array, color="blue", ax=ax)
+
+    if xlabel is not None:
+        ax.set_xlabel(xlabel)
+
+    if title is not None:
+        ax.text(0, 1.06, title, transform=ax.transAxes, size=14)
+
+    if len(array) > 1:
+        ax_tmp = ax.twinx()
+
+        ax_tmp.tick_params(axis='y', colors='red')
+        ax_tmp.yaxis.label.set_color('red')
+
+        sns.kdeplot(array, color="red", cumulative=True, ax=ax_tmp, warn_singular=False)
+
+
+def generate_benchmark_stats_plot(benchmark_folder,
+                                  output_path,
+                                  dpi=300):
+
+    fs = glob.glob(f"{benchmark_folder}/*txt") + glob.glob(f"{benchmark_folder}/10*/*txt")
+
+    keys = set([i.split("/")[-1].split(".")[0] for i in fs if "10_generate_tensor_ics" not in i])
+    keys = list(keys) + ["10_generate_tensor_ics"]
+    keys = sorted(keys, key=lambda x: int(x.split("_")[0]))
+
+    print(keys)
+
+    sns.set_context("talk")
+
+    fig, ax = plt.subplots(len(keys) + 1, 2, figsize=(10, len(keys) * 3), dpi=dpi, constrained_layout=True)
+
+    ax[0][0].axis("off")
+    ax[0][1].axis("off")
+
+    d = {}
+
+    for idx, key in enumerate(keys):
+        array = get_data_benchmark(fs, key)
+
+        d[key] = np.sum(array[:, 0])
+
+        plot_hist_kde_benchmark(array[:, 0] / 60, ax[idx + 1][0], xlabel="time / min", title=key)
+
+        plot_hist_kde_benchmark(array[:, 1], ax[idx + 1][1], xlabel="physical mem / Mb")
+
+    x_coord, y_coord = 0, 0.95
+    total = 0
+    for key, value in d.items():
+        total += value
+        ax[0][0].text(x_coord, y_coord, f"{key} : {value / 60:.2f} min", transform=ax[0][0].transAxes, fontsize=11)
+        y_coord -= 0.13
+
+    ax[0][0].text(x_coord, y_coord, f"total : {total / 3600:.2f} hours", transform=ax[0][0].transAxes, fontsize=11)
+
+    if output_path is not None:
+        plt.savefig(output_path, format="pdf", dpi=dpi, bbox_inches="tight")
+    else:
+        plt.show()
