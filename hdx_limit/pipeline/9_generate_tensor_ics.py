@@ -215,6 +215,8 @@ if __name__ == "__main__":
                 if not os.path.isdir(os.path.dirname(ic_plot_output_path)):
                     os.makedirs(os.path.dirname(ic_plot_output_path))
 
+            print(f"Processing {tensor_input_path}...")
+
             main(library_info_path=library_info_path,
                  tensor_input_path=tensor_input_path,
                  configfile=configfile,
