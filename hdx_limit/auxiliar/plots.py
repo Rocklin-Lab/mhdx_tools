@@ -190,8 +190,6 @@ def generate_benchmark_stats_plot(benchmark_folder,
     keys = list(keys) + ["10_generate_tensor_ics"]
     keys = sorted(keys, key=lambda x: int(x.split("_")[0]))
 
-    print(keys)
-
     sns.set_context("talk")
 
     fig, ax = plt.subplots(len(keys) + 1, 2, figsize=(10, len(keys) * 3), dpi=dpi, constrained_layout=True)
