@@ -233,8 +233,8 @@ def gen_stretched_times(tic_file_list, stretched_times_plot_outpath=None):
     
     """
     ref_tic_dict = limit_read(tic_file_list[0])
-    ref_tic_base_sum = ref_tic_dict['tics_base_sums']
-    ref_tic_cumulative_sum = ref_tic_dict['tic_cumulative_sum']
+    ref_tic_base_sum = ref_tic_dict["tics_base_sums"]
+    ref_tic_cumulative_sum = ref_tic_dict["tic_cumulative_sum"]
     
     stretched_ts1_times = []
     stretched_ts2_times = []
@@ -245,8 +245,8 @@ def gen_stretched_times(tic_file_list, stretched_times_plot_outpath=None):
     for index, tic_file in enumerate(tic_file_list):
 
         tic_dict = limit_read(tic_file)
-        tic_cumulative_sum = tic_dict['tic_cumulative_sum']
-        tic_base_sum = tic_dict['tics_base_sums']
+        tic_cumulative_sum = tic_dict["tic_cumulative_sum"]
+        tic_base_sum = tic_dict["tics_base_sums"]
 
         tic_cumsum = ((tic_cumulative_sum.T / (tic_base_sum + 1)) * ref_tic_base_sum).T
 
@@ -269,7 +269,8 @@ def gen_stretched_times(tic_file_list, stretched_times_plot_outpath=None):
 
     return stretched_ts1_times, stretched_ts2_times
 
-def rt_correlation_plot(intermediates, output_path=None):
+
+def rt_correlation_plot(intermediates, output_path=None, dpi=200):
 
     if len(intermediates) > 6:
         intermediates = intermediates[:6]
@@ -291,36 +292,36 @@ def rt_correlation_plot(intermediates, output_path=None):
 
     for name in unique_names:
         for i in runs.keys():
-            df_rt[i].append(runs[i][runs[i].name == name]['RT'].mean())
+            df_rt[i].append(runs[i][runs[i].name == name]["RT"].mean())
 
     combinations = [subset for subset in itertools.combinations(runs.keys(), 2)]
 
-    fig, ax = plt.subplots(len(combinations), 2, figsize=(10,3.5*len(combinations)), dpi=300)
+    fig, ax = plt.subplots(len(combinations), 2, figsize=(10, 3.5*len(combinations)), dpi=dpi, constrained_layout=True)
 
     for i in range(len(combinations)):
         ax[i][0].scatter(df_rt[combinations[i][0]], df_rt[combinations[i][1]],
-                         alpha=0.5, s=50,  edgecolors='black', lw=0.7)
+                         alpha=0.5, s=50,  color="blue", edgecolors="black", lw=0.7)
 
         r, p = sp.stats.pearsonr(x=df_rt[combinations[i][0]], y=df_rt[combinations[i][1]])
-        ax[i][0].text(.01, .95, 'pearson_r={:.2f}'.format(r), transform=ax[i][0].transAxes)
+        ax[i][0].text(.01, .95, f"pearson_r={r:.2f}", transform=ax[i][0].transAxes, va="top")
 
         sns.kdeplot(data=np.array(df_rt[combinations[i][0]])-np.array(df_rt[combinations[i][1]]), ax=ax[i][1])
 
-        ax[i][0].plot([i for i in range(30)], [i for i in range(30)], '--r', lw=1)
-        ax[i][1].axvline(0, ls='--', color='red')
-        ax[i][0].set_xlabel('RT_%i / min'%combinations[i][0])
-        ax[i][0].set_ylabel('RT_%i / min'%combinations[i][1])
-        ax[i][1].set_xlabel(r'$\Delta$RT/ min')
+        ax[i][0].plot([i for i in range(30)], [i for i in range(30)], "--r", lw=1)
+        ax[i][1].axvline(0, ls="--", color="red")
+        ax[i][0].set_xlabel(f"RT_%{combinations[i][0]}/ min")
+        ax[i][0].set_ylabel(f"RT_%{combinations[i][1]}/ min")
+        ax[i][1].set_xlabel(r"$\Delta$RT/ min")
         ax[i][1].set_xlim(-5,5)
 
     plt.tight_layout()
 
     if output_path is not None:
-        plt.savefig(output_path, format='pdf', dpi=300)
+        plt.savefig(output_path, format="pdf", dpi=dpi, bbox_inches="tight")
     else:
         plt.show()
 
-    plt.close('all')
+    plt.close("all")
 
 
 def main(names_and_seqs_path,
@@ -344,7 +345,7 @@ def main(names_and_seqs_path,
         undeut_mzml (string): path/to/undeuterated.mzML
         intermediates (list of strings): list of paths to imtbx intermediate files
         tics (list of strings): list of paths to all .tic files
-        configfile (dict): dictionary with 'timepoints' key containing list of hdx timepoints in integer seconds, which are keys mapping to lists of each timepoint's replicate .mzML filenames
+        configfile (dict): dictionary with "timepoints" key containing list of hdx timepoints in integer seconds, which are keys mapping to lists of each timepoint"s replicate .mzML filenames
         return_flag (any non-None type): option to return main output in python, for notebook context
         out_path (string): path/to/file for main output library_info.csv
         rt_group_cutoff (float): radius in LC-RT to consider signals a part of an rt-cluster
@@ -379,7 +380,7 @@ def main(names_and_seqs_path,
 
     # Combines undfs and sort.
     catdf = pd.concat(undfs)
-    catdf = catdf[catdf['im_mono'] > 10] # Remove unresonable DT-based signals
+    catdf = catdf[catdf["im_mono"] > 10] # Remove unresonable DT-based signals
     catdf = catdf.sort_values(["name", "charge", "RT", "pred_RT", "abs_ppm"])
     catdf.index = range(len(catdf))
 
@@ -401,12 +402,12 @@ def main(names_and_seqs_path,
     catdf = catdf.query("dup == False")
 
     # Adds sequences to dataframe.
-    catdf.loc[:, 'sequence'] = None
+    catdf.loc[:, "sequence"] = None
     for i, line in name_and_seq.iterrows():
-        catdf.loc[catdf['name'] == line['name'], 'sequence'] = line['sequence']
+        catdf.loc[catdf["name"] == line["name"], "sequence"] = line["sequence"]
 
     # Applies index after sorting and removing duplicates.
-    catdf.loc[:, 'idx'] = [i for i in range(len(catdf))]
+    catdf.loc[:, "idx"] = [i for i in range(len(catdf))]
 
     # Clusters RT values and renames.
     name_dict = OrderedDict.fromkeys(catdf["name"].values)
@@ -465,7 +466,7 @@ def main(names_and_seqs_path,
             # Get sub frame of rt-group.
             protein_name = catdf.iloc[i]["name"]
             subdf = catdf.loc[catdf["name"] == protein_name]
-            # Takes weighted-avg of rt-tp-predictions for all charges in rt-group, if single species group, use species pred-rts as 'mean' stand-ins.
+            # Takes weighted-avg of rt-tp-predictions for all charges in rt-group, if single species group, use species pred-rts as "mean" stand-ins.
             if len(subdf) > 1:
                 name_rt_preds = [
                     np.average(subdf.iloc[:, j].values, weights=catdf.loc[catdf["name"]==protein_name]["ab_cluster_total"])
@@ -488,11 +489,11 @@ def main(names_and_seqs_path,
         catdf["rt_group_mean_" + rt_columns[i]] = all_tp_mean_preds[i]
 
     ref_mzml_path = [mzml_path for mzml_path in mzml_sum_paths if configfile[0][0] in mzml_path][0] # Default first undeuterated replicate.
-    ref_sum = float(open(ref_mzml_path, 'r').read())
+    ref_sum = float(open(ref_mzml_path, "r").read())
     # Initializes normalization_factors dict with reference mzml.
     normalization_factors = {"mzml": ["_".join(ref_mzml_path.split("/")[-1].split("_")[:-1])], "sum": [ref_sum], "normalization_factor": [1]}
     for mzml_sum_path in mzml_sum_paths[1:]:
-        my_sum = float(open(mzml_sum_path, 'r').read())
+        my_sum = float(open(mzml_sum_path, "r").read())
         my_mzml = "_".join(mzml_sum_path.split("/")[-1].split("_")[:-1]) #expects path/to/<mzml>_sum.txt
         normalization_factors["mzml"].append(my_mzml)
         normalization_factors["sum"].append(my_sum)
@@ -529,16 +530,16 @@ if __name__ == "__main__":
     if "snakemake" in globals():
         names_and_seqs_path = snakemake.input[0]
         configfile = yaml.load(open(snakemake.input[1], "rt"),Loader=yaml.FullLoader)
-        undeut_mzml = [fn for fn in snakemake.input if fn.endswith('.mzML.gz')][0]
-        tics = [fn for fn in snakemake.input if '.tic' in fn]
-        intermediates = sorted([fn for fn in snakemake.input if '_intermediate.csv' in fn])
-        mzml_sum_paths = [fn for fn in snakemake.input if '_sum.txt' in fn]
+        undeut_mzml = [fn for fn in snakemake.input if fn.endswith(".mzML.gz")][0]
+        tics = [fn for fn in snakemake.input if ".tic" in fn]
+        intermediates = sorted([fn for fn in snakemake.input if "_intermediate.csv" in fn])
+        mzml_sum_paths = [fn for fn in snakemake.input if "_sum.txt" in fn]
         out_path = snakemake.output[0]
         stretched_times_plot_outpath = snakemake.output[1]
         normalization_factors_outpath = snakemake.output[2]
         normalization_factors_plot_outpath = snakemake.output[3]
         rt_correlation_plot_outpath = snakemake.output[4]
-        use_time_warping = configfile['use_time_warping']
+        use_time_warping = configfile["use_time_warping"]
 
         main(names_and_seqs_path=names_and_seqs_path,
              out_path=out_path,
