@@ -211,7 +211,7 @@ def generate_benchmark_stats_plot(benchmark_folder,
     total = 0
     for key, value in d.items():
         total += value
-        ax[0][0].text(x_coord, y_coord, f"{key} : {value / 60:.2f} min", transform=ax[0][0].transAxes, fontsize=11)
+        ax[0][0].text(x_coord, y_coord, f"{key} : {value / 3600:.2f} hours", transform=ax[0][0].transAxes, fontsize=11)
         y_coord -= 0.13
 
     ax[0][0].text(x_coord, y_coord, f"total : {total / 3600:.2f} hours", transform=ax[0][0].transAxes, fontsize=11)
