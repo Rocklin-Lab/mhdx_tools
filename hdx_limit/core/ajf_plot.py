@@ -84,7 +84,7 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, output=None):
     # Replace ics based on large AUC extrapolations by median value
     # And small AUCs # TODO Check why auc are so large or why Rts suffer from deviation: gaussian extrapolation failing?
     df["auc"] = np.where(df["auc"] > 1e10, np.median(df[df["winner"] == 1]["auc"]), df["auc"])
-    df = df[df["auc"] > 1e1]
+    df["auc"] = np.where(df["auc"] < 1e1, 1e1, df["auc"])
     # Replace unreasonable RT
     df["rt"] = np.where(abs(df["rt"] - np.median(df["rt"])) > 0.5, np.median(df["rt"])+0.5, df["rt"])
 
