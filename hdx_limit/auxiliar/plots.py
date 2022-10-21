@@ -12,6 +12,7 @@ import itertools
 def rt_correlation_plot(intermediates,
                         output_path=None,
                         dpi=200):
+
     if len(intermediates) > 6:
         intermediates = intermediates[:6]
 
@@ -73,20 +74,22 @@ def rt_distribution_plot(configfile,
     runs = {}
     if len(intermediates) == 1:
         runs[0] = pd.read_csv(intermediates)
+        titles = [configfile[0][0]]
     else:
         fs = sorted(intermediates)
         for i, f in enumerate(fs):
             runs[i] = pd.read_csv(f)
+        titles = [f.split("/")[-1].strip("_intermediate.csv") for f in fs]
 
     sns.set_context("talk", font_scale=1)
 
     fig, ax = plt.subplots(len(runs), 1, figsize=(5, 3 * len(runs)), dpi=dpi, constrained_layout=True)
 
     if len(runs) == 1:
-        plot_hist_kde(array=runs[0]["RT"], ax=ax, xlabel="RT / min", title=configfile[0][0], binwidth=0.5)
+        plot_hist_kde(array=runs[0]["RT"], ax=ax, xlabel="RT / min", title=titles[0], binwidth=0.5)
     else:
         for i in range(len(runs)):
-            plot_hist_kde(array=runs[i]["RT"], ax=ax[i], xlabel="RT / min", title=configfile[0][i], binwidth=0.5)
+            plot_hist_kde(array=runs[i]["RT"], ax=ax[i], xlabel="RT / min", title=titles[i], binwidth=0.5)
 
     if output_path is not None:
         plt.savefig(output_path, format="pdf", dpi=dpi, bbox_inches="tight")

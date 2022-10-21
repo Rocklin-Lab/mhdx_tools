@@ -611,5 +611,5 @@ if __name__ == "__main__":
              normalization_factors_outpath=args.normalization_factors_outpath,
              normalization_factors_plot_outpath=args.normalization_factors_plot_outpath,
              rt_correlation_plot_outpath=args.rt_correlation_plot_outpath,
-             rt_correlation_distribution_outpath=args.rt_correlation_plot_outpath,
+             rt_distribution_plot_outpath=args.rt_correlation_plot_outpath,
              use_time_warping=args.use_time_warping)
