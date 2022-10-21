@@ -282,6 +282,7 @@ def main(names_and_seqs_path,
          normalization_factors_outpath=None,
          normalization_factors_plot_outpath=None,
          rt_correlation_plot_outpath=None,
+         rt_distribution_plot_outpath=None,
          use_time_warping=True):
     """Generates the master list of library_proteins identified in MS data: library_info.csv.
 
