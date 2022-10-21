@@ -634,7 +634,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-
     configfile = yaml.load(open(args.configfile, "rb").read(), Loader=yaml.Loader)
 
     if not os.stat(args.atc).st_size == 0:

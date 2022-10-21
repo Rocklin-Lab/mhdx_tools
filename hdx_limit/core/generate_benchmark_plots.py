@@ -13,7 +13,7 @@ def main(benchmark_folder,
 
 if __name__ == "__main__":
 
-    if snakemake in globals():
+    if "snakemake" in globals():
 
         benchmark_folder = snakemake.input[0]
         output_path = snakemake.output[0]
