@@ -5,13 +5,112 @@ from pathlib import Path
 import glob
 import numpy as np
 import pandas as pd
+import scipy as sp
+import itertools
+
+
+def rt_correlation_plot(intermediates,
+                        output_path=None,
+                        dpi=200):
+    if len(intermediates) > 6:
+        intermediates = intermediates[:6]
+
+    fs = sorted(intermediates)
+
+    runs = {}
+    for i, f in enumerate(fs):
+        runs[i] = pd.read_csv(f)
+
+    unique_names = set(runs[0].name)
+    for i in runs.keys():
+        if i != 0:
+            unique_names = set(unique_names).intersection(runs[i].name)
+
+    df_rt = {}
+    for i in runs.keys():
+        df_rt[i] = []
+
+    for name in unique_names:
+        for i in runs.keys():
+            df_rt[i].append(runs[i][runs[i].name == name]["RT"].mean())
+
+    combinations = [subset for subset in itertools.combinations(runs.keys(), 2)]
+
+    sns.set_context("talk")
+
+    fig, ax = plt.subplots(len(combinations), 2, figsize=(10, 3.5 * len(combinations)), dpi=dpi,
+                           constrained_layout=True)
+
+    for i in range(len(combinations)):
+        ax[i][0].scatter(df_rt[combinations[i][0]], df_rt[combinations[i][1]],
+                         alpha=0.5, s=50, color="blue", edgecolors="black", lw=0.7)
+
+        r, p = sp.stats.pearsonr(x=df_rt[combinations[i][0]], y=df_rt[combinations[i][1]])
+        ax[i][0].text(.01, .95, f"pearson_r={r:.2f}", transform=ax[i][0].transAxes, va="top")
+
+        sns.kdeplot(data=np.array(df_rt[combinations[i][0]]) - np.array(df_rt[combinations[i][1]]), ax=ax[i][1])
+
+        ax[i][0].plot([i for i in range(30)], [i for i in range(30)], "--r", lw=1)
+        ax[i][1].axvline(0, ls="--", color="red")
+        ax[i][0].set_xlabel(f"RT_%{combinations[i][0]}/ min")
+        ax[i][0].set_ylabel(f"RT_%{combinations[i][1]}/ min")
+        ax[i][1].set_xlabel(r"$\Delta$RT/ min")
+        ax[i][1].set_xlim(-5, 5)
+
+    if output_path is not None:
+        plt.savefig(output_path, format="pdf", dpi=dpi, bbox_inches="tight")
+    else:
+        plt.show()
+
+    plt.close("all")
+
+
+def rt_distribution_plot(configfile,
+                         intermediates,
+                         output_path=None,
+                         dpi=200):
+    runs = {}
+    if len(intermediates) == 1:
+        runs[0] = pd.read_csv(intermediates)
+    else:
+        fs = sorted(intermediates)
+        for i, f in enumerate(fs):
+            runs[i] = pd.read_csv(f)
+
+    unique_names = set(runs[0].name)
+    for i in runs.keys():
+        if i != 0:
+            unique_names = set(unique_names).intersection(runs[i].name)
+
+    df_rt = {}
+    for i in runs.keys():
+        df_rt[i] = []
+
+    for name in unique_names:
+        for i in runs.keys():
+            df_rt[i].append(runs[i][runs[i].name == name]["RT"].mean())
+
+    sns.set_context("talk", font_scale=1)
+
+    fig, ax = plt.subplots(len(df_rt), 1, figsize=(5, 3 * len(df_rt)), dpi=dpi, constrained_layout=True)
+
+    if len(intermediates) == 1:
+        plot_hist_kde(array=df_rt[0], ax=ax, xlabel="RT / min", title=configfile[0][0])
+    else:
+        for i in range(len(df_rt)):
+            plot_hist_kde(array=df_rt[i], ax=ax[i], xlabel="RT / min", title=configfile[0][i])
+
+    if output_path is not None:
+        plt.savefig(output_path, format="pdf", dpi=dpi, bbox_inches="tight")
+    else:
+        plt.show()
+
+    plt.close("all")
 
 
 def plot_rtdt_recenter(df,
                        output_folder=None,
                        dpi=150):
-
-
     # Create folder to save pdf files
     if output_folder is not None:
         os.makedirs("results/plots/tensor-recenter/")
@@ -56,8 +155,8 @@ def plot_rtdt_recenter(df,
 
             # Plot horizontal and vertical lines corresponding to initial RT and DT centers used to extract tensors
             retention_label_center = \
-            df[(df["name"] == name) & (df["charge"] == charge)]["ic"].values[0].retention_labels[
-                len(df[(df["name"] == name) & (df["charge"] == charge)]["ic"].values[0].retention_labels) // 2]
+                df[(df["name"] == name) & (df["charge"] == charge)]["ic"].values[0].retention_labels[
+                    len(df[(df["name"] == name) & (df["charge"] == charge)]["ic"].values[0].retention_labels) // 2]
             ax[j + 1].axhline(retention_label_center, color="red", alpha=0.5, lw=0.5)
             drift_label_center = df[(df["name"] == name) & (df["charge"] == charge)]["ic"].values[0].drift_labels[
                 len(df[(df["name"] == name) & (df["charge"] == charge)]["ic"].values[0].drift_labels) // 2]
@@ -100,7 +199,6 @@ def plot_deviations(df,
                     configfile,
                     output_path=None,
                     dpi=200):
-
     if len(df.query("n_UN > 1")) == 0:
         print(f"Only one file present... generating empty: {output_path}")
         Path(output_path).touch()
@@ -119,7 +217,8 @@ def plot_deviations(df,
     ax[0][1].set_xlabel("n_signals")
 
     sns.histplot(df["im_mono"].values * configfile["dt_max"] / 200 - df["DT_weighted_avg"].values, ax=ax[1][0])
-    sns.histplot(df["im_mono"].values * configfile["dt_max"] / 200 - df["DT_weighted_avg"].values, ax=ax[1][0], kde=True)
+    sns.histplot(df["im_mono"].values * configfile["dt_max"] / 200 - df["DT_weighted_avg"].values, ax=ax[1][0],
+                 kde=True)
     ax[1][0].set_xlabel("DT error")
 
     sns.histplot(df["RT"].values - df["RT_weighted_avg"].values, ax=ax[1][1])
@@ -152,7 +251,6 @@ def plot_deviations(df,
 
 
 def get_data_benchmark(fs, key):
-
     fs_key = [i for i in fs if key in i]
 
     l = []
@@ -162,7 +260,7 @@ def get_data_benchmark(fs, key):
     return np.array(l)
 
 
-def plot_hist_kde_benchmark(array, ax, xlabel=None, title=None):
+def plot_hist_kde(array, ax, xlabel=None, title=None):
     sns.histplot(array, color="blue", ax=ax)
 
     if xlabel is not None:
@@ -174,8 +272,8 @@ def plot_hist_kde_benchmark(array, ax, xlabel=None, title=None):
     if len(array) > 1:
         ax_tmp = ax.twinx()
 
-        ax_tmp.tick_params(axis='y', colors='red')
-        ax_tmp.yaxis.label.set_color('red')
+        ax_tmp.tick_params(axis="y", colors="red")
+        ax_tmp.yaxis.label.set_color("red")
 
         sns.kdeplot(array, color="red", cumulative=True, ax=ax_tmp, warn_singular=False)
 
@@ -183,7 +281,6 @@ def plot_hist_kde_benchmark(array, ax, xlabel=None, title=None):
 def generate_benchmark_stats_plot(benchmark_folder,
                                   output_path,
                                   dpi=300):
-
     fs = glob.glob(f"{benchmark_folder}/*txt") + glob.glob(f"{benchmark_folder}/10*/*txt")
 
     keys = set([i.split("/")[-1].split(".")[0] for i in fs if "10_generate_tensor_ics" not in i])
@@ -204,9 +301,9 @@ def generate_benchmark_stats_plot(benchmark_folder,
 
         d[key] = np.sum(array[:, 0])
 
-        plot_hist_kde_benchmark(array[:, 0] / 60, ax[idx + 1][0], xlabel="time / min", title=key)
+        plot_hist_kde(array[:, 0] / 60, ax[idx + 1][0], xlabel="time / min", title=key)
 
-        plot_hist_kde_benchmark(array[:, 1], ax[idx + 1][1], xlabel="physical mem / Mb")
+        plot_hist_kde(array[:, 1], ax[idx + 1][1], xlabel="physical mem / Mb")
 
     x_coord, y_coord = 0, 0.95
     total = 0
@@ -221,3 +318,5 @@ def generate_benchmark_stats_plot(benchmark_folder,
         plt.savefig(output_path, format="pdf", dpi=dpi, bbox_inches="tight")
     else:
         plt.show()
+
+    plt.close("all")

@@ -6,15 +6,14 @@ import argparse
 import matplotlib
 import numpy as np
 import pandas as pd
-import seaborn as sns
-import itertools
 from pathlib import Path
 from fastdtw import fastdtw
 from collections import OrderedDict
 from matplotlib import pyplot as plt
 from scipy.spatial.distance import euclidean
 from hdx_limit.core.io import limit_read
-import scipy as sp
+from hdx_limit.auxiliar.plots import rt_correlation_plot, rt_distribution_plot
+
 
 matplotlib.use("Agg")
 
@@ -270,60 +269,6 @@ def gen_stretched_times(tic_file_list, stretched_times_plot_outpath=None):
     return stretched_ts1_times, stretched_ts2_times
 
 
-def rt_correlation_plot(intermediates, output_path=None, dpi=200):
-
-    if len(intermediates) > 6:
-        intermediates = intermediates[:6]
-
-    fs = sorted(intermediates)
-
-    runs = {}
-    for i, f in enumerate(fs):
-        runs[i] = pd.read_csv(f)
-
-    unique_names = set(runs[0].name)
-    for i in runs.keys():
-        if i != 0:
-            unique_names = set(unique_names).intersection(runs[i].name)
-
-    df_rt = {}
-    for i in runs.keys():
-        df_rt[i] = []
-
-    for name in unique_names:
-        for i in runs.keys():
-            df_rt[i].append(runs[i][runs[i].name == name]["RT"].mean())
-
-    combinations = [subset for subset in itertools.combinations(runs.keys(), 2)]
-
-    fig, ax = plt.subplots(len(combinations), 2, figsize=(10, 3.5*len(combinations)), dpi=dpi, constrained_layout=True)
-
-    for i in range(len(combinations)):
-        ax[i][0].scatter(df_rt[combinations[i][0]], df_rt[combinations[i][1]],
-                         alpha=0.5, s=50,  color="blue", edgecolors="black", lw=0.7)
-
-        r, p = sp.stats.pearsonr(x=df_rt[combinations[i][0]], y=df_rt[combinations[i][1]])
-        ax[i][0].text(.01, .95, f"pearson_r={r:.2f}", transform=ax[i][0].transAxes, va="top")
-
-        sns.kdeplot(data=np.array(df_rt[combinations[i][0]])-np.array(df_rt[combinations[i][1]]), ax=ax[i][1])
-
-        ax[i][0].plot([i for i in range(30)], [i for i in range(30)], "--r", lw=1)
-        ax[i][1].axvline(0, ls="--", color="red")
-        ax[i][0].set_xlabel(f"RT_%{combinations[i][0]}/ min")
-        ax[i][0].set_ylabel(f"RT_%{combinations[i][1]}/ min")
-        ax[i][1].set_xlabel(r"$\Delta$RT/ min")
-        ax[i][1].set_xlim(-5,5)
-
-    plt.tight_layout()
-
-    if output_path is not None:
-        plt.savefig(output_path, format="pdf", dpi=dpi, bbox_inches="tight")
-    else:
-        plt.show()
-
-    plt.close("all")
-
-
 def main(names_and_seqs_path,
          undeut_mzml,
          intermediates,
@@ -520,7 +465,13 @@ def main(names_and_seqs_path,
         else:
             #touch empty file if only one run is present
             Path(rt_correlation_plot_outpath).touch()
-    
+
+    if rt_distribution_plot_outpath is not None:
+        rt_distribution_plot(configfile=configfile,
+                             intermediates=intermediates,
+                             output_path=rt_distribution_plot_outpath,
+                             dpi=200)
+
     if return_flag is not None:
         return {"library_info": catdf.to_dict(), "normalization_factors": normalization_factors}
 
@@ -539,6 +490,7 @@ if __name__ == "__main__":
         normalization_factors_outpath = snakemake.output[2]
         normalization_factors_plot_outpath = snakemake.output[3]
         rt_correlation_plot_outpath = snakemake.output[4]
+        rt_distribution_plot_outpath = snakemake.output[5]
         use_time_warping = configfile["use_time_warping"]
 
         main(names_and_seqs_path=names_and_seqs_path,
@@ -552,6 +504,7 @@ if __name__ == "__main__":
              normalization_factors_outpath=normalization_factors_outpath,
              normalization_factors_plot_outpath=normalization_factors_plot_outpath,
              rt_correlation_plot_outpath=rt_correlation_plot_outpath,
+             rt_distribution_plot_outpath=rt_distribution_plot_outpath,
              use_time_warping=use_time_warping)
 
     else:
@@ -622,7 +575,12 @@ if __name__ == "__main__":
                             help="path/to/normalization_factors_plot.png")
         parser.add_argument("-r",
                             "--rt_correlation_plot_outpath",
+                            default=None,
                             help="path/to/rt_correlation_plot.pdf")
+        parser.add_argument("-r",
+                            "--rt_correlation_plot_outpath",
+                            default=None,
+                            help="path/to/rt_distribution_plot.pdf")
         parser.add_argument("-u",
                             "--use_time_warping",
                             default=True,
@@ -638,8 +596,7 @@ if __name__ == "__main__":
                 glob.glob(args.intermediates_dir + "*intermediate.csv")))
         if args.tics_dir is not None and args.tics is None:
             args.tics = list(glob.glob(args.tics_dir + "*.ims.mz.tic.cpickle.zlib"))
-        configfile = yaml.load(open(args.configfile, "rt"),
-                                    Loader=yaml.FullLoader)
+        configfile = yaml.load(open(args.configfile, "rt"), Loader=yaml.FullLoader)
 
         main(args.names_and_seqs_path,
              out_path=args.out_path,
@@ -653,4 +610,5 @@ if __name__ == "__main__":
              normalization_factors_outpath=args.normalization_factors_outpath,
              normalization_factors_plot_outpath=args.normalization_factors_plot_outpath,
              rt_correlation_plot_outpath=args.rt_correlation_plot_outpath,
+             rt_correlation_distribution_outpath=args.rt_correlation_plot_outpath,
              use_time_warping=args.use_time_warping)
