@@ -69,6 +69,7 @@ def rt_distribution_plot(configfile,
                          intermediates,
                          output_path=None,
                          dpi=200):
+
     runs = {}
     if len(intermediates) == 1:
         runs[0] = pd.read_csv(intermediates)
@@ -77,28 +78,15 @@ def rt_distribution_plot(configfile,
         for i, f in enumerate(fs):
             runs[i] = pd.read_csv(f)
 
-    unique_names = set(runs[0].name)
-    for i in runs.keys():
-        if i != 0:
-            unique_names = set(unique_names).intersection(runs[i].name)
-
-    df_rt = {}
-    for i in runs.keys():
-        df_rt[i] = []
-
-    for name in unique_names:
-        for i in runs.keys():
-            df_rt[i].append(runs[i][runs[i].name == name]["RT"].mean())
-
     sns.set_context("talk", font_scale=1)
 
-    fig, ax = plt.subplots(len(df_rt), 1, figsize=(5, 3 * len(df_rt)), dpi=dpi, constrained_layout=True)
+    fig, ax = plt.subplots(len(runs), 1, figsize=(5, 3 * len(runs)), dpi=dpi, constrained_layout=True)
 
-    if len(intermediates) == 1:
-        plot_hist_kde(array=df_rt[0], ax=ax, xlabel="RT / min", title=configfile[0][0])
+    if len(runs) == 1:
+        plot_hist_kde(array=runs[0]["RT"], ax=ax, xlabel="RT / min", title=configfile[0][0], binwidth=0.5)
     else:
-        for i in range(len(df_rt)):
-            plot_hist_kde(array=df_rt[i], ax=ax[i], xlabel="RT / min", title=configfile[0][i])
+        for i in range(len(runs)):
+            plot_hist_kde(array=runs[i]["RT"], ax=ax[i], xlabel="RT / min", title=configfile[0][i], binwidth=0.5)
 
     if output_path is not None:
         plt.savefig(output_path, format="pdf", dpi=dpi, bbox_inches="tight")
@@ -260,8 +248,9 @@ def get_data_benchmark(fs, key):
     return np.array(l)
 
 
-def plot_hist_kde(array, ax, xlabel=None, title=None):
-    sns.histplot(array, color="blue", ax=ax)
+def plot_hist_kde(array, ax, xlabel=None, title=None, binwidth=None):
+
+    sns.histplot(array, color="blue", ax=ax, binwidth=binwidth)
 
     if xlabel is not None:
         ax.set_xlabel(xlabel)
