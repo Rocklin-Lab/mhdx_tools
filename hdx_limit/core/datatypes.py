@@ -2138,7 +2138,7 @@ class IsotopeCluster:
             # self.dt_coms = [center_of_mass(self.dts)[0]]
             self.dt_norms = [self.dts / np.linalg.norm(self.dts)]
 
-        if self.n_concatenated == 1:
+        if (self.n_concatenated == 1) and (np.sum(self.cluster_mz_data) > 0):
             self.abs_mz_com = np.average(self.mz_labels, weights=self.cluster_mz_data)
         else:
             self.abs_mz_com = "Concatenated, N/A, see IC.baseline_integrated_mz_com"
