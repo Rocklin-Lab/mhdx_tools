@@ -24,7 +24,7 @@ def main(configfile_path,
         imtbx.plot_kde(output_path=kde_output_path)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     if "snakemake" in globals():
 
