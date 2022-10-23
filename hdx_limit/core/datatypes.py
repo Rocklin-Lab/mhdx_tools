@@ -1409,28 +1409,34 @@ class DataTensor:
         factor_list = []
         for num in range(factor_output.factor_rank):
             pmem("Factorize: Gen Factor # %s start" % num)
-            factor_obj = Factor(source_file=self.source_file,
-                                tensor_idx=self.tensor_idx,
-                                timepoint_idx=self.timepoint_idx,
-                                name=self.name,
-                                charge_states=self.charge_states,
-                                rts=factor_output.factors[0].T[num],
-                                dts=factor_output.factors[1].T[num],
-                                mz_data=factor_output.factors[2].T[num],
-                                retention_labels=self.retention_labels,
-                                drift_labels=self.drift_labels,
-                                mz_labels=self.mz_labels,
-                                factor_idx=num,
-                                n_factors=factor_output.factor_rank,
-                                nnfac_output=factor_output_metadata,
-                                bins_per_isotope_peak=self.bins_per_isotope_peak,
-                                n_concatenated=self.n_concatenated,
-                                concat_dt_idxs=concat_dt_idxs,
-                                tensor_auc=self.tensor_auc,
-                                tensor_gauss_auc=self.tensor_gauss_auc,
-                                normalization_factor=self.normalization_factor)
-            pmem("Factorize: Gen Factor # %s end" % num)
-            factor_list.append(factor_obj)
+
+            if (not np.isnan(factor_output.factors[0].T[num]).any()) and \
+                (not np.isnan(factor_output.factors[1].T[num]).any()) and \
+                    (not np.isnan(factor_output.factors[2].T[num]).any()):
+
+                factor_obj = Factor(source_file=self.source_file,
+                                    tensor_idx=self.tensor_idx,
+                                    timepoint_idx=self.timepoint_idx,
+                                    name=self.name,
+                                    charge_states=self.charge_states,
+                                    rts=factor_output.factors[0].T[num],
+                                    dts=factor_output.factors[1].T[num],
+                                    mz_data=factor_output.factors[2].T[num],
+                                    retention_labels=self.retention_labels,
+                                    drift_labels=self.drift_labels,
+                                    mz_labels=self.mz_labels,
+                                    factor_idx=num,
+                                    n_factors=factor_output.factor_rank,
+                                    nnfac_output=factor_output_metadata,
+                                    bins_per_isotope_peak=self.bins_per_isotope_peak,
+                                    n_concatenated=self.n_concatenated,
+                                    concat_dt_idxs=concat_dt_idxs,
+                                    tensor_auc=self.tensor_auc,
+                                    tensor_gauss_auc=self.tensor_gauss_auc,
+                                    normalization_factor=self.normalization_factor)
+
+                pmem("Factorize: Gen Factor # %s end" % num)
+                factor_list.append(factor_obj)
 
         pmem("Factorize: Appended factors to a list")
 
