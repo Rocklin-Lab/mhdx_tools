@@ -1435,11 +1435,11 @@ class DataTensor:
                                     tensor_gauss_auc=self.tensor_gauss_auc,
                                     normalization_factor=self.normalization_factor)
 
-            else:
-                print("Nan found, factor not saved")
-
                 pmem("Factorize: Gen Factor # %s end" % num)
                 factor_list.append(factor_obj)
+
+            else:
+                print("Nan found, factor not saved")
 
         pmem("Factorize: Appended factors to a list")
 
