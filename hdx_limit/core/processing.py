@@ -547,9 +547,10 @@ class PathOptimizer:
 
         out, charge_fits = {}, {}
         for charge in np.unique(array[:, 2]):
-            best_idx = np.argmin(array[array[:, 2] == charge][:, 1])
-            out[charge] = array[best_idx][0]
-            charge_fits[charge] = array[best_idx][0].idotp
+            tmp_array = array[array[:, 2] == charge]
+            best_idx = np.argmin(tmp_array[:, 1])
+            out[charge] = tmp_array[best_idx][0]
+            charge_fits[charge] = tmp_array[best_idx][0].idotp
 
         self.undeut_grounds = out
         self.undeut_ground_dot_products = charge_fits
