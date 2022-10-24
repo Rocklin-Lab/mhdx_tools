@@ -207,7 +207,7 @@ def ajf_plot(df, winner, tps, output_path=None, dpi=300):
         ax_scatter_atc[i].legend("", frameon=False)
         for i, line in df[(df["tp_idx"] == 0) & (df["charge"] == charge) & (df["winner"] == 0)
                           & (df["prefiltered"] == 0)].iterrows():
-            if line["ic"].idotp >= 0.99:
+            if line["ic"].idotp >= 0.98:
                 ax_scatter_atc[charge_states.index(int(line["charge"]))].text(float(line["dt"]), float(line["rt_corr"]),
                                                                               "x", fontsize=10, color="black", )
     if winner is not None:
@@ -496,7 +496,7 @@ def ajf_plot(df, winner, tps, output_path=None, dpi=300):
                                 alpha=0.7,
                                 ax=ax_charge_states_scatter_atc[i + j])
             for _, line in df[(df["charge"] == charge) & (df["tp_idx"] == 0) & (df["prefiltered"] == 0)].iterrows():
-                if line["ic"].idotp >= 0.99:
+                if line["ic"].idotp >= 0.98:
                     ax_charge_states_scatter_atc[i + j].text(float(line["dt"]), float(line["rt_corr"]),
                                                              "x", fontsize=10, color="black", ha="center", va="center")
             sns.scatterplot(data=df[(df["charge"] == charge) & (df["tp_idx"] == j) & (df["prefiltered"] == 0)], x="dt",
