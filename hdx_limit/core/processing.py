@@ -386,17 +386,6 @@ class PathOptimizer:
         self.timepoints = timepoints
         self.n_undeut_runs = n_undeut_runs
         self.thresholds = thresholds
-        self.undeuts = [ic for ic in self.all_tp_clusters[0] if ic.idotp >= 0.95]
-        # if len(self.undeuts) == 0:
-        #     print(f"Error {self.name}: no undeuts with idotp > {self.thresholds['idotp_cutoff']:.2f} was found!")
-        #     sys.exit()
-
-        self.first_center = self.undeuts[0].baseline_integrated_mz_com
-        self.max_peak_center = len(
-            self.library_info.loc[self.library_info["name"] ==
-                                  self.name]["sequence"].values[0]
-        ) - self.library_info.loc[self.library_info["name"] ==
-                                  self.name]["sequence"].values[0][2:].count("P") - 2 + self.first_center
 
         self.old_data_dir = old_data_dir
         self.old_files = None
@@ -408,11 +397,20 @@ class PathOptimizer:
 
         self.use_rtdt_center = use_rtdt_recenter
 
-        self.gather_old_data()
-
         self.select_undeuterated()
+
+        self.prefiltered_ics = self.prefilter_based_on_charge()
+
         self.precalculate_fit_to_ground()
-        self.prefiltered_ics = self.all_tp_clusters
+
+        self.first_center = self.undeuts[0].baseline_integrated_mz_com
+        self.max_peak_center = len(
+            self.library_info.loc[self.library_info["name"] ==
+                                  self.name]["sequence"].values[0]
+        ) - self.library_info.loc[self.library_info["name"] ==
+                                  self.name]["sequence"].values[0][2:].count("P") - 2 + self.first_center
+
+        self.gather_old_data()
 
         if user_prefilter:
             self.filters_from_user()
@@ -421,6 +419,116 @@ class PathOptimizer:
         elif pareto_prefilter:
             self.prefiltered_ics = self.weak_pareto_dom_filter()
         self.generate_sample_paths()
+
+    def select_undeuterated(self):
+        """Description of function.
+
+        Args:
+            arg_name (type): Description of input variable.
+
+        Returns:
+            out_name (type): Description of any returned objects.
+
+        """
+
+        """
+        Selects undeuterated isotope cluster which best matches theoretically calculated isotope distribution for POI sequence, for each observed charge state of the POI
+        all_tp_clusters = TensorGenerator attribute, e.g. T1 = TensorGenerator(...); select_undeuterated(T1.all_tp_clusters)
+        n_undeut_runs = number of undeuterated HDX runs included in the "library_info" master csv
+        """
+
+        self.undeuts = [ic for ic in self.all_tp_clusters[0] if ic.idotp > 0.96]
+
+        l = []
+        for ic in self.undeuts:
+            ic.dt_ground_err = 100 * abs(ic.dt_coms - len(ic.drift_labels) / 2) * (
+                    ic.drift_labels[1] - ic.drift_labels[0]) / ic.drift_labels[
+                                   len(ic.drift_labels) // 2]
+            ic.rt_ground_err = abs(ic.rt_com - len(ic.retention_labels) / 2) * (
+                    ic.retention_labels[1] - ic.retention_labels[0]) * 60
+
+            # Append ic [0], error as a function of deviation of dt and rt center [1], and charge state [2]
+            l.append([ic, ic.rt_ground_err / ic.retention_labels[len(ic.retention_labels) // 2] + ic.dt_ground_err,
+                      ic.charge_states[0]])
+
+        # Convert in numpy array
+        array = np.array(l)
+
+        out, charge_fits = {}, {}
+        for charge in np.unique(array[:, 2]):
+            tmp_array = array[array[:, 2] == charge]
+            best_idx = np.argmin(tmp_array[:, 1])
+            out[charge] = tmp_array[best_idx][0]
+            charge_fits[charge] = tmp_array[best_idx][0].idotp
+
+        self.undeut_grounds = out
+        self.undeut_ground_dot_products = charge_fits
+
+        self.undeuts = [self.undeut_grounds[charge] for charge in self.undeut_grounds]
+
+    def prefilter_based_on_charge(self):
+
+        atc = [[self.undeuts]]
+        for tp in self.all_tp_clusters[1:]:
+            ics = []
+            for ic in tp:
+                if ic.charge_states[0] in self.undeut_grounds:
+                    ics.append(ic)
+            atc.append(ics)
+
+        return atc
+
+    def precalculate_fit_to_ground(self,
+                                   prefiltered_ics=None,
+                                   undeut_grounds=None,
+                                   ):
+        """Description of function.
+
+        Args:
+            arg_name (type): Description of input variable.
+
+        Returns:
+            out_name (type): Description of any returned objects.
+
+        """
+        if prefiltered_ics is None:
+            prefiltered_ics = self.prefiltered_ics
+        if undeut_grounds is None:
+            undeut_grounds = self.undeut_grounds
+
+        for timepoint in prefiltered_ics:
+            for ic in timepoint:
+
+                undeut = undeut_grounds[ic.charge_states[0]]
+
+                # rt_ground_err: retention time error in seconds
+                # dt_ground_err: drift time error in percentage of deviation * 100
+
+                if self.use_rtdt_center:
+
+                    ic.dt_ground_err = 100 * abs(ic.dt_coms - len(undeut.drift_labels) / 2) * (
+                            undeut.drift_labels[1] - undeut.drift_labels[0]) / undeut.drift_labels[
+                                           len(undeut.drift_labels) // 2]
+                    ic.rt_ground_err = abs(ic.rt_com - len(undeut.retention_labels) / 2) * (
+                            undeut.retention_labels[1] - undeut.retention_labels[0]) * 60
+
+                else:
+                    ic.dt_ground_err = 100 * abs(ic.dt_coms - undeut.dt_coms) * (
+                            undeut.drift_labels[1] - undeut.drift_labels[0]) / undeut.drift_labels[
+                                           len(undeut.drift_labels) // 2]
+                    ic.rt_ground_err = abs(ic.rt_com - undeut.rt_com) * (
+                            undeut.retention_labels[1] - undeut.retention_labels[0]) * 60
+
+                ic.auc_ground_err = ic.log_baseline_auc - undeut.log_baseline_auc
+                ic.dt_ground_fit = max(
+                    np.correlate(undeut.dt_norms[0], ic.dt_norms[0], mode="full"))
+                ic.rt_ground_fit = max(np.correlate(undeut.rt_norm, ic.rt_norm, mode="full"))
+
+                # these are pre calculated in the factor class
+                # ic.dt_gaussian_rmse = self.rmse_from_gaussian_fit(ic.dt_norms[0])
+                # ic.rt_gaussian_rmse = self.rmse_from_gaussian_fit(ic.rt_norm)
+
+                ic.log_baseline_auc_diff = ic.log_baseline_auc - undeut.log_baseline_auc
 
     def filters_from_user(self):
         """Description of function.
@@ -432,7 +540,7 @@ class PathOptimizer:
         out_name (type): Description of any returned objects.
 
         """
-        undeut_list = [ic for ic in self.prefiltered_ics[0] if round(ic.idotp) >= self.thresholds["idotp_cutoff"]]
+
         filtered_atc = [
             [ic for ic in ics if (ic.baseline_peak_error <= self.thresholds["baseline_peak_error"] and
                                   ic.dt_ground_err <= self.thresholds["dt_ground_err"] and
@@ -443,10 +551,11 @@ class PathOptimizer:
                                       "baseline_integrated_rmse"] and
                                   ic.baseline_integrated_mz_FWHM >= self.thresholds[
                                       "baseline_integrated_FWHM"] and
-                                  ic.nearest_neighbor_correlation >= self.thresholds["nearest_neighbor_correlation"]
+                                  ic.nearest_neighbor_correlation >= self.thresholds["nearest_neighbor_correlation"] and
+                                  ic.charge_states[0] in self.undeut_grounds
                                   and ic.baseline_integrated_mz_com <= self.max_peak_center)
              ] for ics in self.prefiltered_ics[1:] if ics[0].timepoint_idx in self.timepoints]
-        filtered_atc = np.array([undeut_list] + filtered_atc)
+        filtered_atc = np.array([self.undeuts] + filtered_atc, dtype=object)
         filtered_indexes = np.array([True if len(ics) > 0 else False for ics in filtered_atc])
         self.prefiltered_ics = list(filtered_atc[filtered_indexes])
         self.timepoints = list(np.array(self.timepoints)[filtered_indexes])
@@ -511,126 +620,6 @@ class PathOptimizer:
                 ]
                 self.old_data.append(ts)
 
-    def select_undeuterated(self,
-                            # all_tp_clusters=None,
-                            # library_info=None,
-                            # name=None,
-                            # n_undeut_runs=None):
-                            ):
-        """Description of function.
-
-        Args:
-            arg_name (type): Description of input variable.
-
-        Returns:
-            out_name (type): Description of any returned objects.
-
-        """
-
-        """
-        Selects undeuterated isotope cluster which best matches theoretically calculated isotope distribution for POI sequence, for each observed charge state of the POI
-        all_tp_clusters = TensorGenerator attribute, e.g. T1 = TensorGenerator(...); select_undeuterated(T1.all_tp_clusters)
-        n_undeut_runs = number of undeuterated HDX runs included in the "library_info" master csv
-        """
-
-        l = []
-        for ic in self.undeuts:
-            ic.dt_ground_err = 100 * abs(ic.dt_coms - len(ic.drift_labels) / 2) * (
-                    ic.drift_labels[1] - ic.drift_labels[0]) / ic.drift_labels[
-                                   len(ic.drift_labels) // 2]
-            ic.rt_ground_err = abs(ic.rt_com - len(ic.retention_labels) / 2) * (
-                    ic.retention_labels[1] - ic.retention_labels[0]) * 60
-
-            # Append ic [0], error as a function of deviation of dt and rt center [1], and charge state [2]
-            l.append([ic, ic.rt_ground_err / ic.retention_labels[len(ic.retention_labels) // 2] + ic.dt_ground_err,
-                      ic.charge_states[0]])
-
-        # Convert in numpy array
-        array = np.array(l)
-
-        out, charge_fits = {}, {}
-        for charge in np.unique(array[:, 2]):
-            tmp_array = array[array[:, 2] == charge]
-            best_idx = np.argmin(tmp_array[:, 1])
-            out[charge] = tmp_array[best_idx][0]
-            charge_fits[charge] = tmp_array[best_idx][0].idotp
-
-        self.undeut_grounds = out
-        self.undeut_ground_dot_products = charge_fits
-
-        # if all_tp_clusters is None:
-        #     all_tp_clusters = self.all_tp_clusters
-        #
-        # if name is None:
-        #     name = self.name
-        #
-        # if library_info is None:
-        #     library_info = self.library_info
-        #
-        # if n_undeut_runs is None:
-        #     n_undeut_runs = self.n_undeut_runs
-        #
-        # my_seq = library_info.loc[library_info["name"] == name]["sequence"].values[0]
-        #
-        # if (
-        #         self.old_data_dir is not None
-        # ):  # if comparing to old data, save old-data"s fits in-place
-        #     # open first three (undeut) dicts in list, store fit to theoretical dist
-        #     for charge_dict in self.old_data:
-        #         undeut_amds = [{
-        #             "major_species_integrated_intensities":
-        #                 charge_dict["major_species_integrated_intensities"][i]
-        #         } for i in range(3)]  # hardcode for gabe"s undeut idxs in list
-        #         charge_dict["fit_to_theo_dist"] = max(
-        #             [self.calculate_isotope_dist_dot_product(sequence=my_seq, undeut_integrated_mz_array=d) for d in undeut_amds]
-        #             )
-        #
-        # undeuts = []
-        # for ic in all_tp_clusters[
-        #         0]:  # anticipates all undeuterated replicates being in the 0th index
-        #     undeuts.append(ic)
-        # dot_products = []
-        #
-        # # <ake list of all normed dot products between an undeuterated IC and the theoretical distribution.
-        # for ic in undeuts:
-        #     df = pd.DataFrame(
-        #         ic.baseline_integrated_mz,
-        #         columns=["major_species_integrated_intensities"],
-        #     )
-        #     # fit = self.calculate_isotope_dist_dot_product(sequence=my_seq, undeut_integrated_mz_array=ic.baseline_integrated_mz)
-        #     # ic.undeut_ground_dot_product = fit
-        #     dot_products.append((ic.idotp, ic.charge_states))
-        #
-        # # Append final (0, 0) to be called by charge_idxs which are not in the charge group for a single loop iteration
-        # dot_products.append((0, 0))
-        # charges = list(set(np.concatenate([ic.charge_states for ic in undeuts
-        #                                   ])))
-        # out = dict.fromkeys(charges)
-        # charge_fits = dict.fromkeys(charges)
-        # for charge in charges:
-        #     # print(charge)
-        #     # Create sublist of undeuts with single charge state and same shape as undeuts, use -1 for non-matches to retain shape of list
-        #     # [charge] == dot_products[i][1] ensures we only pick undeut_grounds from unconcatenated DataTensors, this saves trouble in undeut comparisons
-        #     charge_idxs = []
-        #     for i in range(len(dot_products)):
-        #         if [charge] == dot_products[i][1]:
-        #             charge_idxs.append(i)
-        #         else:
-        #             charge_idxs.append(-1)
-        #     # print(charge_idxs)
-        #     # print(np.asarray(dot_products)[charge_idxs])
-        #
-        #     # Select best fit of charge state, append to output
-        #     best = undeuts[charge_idxs[np.argmax(
-        #         np.asarray(dot_products, dtype=object)[charge_idxs][:, 0])]]
-        #
-        #     out[charge] = best
-        #     charge_fits[charge] = max(
-        #         np.asarray(dot_products, dtype=object)[charge_idxs][:, 0])
-
-        # self.undeut_grounds = out
-        # self.undeut_ground_dot_products = charge_fits
-
     def gaussian_function(self, x, H, A, x0, sigma):
         """Description of function.
 
@@ -678,58 +667,6 @@ class PathOptimizer:
             return rmse
         except:
             return 100
-
-    def precalculate_fit_to_ground(self,
-                                   all_tp_clusters=None,
-                                   undeut_grounds=None
-                                   ):
-        """Description of function.
-
-        Args:
-            arg_name (type): Description of input variable.
-
-        Returns:
-            out_name (type): Description of any returned objects.
-
-        """
-        if all_tp_clusters is None:
-            all_tp_clusters = self.all_tp_clusters
-        if undeut_grounds is None:
-            undeut_grounds = self.undeut_grounds
-
-        for timepoint in all_tp_clusters:
-            for ic in timepoint:
-
-                undeut = undeut_grounds[ic.charge_states[0]]
-
-                # rt_ground_err: retention time error in seconds
-                # dt_ground_err: drift time error in percentage of deviation * 100
-
-                if self.use_rtdt_center:
-
-                    ic.dt_ground_err = 100 * abs(ic.dt_coms - len(undeut.drift_labels) / 2) * (
-                            undeut.drift_labels[1] - undeut.drift_labels[0]) / undeut.drift_labels[
-                                           len(undeut.drift_labels) // 2]
-                    ic.rt_ground_err = abs(ic.rt_com - len(undeut.retention_labels) / 2) * (
-                            undeut.retention_labels[1] - undeut.retention_labels[0]) * 60
-
-                else:
-                    ic.dt_ground_err = 100 * abs(ic.dt_coms - undeut.dt_coms) * (
-                            undeut.drift_labels[1] - undeut.drift_labels[0]) / undeut.drift_labels[
-                                           len(undeut.drift_labels) // 2]
-                    ic.rt_ground_err = abs(ic.rt_com - undeut.rt_com) * (
-                            undeut.retention_labels[1] - undeut.retention_labels[0]) * 60
-
-                ic.auc_ground_err = ic.log_baseline_auc - undeut.log_baseline_auc
-                ic.dt_ground_fit = max(
-                    np.correlate(undeut.dt_norms[0], ic.dt_norms[0], mode="full"))
-                ic.rt_ground_fit = max(np.correlate(undeut.rt_norm, ic.rt_norm, mode="full"))
-
-                # these are pre calculated in the factor class
-                # ic.dt_gaussian_rmse = self.rmse_from_gaussian_fit(ic.dt_norms[0])
-                # ic.rt_gaussian_rmse = self.rmse_from_gaussian_fit(ic.rt_norm)
-
-                ic.log_baseline_auc_diff = ic.log_baseline_auc - undeut.log_baseline_auc
 
     def generate_sample_paths(self):
         """Description of function.
