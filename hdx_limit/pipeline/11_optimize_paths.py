@@ -146,7 +146,7 @@ def main(library_info_path,
         check_for_create_files([prefiltered_ics_out_path])
 
         with open("joberr.out", "a") as f:
-            f.write(f"{name}\tNo tp=0 with idotp greater than thershold found. Creating empty files...\n")
+            f.write(f"{name}\tNo tp=0 with idotp greater than threshold found. Creating empty files...\n")
 
         sys.exit()
 
