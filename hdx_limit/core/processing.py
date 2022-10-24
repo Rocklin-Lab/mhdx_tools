@@ -387,14 +387,6 @@ class PathOptimizer:
         # if len(self.undeuts) == 0:
         #     print(f"Error {self.name}: no undeuts with idotp > {self.thresholds['idotp_cutoff']:.2f} was found!")
         #     sys.exit()
-        self.first_center = self.undeuts[0].baseline_integrated_mz_com
-
-
-        self.max_peak_center = len(
-            self.library_info.loc[self.library_info["name"] ==
-                                  self.name]["sequence"].values[0]
-        ) - self.library_info.loc[self.library_info["name"] ==
-                                  self.name]["sequence"].values[0][2:].count("P") - 2 + self.first_center
 
         self.old_data_dir = old_data_dir
         self.old_files = None
@@ -411,6 +403,16 @@ class PathOptimizer:
         self.select_undeuterated()
         self.precalculate_fit_to_ground()
         self.prefiltered_ics = self.all_tp_clusters
+
+        self.first_center = self.undeuts[0].baseline_integrated_mz_com
+
+        self.max_peak_center = len(
+            self.library_info.loc[self.library_info["name"] ==
+                                  self.name]["sequence"].values[0]
+        ) - self.library_info.loc[self.library_info["name"] ==
+                                  self.name]["sequence"].values[0][2:].count("P") - 2 + self.first_center
+
+
         if user_prefilter:
             self.filters_from_user()
             if pareto_prefilter and len(self.prefiltered_ics) >= self.thresholds["min_timepoints"]:
@@ -418,6 +420,7 @@ class PathOptimizer:
         elif pareto_prefilter:
             self.prefiltered_ics = self.weak_pareto_dom_filter()
         self.generate_sample_paths()
+
 
     def filters_from_user(self):
         """Description of function.
@@ -531,7 +534,7 @@ class PathOptimizer:
         """
 
         l = []
-        for ic in self.undeuts:
+        for ic in self.all_tp_clusters[0]:
             ic.dt_ground_err = 100 * abs(ic.dt_coms - len(ic.drift_labels) / 2) * (
                     ic.drift_labels[1] - ic.drift_labels[0]) / ic.drift_labels[
                                 len(ic.drift_labels) // 2]
@@ -552,6 +555,7 @@ class PathOptimizer:
             out[charge] = tmp_array[best_idx][0]
             charge_fits[charge] = tmp_array[best_idx][0].idotp
 
+        self.undeuts = [ out[key] for key in out ]
         self.undeut_grounds = out
         self.undeut_ground_dot_products = charge_fits
 
