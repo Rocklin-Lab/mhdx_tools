@@ -58,27 +58,27 @@ def create_factor_data_object(data_tensor, gauss_params, timepoint_label=None):
 
     """
     factor_data_dict = {
-    "name": data_tensor.DataTensor.name,
-    "charge_state": data_tensor.DataTensor.charge_states[0],
-    "timepoint_index": data_tensor.DataTensor.timepoint_idx,
-    "timepoint_label": timepoint_label,
-    "retention_labels": data_tensor.DataTensor.retention_labels,
-    "drift_labels": data_tensor.DataTensor.drift_labels,
-    "mz_labels": data_tensor.DataTensor.mz_labels,
-    "bins_per_isotope_peak": data_tensor.DataTensor.bins_per_isotope_peak,
-    "tensor_3d_grid": data_tensor.DataTensor.full_grid_out,
-    "gauss_params": gauss_params,
-    "num_factors": len(data_tensor.DataTensor.factors),
-    "factors": []
+        "name": data_tensor.DataTensor.name,
+        "charge_state": data_tensor.DataTensor.charge_states[0],
+        "timepoint_index": data_tensor.DataTensor.timepoint_idx,
+        "timepoint_label": timepoint_label,
+        "retention_labels": data_tensor.DataTensor.retention_labels,
+        "drift_labels": data_tensor.DataTensor.drift_labels,
+        "mz_labels": data_tensor.DataTensor.mz_labels,
+        "bins_per_isotope_peak": data_tensor.DataTensor.bins_per_isotope_peak,
+        "tensor_3d_grid": data_tensor.DataTensor.full_grid_out,
+        "gauss_params": gauss_params,
+        "num_factors": len(data_tensor.DataTensor.factors),
+        "factors": []
     }
 
     for num, factor in enumerate(data_tensor.DataTensor.factors):
         factor_dict = {
-        "factor_num": factor.factor_idx,
-        "factor_dt": factor.dts,
-        "factor_rt": factor.rts,
-        "factor_mz": factor.mz_data,
-        "factor_integrated_mz": factor.integrated_mz_data
+            "factor_num": factor.factor_idx,
+            "factor_dt": factor.dts,
+            "factor_rt": factor.rts,
+            "factor_mz": factor.mz_data,
+            "factor_integrated_mz": factor.integrated_mz_data
         }
         factor_data_dict["factors"].append(factor_dict)
 
@@ -128,7 +128,7 @@ def generate_tensor_factors(tensor_fpath,
     process = psutil.Process(os.getpid())
 
     print("Pre-Tensor-Initialization: " + str(process.memory_info().rss /
-                                       (1024 * 1024 * 1024)))
+                                              (1024 * 1024 * 1024)))
 
     data_tensor = TensorGenerator(filename=tensor_fpath,
                                   library_info=library_info_df,
@@ -138,7 +138,7 @@ def generate_tensor_factors(tensor_fpath,
                                   )
 
     print("Post-Tensor-Pre-Factor-Initialization: " + str(process.memory_info().rss /
-                                        (1024 * 1024 * 1024)))
+                                                          (1024 * 1024 * 1024)))
 
     print("Factorizing ... ")
 
@@ -207,7 +207,6 @@ class TensorGenerator:
     hd_mass_diff = 1.006277
     c13_mass_diff = 1.00335
 
-
     def __init__(self, filename, timepoint_index, library_info, mz_centers, normalization_factor,
                  **kwargs):
         """Initializes the TensorGenerator object to create a DataTensor.
@@ -232,7 +231,7 @@ class TensorGenerator:
 
         if (
                 kwargs is not None
-        ):  
+        ):
             for key in kwargs.keys():
                 setattr(self, key, kwargs[key])
 
@@ -246,18 +245,22 @@ class TensorGenerator:
             self.bins_per_isotope_peak = 7
 
         self.tensor = io.limit_read(self.filename)
-        self.name = filename.split("/")[-2] # Expects format: path/to/{rt-group-name}/{rt-group-name}_{charge}_{file.mzML.gz}.cpickle.zlib.
-        self.charge = int([item[6:] for item in filename.split("/")[-1].split("_") if "charge" in item][0]) # Finds by keyword and strips text.
-        self.lib_idx = self.library_info.loc[(library_info["name"]==self.name) & (library_info["charge"]==self.charge)].index
-        self.my_row = self.library_info.loc[(library_info["name"]==self.name) & (library_info["charge"]==self.charge)]
+        self.name = filename.split("/")[
+            -2]  # Expects format: path/to/{rt-group-name}/{rt-group-name}_{charge}_{file.mzML.gz}.cpickle.zlib.
+        self.charge = int([item[6:] for item in filename.split("/")[-1].split("_") if "charge" in item][
+                              0])  # Finds by keyword and strips text.
+        self.lib_idx = self.library_info.loc[
+            (library_info["name"] == self.name) & (library_info["charge"] == self.charge)].index
+        self.my_row = self.library_info.loc[
+            (library_info["name"] == self.name) & (library_info["charge"] == self.charge)]
         self.max_peak_center = len(self.library_info.loc[self.library_info["name"] == self.name]["sequence"].values[0])
         self.total_isotopes = self.max_peak_center + self.high_mass_margin
         self.total_mass_window = self.low_mass_margin + self.total_isotopes
 
         self.mz_lows = self.my_row["expect_mz"].values[0] - (
-            self.low_mass_margin / self.charge)
+                self.low_mass_margin / self.charge)
         self.mz_highs = self.my_row["expect_mz"].values[0] + (
-            self.total_isotopes / self.charge)
+                self.total_isotopes / self.charge)
 
         low_mz_limits = [center * ((1000000.0 - self.ppm_radius) / 1000000.0) for center in self.mz_centers]
         high_mz_limits = [center * ((1000000.0 + self.ppm_radius) / 1000000.0) for center in self.mz_centers]
@@ -282,11 +285,11 @@ class TensorGenerator:
             normalization_factor=self.normalization_factor
         )
 
-        #self.DataTensor.lows = searchsorted(self.DataTensor.mz_labels,
+        # self.DataTensor.lows = searchsorted(self.DataTensor.mz_labels,
         #                                    self.low_lims)
-        #self.DataTensor.highs = searchsorted(self.DataTensor.mz_labels,
+        # self.DataTensor.highs = searchsorted(self.DataTensor.mz_labels,
         #                                     self.high_lims)
-        
+
         # Consider separating factorize from init
         # self.DataTensor.factorize(gauss_params=(3,1))
 
@@ -329,6 +332,7 @@ class PathOptimizer:
         prefiltered_ics (list of lists of IsotopeClusters): IsotopeClusters for all timepoints after prefiltering.
     
     """
+
     def __init__(self,
                  name,
                  all_tp_clusters,
@@ -376,17 +380,23 @@ class PathOptimizer:
         self.int_mz_FWHM_rmse_weight = 0.072
         self.nearest_neighbor_penalty_weight = 0.151
 
-
         self.name = name
         self.all_tp_clusters = all_tp_clusters
         self.library_info = library_info
         self.timepoints = timepoints
         self.n_undeut_runs = n_undeut_runs
         self.thresholds = thresholds
-        # self.undeuts = [ic for ic in self.all_tp_clusters[0] if ic.idotp >= self.thresholds["idotp_cutoff"]]
+        self.undeuts = [ic for ic in self.all_tp_clusters[0] if ic.idotp >= 0.95]
         # if len(self.undeuts) == 0:
         #     print(f"Error {self.name}: no undeuts with idotp > {self.thresholds['idotp_cutoff']:.2f} was found!")
         #     sys.exit()
+
+        self.first_center = self.undeuts[0].baseline_integrated_mz_com
+        self.max_peak_center = len(
+            self.library_info.loc[self.library_info["name"] ==
+                                  self.name]["sequence"].values[0]
+        ) - self.library_info.loc[self.library_info["name"] ==
+                                  self.name]["sequence"].values[0][2:].count("P") - 2 + self.first_center
 
         self.old_data_dir = old_data_dir
         self.old_files = None
@@ -404,15 +414,6 @@ class PathOptimizer:
         self.precalculate_fit_to_ground()
         self.prefiltered_ics = self.all_tp_clusters
 
-        self.first_center = self.undeuts[0].baseline_integrated_mz_com
-
-        self.max_peak_center = len(
-            self.library_info.loc[self.library_info["name"] ==
-                                  self.name]["sequence"].values[0]
-        ) - self.library_info.loc[self.library_info["name"] ==
-                                  self.name]["sequence"].values[0][2:].count("P") - 2 + self.first_center
-
-
         if user_prefilter:
             self.filters_from_user()
             if pareto_prefilter and len(self.prefiltered_ics) >= self.thresholds["min_timepoints"]:
@@ -420,7 +421,6 @@ class PathOptimizer:
         elif pareto_prefilter:
             self.prefiltered_ics = self.weak_pareto_dom_filter()
         self.generate_sample_paths()
-
 
     def filters_from_user(self):
         """Description of function.
@@ -470,14 +470,14 @@ class PathOptimizer:
                 compare_flag = False
                 for ic2 in tp:
                     if (
-                        np.round(ic2.baseline_integrated_mz_com) == ic1_int_mz_com and
-                        ic2.rt_ground_err**2 < ic1.rt_ground_err**2 and
-                        ic2.dt_ground_err**2 < ic1.dt_ground_err**2 and
-                        ic2.baseline_peak_error < ic1.baseline_peak_error and
-                        ic2.rt_ground_fit > ic1.rt_ground_fit and 
-                        ic2.dt_ground_fit > ic1.dt_ground_fit and 
-                        ic2.auc_ground_err**2 < ic1.auc_ground_err**2
-                       ):
+                            np.round(ic2.baseline_integrated_mz_com) == ic1_int_mz_com and
+                            ic2.rt_ground_err ** 2 < ic1.rt_ground_err ** 2 and
+                            ic2.dt_ground_err ** 2 < ic1.dt_ground_err ** 2 and
+                            ic2.baseline_peak_error < ic1.baseline_peak_error and
+                            ic2.rt_ground_fit > ic1.rt_ground_fit and
+                            ic2.dt_ground_fit > ic1.dt_ground_fit and
+                            ic2.auc_ground_err ** 2 < ic1.auc_ground_err ** 2
+                    ):
                         compare_flag = True
                         break
                 if not compare_flag:
@@ -534,10 +534,10 @@ class PathOptimizer:
         """
 
         l = []
-        for ic in self.all_tp_clusters[0]:
+        for ic in self.undeuts:
             ic.dt_ground_err = 100 * abs(ic.dt_coms - len(ic.drift_labels) / 2) * (
                     ic.drift_labels[1] - ic.drift_labels[0]) / ic.drift_labels[
-                                len(ic.drift_labels) // 2]
+                                   len(ic.drift_labels) // 2]
             ic.rt_ground_err = abs(ic.rt_com - len(ic.retention_labels) / 2) * (
                     ic.retention_labels[1] - ic.retention_labels[0]) * 60
 
@@ -555,7 +555,6 @@ class PathOptimizer:
             out[charge] = tmp_array[best_idx][0]
             charge_fits[charge] = tmp_array[best_idx][0].idotp
 
-        self.undeuts = [ out[key] for key in out ]
         self.undeut_grounds = out
         self.undeut_ground_dot_products = charge_fits
 
@@ -717,7 +716,7 @@ class PathOptimizer:
                 else:
                     ic.dt_ground_err = 100 * abs(ic.dt_coms - undeut.dt_coms) * (
                             undeut.drift_labels[1] - undeut.drift_labels[0]) / undeut.drift_labels[
-                        len(undeut.drift_labels) // 2]
+                                           len(undeut.drift_labels) // 2]
                     ic.rt_ground_err = abs(ic.rt_com - undeut.rt_com) * (
                             undeut.retention_labels[1] - undeut.retention_labels[0]) * 60
 
@@ -752,12 +751,12 @@ class PathOptimizer:
         self.sample_paths = [list(path) for path in set(sample_paths)]
 
     def clusters_close_to_line(
-        self,
-        start,
-        slope,
-        undeut_grounds=None,
-        prefiltered_ics=None,
-        max_peak_center=None,
+            self,
+            start,
+            slope,
+            undeut_grounds=None,
+            prefiltered_ics=None,
+            max_peak_center=None,
     ):
         """Description of function.
 
@@ -818,7 +817,7 @@ class PathOptimizer:
                                 sorted(
                                     prefiltered_ics[tp],
                                     key=lambda ic: ic.
-                                    baseline_integrated_mz_com,
+                                        baseline_integrated_mz_com,
                                 )[0])
                     else:
                         # No ics in tp, print message and append path[-1]
@@ -894,7 +893,7 @@ class PathOptimizer:
                           0.5) / np.mean([ic.rt_com for ic in self.winner if ic.rt_com is not None])
         self.dt_com_cv = (np.var([
             np.mean(ic.dt_coms) for ic in self.winner if ic.dt_coms is not None
-        ])**0.5) / np.mean([np.mean(ic.dt_coms) for ic in self.winner if ic.dt_coms is not None])
+        ]) ** 0.5) / np.mean([np.mean(ic.dt_coms) for ic in self.winner if ic.dt_coms is not None])
 
     def find_runners_multi(self):
         """Description of function.
@@ -1047,6 +1046,7 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
+
         # Sets IC.bokeh_tuple to be passed to bokeh for display through the HoverTool
         # Winners store the full values of the winning series scores
         # Runners store the differences between the winning scores and the score if they were to be substituted
@@ -1121,8 +1121,6 @@ class PathOptimizer:
                 winner_scores["nearest_neighbor_penalty"]
                 - substituted_scores["nearest_neighbor_penalty"],
 
-
-
                 sum([winner_scores[key] for key in winner_scores.keys()]) -
                 sum([
                     substituted_scores[key]
@@ -1162,8 +1160,8 @@ class PathOptimizer:
                 substituted_series[tp] = ic
                 substituted_scores = score_dict(substituted_series)
                 ic.bokeh_tuple = (ic.info_tuple +
-                                 (ic.rt_ground_err, ic.dt_ground_err) +
-                                 score_diff(winner_scores, substituted_scores))
+                                  (ic.rt_ground_err, ic.dt_ground_err) +
+                                  score_diff(winner_scores, substituted_scores))
 
     def filter_runners(self, n_runners=5):
         """Description of function.
@@ -1257,7 +1255,6 @@ class PathOptimizer:
     ### Scoring Functions for PathOptimizer ##################################################################################################################################################################################################
     ##########################################################################################################################################################################################################################################
 
-
     def delta_mz_rate(self, ics, timepoints=None):
         """Description of function.
 
@@ -1268,25 +1265,27 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-    # Two penalizations are computed: [0] if the ic is too fast (sd) and [1] if the ic goes backwards (back)
+        # Two penalizations are computed: [0] if the ic is too fast (sd) and [1] if the ic goes backwards (back)
 
         if timepoints is None:
             timepoints = self.timepoints
-        
+
         backward = 0
         forward = 0
-        previous_rate = max([(ics[1].baseline_integrated_mz_com - ics[0].baseline_integrated_mz_com) / (timepoints[1] - timepoints[0]), 0.1])
+        previous_rate = max(
+            [(ics[1].baseline_integrated_mz_com - ics[0].baseline_integrated_mz_com) / (timepoints[1] - timepoints[0]),
+             0.1])
 
         for i in range(2, len(ics)):
             # if previous_rate == 0: diagnostic for /0 error
             new_com = ics[i].baseline_integrated_mz_com
             if new_com < ics[
-                    i - 1].baseline_integrated_mz_com:  # if we went backwards
+                i - 1].baseline_integrated_mz_com:  # if we went backwards
                 backward += (100 *
-                       (new_com - ics[i - 1].baseline_integrated_mz_com)**2.0
-                      )  # penalize for going backwards
+                             (new_com - ics[i - 1].baseline_integrated_mz_com) ** 2.0
+                             )  # penalize for going backwards
                 new_com = (
-                    ics[i - 1].baseline_integrated_mz_com + 0.01
+                        ics[i - 1].baseline_integrated_mz_com + 0.01
                 )  # pretend we went forwards for calculating current rate
             if round(timepoints[i] - timepoints[i - 1], 2) <= 0.1:
                 continue
@@ -1294,12 +1293,12 @@ class PathOptimizer:
                 (new_com - ics[i - 1].baseline_integrated_mz_com), 0.1
             ]) / (timepoints[i] - timepoints[i - 1])
             if (current_rate / previous_rate) > 1.2:
-                forward += (current_rate / previous_rate)**2.0
+                forward += (current_rate / previous_rate) ** 2.0
             previous_rate = current_rate
         return backward / len(ics), forward / len(ics)
 
     def dt_ground_rmse(
-        self, ics
+            self, ics
     ):
         """Description of function.
 
@@ -1310,8 +1309,8 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-      # rmse penalizes strong single outliers, score is minimized - lower is better
-        return math.sqrt(sum([ic.dt_ground_err**2 for ic in ics]) / len(ics))
+        # rmse penalizes strong single outliers, score is minimized - lower is better
+        return math.sqrt(sum([ic.dt_ground_err ** 2 for ic in ics]) / len(ics))
 
     def rt_ground_rmse(self, ics):
         """Description of function.
@@ -1323,7 +1322,7 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        return math.sqrt(sum([ic.rt_ground_err**2 for ic in ics]) / len(ics))
+        return math.sqrt(sum([ic.rt_ground_err ** 2 for ic in ics]) / len(ics))
 
     def dt_ground_fit(self, ics):
         """Description of function.
@@ -1372,9 +1371,9 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        return np.sqrt(np.mean([ic.auc_ground_err**2 for ic in ics]))
+        return np.sqrt(np.mean([ic.auc_ground_err ** 2 for ic in ics]))
 
-    def auc_rmse(self,ics):
+    def auc_rmse(self, ics):
         """Description of function.
 
         Args:
@@ -1388,7 +1387,7 @@ class PathOptimizer:
         for ic in ics:
             sd += ic.log_baseline_auc_diff ** 2
         return math.sqrt(np.mean(sd))
-    
+
     def rmses_sum(self, ics):
         """Description of function.
 
@@ -1401,9 +1400,9 @@ class PathOptimizer:
         """
         rmses = 0
         for ic in ics:
-            rmses += 100*ic.baseline_integrated_mz_rmse
+            rmses += 100 * ic.baseline_integrated_mz_rmse
         return rmses
-  
+
     def int_mz_FWHM_rmse(self, ics):
         """Description of function.
 
@@ -1417,9 +1416,9 @@ class PathOptimizer:
         sd = 0
         for i in range(2, len(ics)):
             sd += (
-                ics[i].baseline_integrated_mz_FWHM - ics[i - 1].baseline_integrated_mz_FWHM
-            ) ** 2.0
- 
+                          ics[i].baseline_integrated_mz_FWHM - ics[i - 1].baseline_integrated_mz_FWHM
+                  ) ** 2.0
+
         return math.sqrt(sd)
 
     def nearest_neighbor_penalty(self, ics):
@@ -1439,21 +1438,20 @@ class PathOptimizer:
             ) ** 2.0
         return nn_penalty
 
-
     # Eventually put defaults here as else statements
     def set_score_weights(
-        self,
-        baseline_peak_error_weight=None,
-        delta_mz_rate_backward_weight=None,
-        delta_mz_rate_forward_weight=None,
-        dt_ground_fit_weight=None,
-        rt_ground_rmse_weight=None,
-        dt_ground_rmse_weight=None,
-        auc_ground_rmse_weight=None,
-        rmses_sum_weight=None,
-        int_mz_FWHM_rmse_weight=None,
-        nearest_neighbor_penalty_weight=None,
-        rt_ground_fit_weight=None
+            self,
+            baseline_peak_error_weight=None,
+            delta_mz_rate_backward_weight=None,
+            delta_mz_rate_forward_weight=None,
+            dt_ground_fit_weight=None,
+            rt_ground_rmse_weight=None,
+            dt_ground_rmse_weight=None,
+            auc_ground_rmse_weight=None,
+            rmses_sum_weight=None,
+            int_mz_FWHM_rmse_weight=None,
+            nearest_neighbor_penalty_weight=None,
+            rt_ground_fit_weight=None
     ):
         """Description of function.
 
@@ -1484,7 +1482,7 @@ class PathOptimizer:
         if rmses_sum_weight != None:
             self.rmses_sum_weight = rmses_sum_weight
         if int_mz_FWHM_rmse_weight != None:
-            self.int_mz_FWHM_rmse_weight  = int_mz_FWHM_rmse_weight
+            self.int_mz_FWHM_rmse_weight = int_mz_FWHM_rmse_weight
         if nearest_neighbor_penalty_weight != None:
             self.nearest_neighbor_penalty_weight = nearest_neighbor_penalty_weight
 
@@ -1532,8 +1530,7 @@ class PathOptimizer:
             self.rmses_sum_weight * self.rmses_sum(ics),
             self.nearest_neighbor_penalty_weight * self.nearest_neighbor_penalty(ics),
         ])
-           
-                                         
+
     def report_score_multi(self, ics):
         """Description of function.
 
@@ -1544,7 +1541,7 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-    # TODO Add additional scores to this function                                    
+        # TODO Add additional scores to this function
 
         return {
             "baseline_peak_error": (
@@ -1566,7 +1563,7 @@ class PathOptimizer:
             "auc_ground_rmse": (self.auc_ground_rmse_weight,
                                 self.auc_ground_rmse(ics)),
             "rmses_sum": (self.rmses_sum_weight,
-                                self.rmses_sum(ics)),
+                          self.rmses_sum(ics)),
             "int_mz_FWHM_rmse": (self.int_mz_FWHM_rmse_weight,
                                  self.int_mz_FWHM_rmse(ics)),
             "nearest_neighbor_penalty": (self.nearest_neighbor_penalty_weight,
@@ -1603,7 +1600,7 @@ class PathOptimizer:
             "rmses_sum": (self.rmses_sum_weight,
                           self.rmses_sum(ics)),
             "int_mz_FWHM_rmse": (self.int_mz_FWHM_rmse_weight,
-                          self.int_mz_FWHM_rmse(ics)),
+                                 self.int_mz_FWHM_rmse(ics)),
             "nearest_neighbor_penalty": (self.nearest_neighbor_penalty_weight,
-                                 self.nearest_neighbor_penalty(ics)),
+                                         self.nearest_neighbor_penalty(ics)),
         }
