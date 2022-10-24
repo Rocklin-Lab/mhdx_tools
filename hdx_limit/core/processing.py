@@ -339,6 +339,7 @@ class PathOptimizer:
                  thresholds,
                  pareto_prefilter=True,
                  old_data_dir=None,
+                 use_rtdt_recenter=True,
                  **kwargs):
         """Initializes an instance of PathOptimizer, performs preprocessing of inputs so the returned object is ready for optimization.
 
@@ -375,6 +376,7 @@ class PathOptimizer:
         self.int_mz_FWHM_rmse_weight = 0.072
         self.nearest_neighbor_penalty_weight = 0.151
 
+
         self.name = name
         self.all_tp_clusters = all_tp_clusters
         self.library_info = library_info
@@ -401,6 +403,8 @@ class PathOptimizer:
         self.dt_com_cv = None
         self.rt_error_rmse = None
         self.dt_error_rmse = None
+
+        self.use_rtdt_center = use_rtdt_recenter
 
         self.gather_old_data()
 
@@ -505,10 +509,11 @@ class PathOptimizer:
                 self.old_data.append(ts)
 
     def select_undeuterated(self,
-                            all_tp_clusters=None,
-                            library_info=None,
-                            name=None,
-                            n_undeut_runs=None):
+                            # all_tp_clusters=None,
+                            # library_info=None,
+                            # name=None,
+                            # n_undeut_runs=None):
+                            ):
         """Description of function.
 
         Args:
@@ -525,78 +530,102 @@ class PathOptimizer:
         n_undeut_runs = number of undeuterated HDX runs included in the "library_info" master csv
         """
 
-        if all_tp_clusters is None:
-            all_tp_clusters = self.all_tp_clusters
+        l = []
+        for ic in self.undeuts:
+            ic.dt_ground_err = 100 * abs(ic.dt_coms - len(ic.drift_labels) / 2) * (
+                    ic.drift_labels[1] - ic.drift_labels[0]) / ic.drift_labels[
+                                len(ic.drift_labels) // 2]
+            ic.rt_ground_err = abs(ic.rt_com - len(ic.retention_labels) / 2) * (
+                    ic.retention_labels[1] - ic.retention_labels[0]) * 60
 
-        if name is None:
-            name = self.name
+            # Append ic [0], error as a function of deviation of dt and rt center [1], and charge state [2]
+            l.append([ic, ic.rt_ground_err / ic.retention_labels[len(ic.retention_labels) // 2] + ic.dt_ground_err,
+                      ic.charge_states[0]])
 
-        if library_info is None:
-            library_info = self.library_info
+        # Convert in numpy array
+        array = np.array(l)
 
-        if n_undeut_runs is None:
-            n_undeut_runs = self.n_undeut_runs
-
-        my_seq = library_info.loc[library_info["name"] == name]["sequence"].values[0]
-
-        if (
-                self.old_data_dir is not None
-        ):  # if comparing to old data, save old-data"s fits in-place TODO: CONSIDER OUTPUTTING TO SNAKEMAKE DIR
-            # open first three (undeut) dicts in list, store fit to theoretical dist
-            for charge_dict in self.old_data:
-                undeut_amds = [{
-                    "major_species_integrated_intensities":
-                        charge_dict["major_species_integrated_intensities"][i]
-                } for i in range(3)]  # hardcode for gabe"s undeut idxs in list
-                charge_dict["fit_to_theo_dist"] = max(
-                    [self.calculate_isotope_dist_dot_product(sequence=my_seq, undeut_integrated_mz_array=d) for d in undeut_amds]
-                    )
-
-        undeuts = []
-        for ic in all_tp_clusters[
-                0]:  # anticipates all undeuterated replicates being in the 0th index
-            undeuts.append(ic)
-        dot_products = []
-
-        # <ake list of all normed dot products between an undeuterated IC and the theoretical distribution.
-        for ic in undeuts:
-            df = pd.DataFrame(
-                ic.baseline_integrated_mz,
-                columns=["major_species_integrated_intensities"],
-            )
-            # fit = self.calculate_isotope_dist_dot_product(sequence=my_seq, undeut_integrated_mz_array=ic.baseline_integrated_mz)
-            # ic.undeut_ground_dot_product = fit
-            dot_products.append((ic.idotp, ic.charge_states))
-
-        # Append final (0, 0) to be called by charge_idxs which are not in the charge group for a single loop iteration
-        dot_products.append((0, 0))
-        charges = list(set(np.concatenate([ic.charge_states for ic in undeuts
-                                          ])))
-        out = dict.fromkeys(charges)
-        charge_fits = dict.fromkeys(charges)
-        for charge in charges:
-            # print(charge)
-            # Create sublist of undeuts with single charge state and same shape as undeuts, use -1 for non-matches to retain shape of list
-            # [charge] == dot_products[i][1] ensures we only pick undeut_grounds from unconcatenated DataTensors, this saves trouble in undeut comparisons
-            charge_idxs = []
-            for i in range(len(dot_products)):
-                if [charge] == dot_products[i][1]:
-                    charge_idxs.append(i)
-                else:
-                    charge_idxs.append(-1)
-            # print(charge_idxs)
-            # print(np.asarray(dot_products)[charge_idxs])
-
-            # Select best fit of charge state, append to output
-            best = undeuts[charge_idxs[np.argmax(
-                np.asarray(dot_products, dtype=object)[charge_idxs][:, 0])]]
-
-            out[charge] = best
-            charge_fits[charge] = max(
-                np.asarray(dot_products, dtype=object)[charge_idxs][:, 0])
+        out, charge_fits = {}, {}
+        for charge in np.unique(array[:, 2]):
+            best_idx = np.argmin(array[array[:, 2] == charge][:, 1])
+            out[charge] = array[best_idx][0]
+            charge_fits[charge] = array[best_idx][0].idotp
 
         self.undeut_grounds = out
         self.undeut_ground_dot_products = charge_fits
+
+        # if all_tp_clusters is None:
+        #     all_tp_clusters = self.all_tp_clusters
+        #
+        # if name is None:
+        #     name = self.name
+        #
+        # if library_info is None:
+        #     library_info = self.library_info
+        #
+        # if n_undeut_runs is None:
+        #     n_undeut_runs = self.n_undeut_runs
+        #
+        # my_seq = library_info.loc[library_info["name"] == name]["sequence"].values[0]
+        #
+        # if (
+        #         self.old_data_dir is not None
+        # ):  # if comparing to old data, save old-data"s fits in-place
+        #     # open first three (undeut) dicts in list, store fit to theoretical dist
+        #     for charge_dict in self.old_data:
+        #         undeut_amds = [{
+        #             "major_species_integrated_intensities":
+        #                 charge_dict["major_species_integrated_intensities"][i]
+        #         } for i in range(3)]  # hardcode for gabe"s undeut idxs in list
+        #         charge_dict["fit_to_theo_dist"] = max(
+        #             [self.calculate_isotope_dist_dot_product(sequence=my_seq, undeut_integrated_mz_array=d) for d in undeut_amds]
+        #             )
+        #
+        # undeuts = []
+        # for ic in all_tp_clusters[
+        #         0]:  # anticipates all undeuterated replicates being in the 0th index
+        #     undeuts.append(ic)
+        # dot_products = []
+        #
+        # # <ake list of all normed dot products between an undeuterated IC and the theoretical distribution.
+        # for ic in undeuts:
+        #     df = pd.DataFrame(
+        #         ic.baseline_integrated_mz,
+        #         columns=["major_species_integrated_intensities"],
+        #     )
+        #     # fit = self.calculate_isotope_dist_dot_product(sequence=my_seq, undeut_integrated_mz_array=ic.baseline_integrated_mz)
+        #     # ic.undeut_ground_dot_product = fit
+        #     dot_products.append((ic.idotp, ic.charge_states))
+        #
+        # # Append final (0, 0) to be called by charge_idxs which are not in the charge group for a single loop iteration
+        # dot_products.append((0, 0))
+        # charges = list(set(np.concatenate([ic.charge_states for ic in undeuts
+        #                                   ])))
+        # out = dict.fromkeys(charges)
+        # charge_fits = dict.fromkeys(charges)
+        # for charge in charges:
+        #     # print(charge)
+        #     # Create sublist of undeuts with single charge state and same shape as undeuts, use -1 for non-matches to retain shape of list
+        #     # [charge] == dot_products[i][1] ensures we only pick undeut_grounds from unconcatenated DataTensors, this saves trouble in undeut comparisons
+        #     charge_idxs = []
+        #     for i in range(len(dot_products)):
+        #         if [charge] == dot_products[i][1]:
+        #             charge_idxs.append(i)
+        #         else:
+        #             charge_idxs.append(-1)
+        #     # print(charge_idxs)
+        #     # print(np.asarray(dot_products)[charge_idxs])
+        #
+        #     # Select best fit of charge state, append to output
+        #     best = undeuts[charge_idxs[np.argmax(
+        #         np.asarray(dot_products, dtype=object)[charge_idxs][:, 0])]]
+        #
+        #     out[charge] = best
+        #     charge_fits[charge] = max(
+        #         np.asarray(dot_products, dtype=object)[charge_idxs][:, 0])
+
+        # self.undeut_grounds = out
+        # self.undeut_ground_dot_products = charge_fits
 
     def gaussian_function(self, x, H, A, x0, sigma):
         """Description of function.
@@ -671,11 +700,22 @@ class PathOptimizer:
 
                 # rt_ground_err: retention time error in seconds
                 # dt_ground_err: drift time error in percentage of deviation * 100
-                ic.dt_ground_err = 100* abs(ic.dt_coms - undeut.dt_coms) * (
-                        undeut.drift_labels[1] - undeut.drift_labels[0]) / undeut.drift_labels[
-                    len(undeut.drift_labels) // 2]
-                ic.rt_ground_err = abs(ic.rt_com - undeut.rt_com) * (
-                        undeut.retention_labels[1] - undeut.retention_labels[0]) * 60
+
+                if self.use_rtdt_center:
+
+                    ic.dt_ground_err = 100 * abs(ic.dt_coms - len(undeut.drift_labels) / 2) * (
+                            undeut.drift_labels[1] - undeut.drift_labels[0]) / undeut.drift_labels[
+                                           len(undeut.drift_labels) // 2]
+                    ic.rt_ground_err = abs(ic.rt_com - len(undeut.retention_labels) / 2) * (
+                            undeut.retention_labels[1] - undeut.retention_labels[0]) * 60
+
+                else:
+                    ic.dt_ground_err = 100 * abs(ic.dt_coms - undeut.dt_coms) * (
+                            undeut.drift_labels[1] - undeut.drift_labels[0]) / undeut.drift_labels[
+                        len(undeut.drift_labels) // 2]
+                    ic.rt_ground_err = abs(ic.rt_com - undeut.rt_com) * (
+                            undeut.retention_labels[1] - undeut.retention_labels[0]) * 60
+
                 ic.auc_ground_err = ic.log_baseline_auc - undeut.log_baseline_auc
                 ic.dt_ground_fit = max(
                     np.correlate(undeut.dt_norms[0], ic.dt_norms[0], mode="full"))
