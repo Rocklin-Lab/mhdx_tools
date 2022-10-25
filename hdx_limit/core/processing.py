@@ -468,7 +468,7 @@ class PathOptimizer:
 
     def prefilter_based_on_charge(self):
 
-        atc = [[self.undeuts]]
+        atc = [self.undeuts]
         for tp in self.all_tp_clusters[1:]:
             ics = []
             for ic in tp:
