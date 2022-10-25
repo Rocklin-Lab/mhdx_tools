@@ -397,11 +397,11 @@ class PathOptimizer:
 
         self.use_rtdt_center = use_rtdt_recenter
 
-        self.select_undeuterated()
+        self.select_undeuterated() # selects best undeuterated per charge state
 
-        self.prefiltered_ics = self.prefilter_based_on_charge()
+        self.prefiltered_ics = self.prefilter_based_on_charge() # prefilters ics with charges not present in the undeuterated ics set
 
-        self.precalculate_fit_to_ground()
+        self.precalculate_fit_to_ground() # compute ics features, dt_err, rt_err, dt_fit and rt_fit
 
         self.first_center = self.undeuts[0].baseline_integrated_mz_com
         self.max_peak_center = len(
@@ -437,7 +437,8 @@ class PathOptimizer:
         n_undeut_runs = number of undeuterated HDX runs included in the "library_info" master csv
         """
 
-        self.undeuts = [ic for ic in self.all_tp_clusters[0] if ic.idotp > 0.96]
+        self.undeuts = [ic for ic in self.all_tp_clusters[0] if (ic.idotp > 0.96) and
+                        (ic.auc > 10) and (np.sum(ic.rts) > 0) and (np.sum(ic.dts) > 0)]
 
         l = []
         for ic in self.undeuts:
