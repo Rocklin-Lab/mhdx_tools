@@ -555,7 +555,8 @@ class PathOptimizer:
                                   ic.nearest_neighbor_correlation >= self.thresholds["nearest_neighbor_correlation"] and
                                   ic.charge_states[0] in self.undeut_grounds
                                   and ic.baseline_integrated_mz_com <= self.max_peak_center)
-             ] for ics in self.prefiltered_ics[1:] if ics[0].timepoint_idx in self.timepoints]
+             ] for ics in self.prefiltered_ics[1:]
+        ] #if ics[0].timepoint_idx in self.timepoints] # TODO not sure the impact of removing this statement
         filtered_atc = np.array([self.undeuts] + filtered_atc, dtype=object)
         filtered_indexes = np.array([True if len(ics) > 0 else False for ics in filtered_atc])
         self.prefiltered_ics = list(filtered_atc[filtered_indexes])
