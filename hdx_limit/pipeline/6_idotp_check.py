@@ -100,7 +100,7 @@ def gen_ics_list(library_info_df,
                  factor_plot_output_path_list=None,
                  ics_plot_output_path_list=None,
                  timepoint_index=0,
-                 n_factors=15,
+                 num_factors_guess=5,
                  init_method='nndsvd',
                  niter_max=100000,
                  tol=1e-8,
@@ -153,7 +153,7 @@ def gen_ics_list(library_info_df,
                                               library_info_df=library_info_df,
                                               timepoint_index=timepoint_index,
                                               gauss_params=gauss_params,
-                                              n_factors=n_factors,
+                                              num_factors_guess=num_factors_guess,
                                               init_method=init_method,
                                               niter_max=niter_max,
                                               tol=tol,
@@ -197,7 +197,7 @@ def main(library_info_path,
          all_clusters_output=None,
          ics_plot_output_path_list=None,
          return_flag=None,
-         n_factors=15,
+         num_factors_guess=5,
          init_method='nndsvd',
          niter_max=100000,
          tol=1e-8,
@@ -258,7 +258,7 @@ def main(library_info_path,
                                      prot_sequence=prot_seq,
                                      mz_centers=mz_centers,
                                      normalization_factor=normalization_factor,
-                                     n_factors=n_factors,
+                                     num_factors_guess=num_factors_guess,
                                      init_method=init_method,
                                      niter_max=niter_max,
                                      tol=tol,
@@ -334,7 +334,7 @@ if __name__ == "__main__":
         ic_rel_ht_filter = config_dict["ic_rel_height_filter"]
         ic_rel_ht_baseline = config_dict["ic_rel_height_filter_baseline"]
         ic_rel_ht_threshold = config_dict["ic_rel_height_threshold"]
-        max_num_factors = config_dict["max_num_factors"]
+        num_factors_guess = config_dict["num_factors_guess"]
         factor_init_method = config_dict["init_method"]
         factor_niter_max = config_dict["n_iter_max"]
         factor_tol = config_dict["tolerance"]
@@ -342,7 +342,7 @@ if __name__ == "__main__":
 
         main(library_info_path=library_info_path,
              normalization_factor=normalization_factor,
-             n_factors=max_num_factors,
+             num_factors_guess=num_factors_guess,
              init_method=factor_init_method,
              niter_max=factor_niter_max,
              tol=factor_tol,
@@ -413,7 +413,7 @@ if __name__ == "__main__":
         factor_rt_r2_cutoff = config_dict["factor_rt_r2_cutoff"]
         factor_dt_r2_cutoff = config_dict["factor_dt_r2_cutoff"]
 
-        max_num_factors = config_dict["max_num_factors"]
+        num_factors_guess = config_dict["num_factors_guess"]
         factor_init_method = config_dict["init_method"]
         factor_niter_max = config_dict["n_iter_max"]
         factor_tol = config_dict["tolerance"]
@@ -431,7 +431,7 @@ if __name__ == "__main__":
 
         main(library_info_path=args.library_info_path,
              normalization_factor=normalization_factor,
-             n_factors=max_num_factors,
+             num_factors_guess=num_factors_guess,
              init_method=factor_init_method,
              niter_max=factor_niter_max,
              tol=factor_tol,
