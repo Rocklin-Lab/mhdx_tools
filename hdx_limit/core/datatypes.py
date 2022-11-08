@@ -801,10 +801,72 @@ def factorize_tensor(input_grid,
     return nnfac_output
 
 
+# def gen_factors_with_corr_check(input_grid,
+#                                 init_method="random",
+#                                 factors_0=[],
+#                                 max_num_factors=15,
+#                                 n_iter_max=100000,
+#                                 tolerance=1e-8,
+#                                 sparsity_coefficients=[],
+#                                 fixed_modes=[],
+#                                 normalize=[],
+#                                 verbose=False,
+#                                 return_errors=True,
+#                                 corr_threshold=0.17):
+#     """
+#     generate factors with reducing the rank while checking factor correlations
+#     Args:
+#         input_grid: input grid for factorization
+#         init_method: initialization method: "random", "nndsvd", or "custom"
+#         factors_0: factors to iniitialize with
+#         max_num_factors: max number of factor rank
+#         n_iter_max: max iteration
+#         tolerance: tolerance criteria for rec error for convergence
+#         sparsity_coefficients: sparsity coeffs
+#         fixed_modes: fixing modes for W and H
+#         normalize: normalize boolean list for modes (l2 normalization)
+#         verbose: True for printing out nnfac operation
+#         return_errors: True for return errors, toc, convergence etc
+#         corr_threshold: factor correlation threshold. factors have to have a correlation smaller than this value
+#
+#     Returns:
+#
+#     """
+#
+#     last_corr_check = 1.0
+#     max_num_factors += 1
+#
+#     factor_output = None
+#
+#     while max_num_factors > 2 and last_corr_check > corr_threshold:
+#
+#         max_num_factors -= 1
+#
+#         pmem("Factorize: %s # Factors (Start)" % max_num_factors)
+#
+#         factor_output = factorize_tensor(input_grid=input_grid,
+#                                          init_method=init_method,
+#                                          factors_0=factors_0,
+#                                          factor_rank=max_num_factors,
+#                                          n_iter_max=n_iter_max,
+#                                          tolerance=tolerance,
+#                                          sparsity_coefficients=sparsity_coefficients,
+#                                          fixed_modes=fixed_modes,
+#                                          normalize=normalize,
+#                                          verbose=verbose,
+#                                          return_errors=return_errors)
+#
+#         pmem("Factorize: %s # Factors (End)" % max_num_factors)
+#
+#         if max_num_factors > 1:
+#             last_corr_check = factor_correlations(factor_output.factors)
+#
+#     return factor_output
+
 def gen_factors_with_corr_check(input_grid,
-                                init_method="random",
+                                init_method='nndsvd',
                                 factors_0=[],
-                                max_num_factors=15,
+                                num_factors_guess=5,
                                 n_iter_max=100000,
                                 tolerance=1e-8,
                                 sparsity_coefficients=[],
@@ -812,12 +874,12 @@ def gen_factors_with_corr_check(input_grid,
                                 normalize=[],
                                 verbose=False,
                                 return_errors=True,
-                                corr_threshold=0.17):
+                                corr_threshold=0.4):
     """
     generate factors with reducing the rank while checking factor correlations
     Args:
         input_grid: input grid for factorization
-        init_method: initialization method: "random", "nndsvd", or "custom"
+        init_method: initialization method: 'random', 'nndsvd', or 'custom'
         factors_0: factors to iniitialize with
         max_num_factors: max number of factor rank
         n_iter_max: max iteration
@@ -833,21 +895,14 @@ def gen_factors_with_corr_check(input_grid,
 
     """
 
-    last_corr_check = 1.0
-    max_num_factors += 1
+    factorize = True
 
-    factor_output = None
+    pmem('Factorize: %s # Factors (Start)' % num_factors_guess)
 
-    while max_num_factors > 2 and last_corr_check > corr_threshold:
-
-        max_num_factors -= 1
-
-        pmem("Factorize: %s # Factors (Start)" % max_num_factors)
-
-        factor_output = factorize_tensor(input_grid=input_grid,
+    factor_output_tmp = factorize_tensor(input_grid=input_grid,
                                          init_method=init_method,
                                          factors_0=factors_0,
-                                         factor_rank=max_num_factors,
+                                         factor_rank=num_factors_guess,
                                          n_iter_max=n_iter_max,
                                          tolerance=tolerance,
                                          sparsity_coefficients=sparsity_coefficients,
@@ -856,12 +911,84 @@ def gen_factors_with_corr_check(input_grid,
                                          verbose=verbose,
                                          return_errors=return_errors)
 
-        pmem("Factorize: %s # Factors (End)" % max_num_factors)
+    pmem('Factorize: %s # Factors (End)' % num_factors_guess)
 
-        if max_num_factors > 1:
-            last_corr_check = factor_correlations(factor_output.factors)
+    factor_output = factor_output_tmp
 
-    return factor_output
+    last_corr_check = factor_correlations(factor_output_tmp.factors)
+
+    if last_corr_check < corr_threshold:
+
+        while factorize:
+
+            num_factors_guess += 1
+
+            pmem('Factorize: %s # Factors (Start)' % num_factors_guess)
+
+            factor_output_tmp = factorize_tensor(input_grid=input_grid,
+                                                 init_method=init_method,
+                                                 factors_0=factors_0,
+                                                 factor_rank=num_factors_guess,
+                                                 n_iter_max=n_iter_max,
+                                                 tolerance=tolerance,
+                                                 sparsity_coefficients=sparsity_coefficients,
+                                                 fixed_modes=fixed_modes,
+                                                 normalize=normalize,
+                                                 verbose=verbose,
+                                                 return_errors=return_errors)
+
+            pmem('Factorize: %s # Factors (End)' % num_factors_guess)
+
+            if num_factors_guess > 1:
+                last_corr_check = factor_correlations(factor_output_tmp.factors)
+                factor_output_tmp.corr_check = last_corr_check
+                if last_corr_check < corr_threshold:
+                    factor_output = factor_output_tmp
+                else:
+                    factorize = False
+            else:
+                factor_output_tmp.corr_check = 1
+                factor_output = factor_output_tmp
+                factorize = False
+
+        return factor_output
+
+    else:
+
+        while factorize:
+
+            num_factors_guess -= 1
+
+            pmem('Factorize: %s # Factors (Start)' % num_factors_guess)
+
+            factor_output_tmp = factorize_tensor(input_grid=input_grid,
+                                                 init_method=init_method,
+                                                 factors_0=factors_0,
+                                                 factor_rank=num_factors_guess,
+                                                 n_iter_max=n_iter_max,
+                                                 tolerance=tolerance,
+                                                 sparsity_coefficients=sparsity_coefficients,
+                                                 fixed_modes=fixed_modes,
+                                                 normalize=normalize,
+                                                 verbose=verbose,
+                                                 return_errors=return_errors)
+
+            pmem('Factorize: %s # Factors (End)' % num_factors_guess)
+
+            if num_factors_guess > 1:
+                last_corr_check = factor_correlations(factor_output_tmp.factors)
+                factor_output_tmp.corr_check = last_corr_check
+                if last_corr_check < corr_threshold:
+                    factor_output = factor_output_tmp
+                else:
+                    factor_output = factor_output_tmp
+                    factorize = False
+            else:
+                factor_output_tmp.corr_check = 1
+                factor_output = factor_output_tmp
+                factorize = False
+
+        return factor_output
 
 
 def calculate_theoretical_isotope_dist_from_sequence(sequence, n_isotopes=None):
@@ -1344,7 +1471,8 @@ class DataTensor:
 
     # TODO: This isn"t great style, make this take the tensor as input and return the factors.
     def factorize(self,
-                  max_num_factors=15,
+                  # max_num_factors=15,
+                  num_factors_guess=5,
                   init_method="nndsvd",
                   factors_0=[],
                   fixed_modes=[],
@@ -1390,7 +1518,8 @@ class DataTensor:
         factor_output = gen_factors_with_corr_check(input_grid=self.full_gauss_grids,
                                                     init_method=init_method,
                                                     factors_0=factors_0,
-                                                    max_num_factors=max_num_factors,
+                                                    # max_num_factors=max_num_factors,
+                                                    num_factors_guess=num_factors_guess,
                                                     n_iter_max=niter_max,
                                                     tolerance=tol,
                                                     sparsity_coefficients=sparsity_coeffs,
