@@ -91,7 +91,7 @@ def generate_tensor_factors(tensor_fpath,
                             gauss_params,
                             mz_centers,
                             normalization_factor,
-                            n_factors=15,
+                            num_factors_guess=5,
                             init_method="nndsvd",
                             niter_max=100000,
                             tol=1e-8,
@@ -142,7 +142,7 @@ def generate_tensor_factors(tensor_fpath,
 
     print("Factorizing ... ")
 
-    data_tensor.DataTensor.factorize(max_num_factors=n_factors,
+    data_tensor.DataTensor.factorize(num_factors_guess=num_factors_guess,
                                      init_method=init_method,
                                      niter_max=niter_max,
                                      tol=tol,

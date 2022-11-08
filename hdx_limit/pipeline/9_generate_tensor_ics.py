@@ -19,7 +19,7 @@ def main(library_info_path,
          ic_plot_output_path=None,
          return_flag=False,
          gauss_params=(3, 1),
-         n_factors=15,
+         num_factors_guess=5,
          init_method="nndsvd",
          niter_max=100000,
          tol=1e-8,
@@ -75,7 +75,7 @@ def main(library_info_path,
                                           library_info_df=library_info,
                                           timepoint_index=my_tp,
                                           gauss_params=gauss_params,
-                                          n_factors=n_factors,
+                                          num_factors_guess=num_factors_guess,
                                           init_method=init_method,
                                           niter_max=niter_max,
                                           tol=tol,
@@ -168,7 +168,7 @@ if __name__ == "__main__":
         factor_rt_r2_cutoff = configfile["factor_rt_r2_cutoff"]
         factor_dt_r2_cutoff = configfile["factor_dt_r2_cutoff"]
 
-        max_num_factors = configfile["max_num_factors"]
+        num_factors_guess = configfile["num_factors_guess"]
         factor_init_method = configfile["init_method"]
         factor_niter_max = configfile["n_iter_max"]
         factor_tol = configfile["tolerance"]
@@ -226,7 +226,7 @@ if __name__ == "__main__":
                  factor_plot_output_path=factor_plot_output_path,
                  ic_plot_output_path=ic_plot_output_path,
                  gauss_params=gauss_params,
-                 n_factors=max_num_factors,
+                 num_factors_guess=num_factors_guess,
                  init_method=factor_init_method,
                  niter_max=factor_niter_max,
                  tol=factor_tol,
@@ -301,7 +301,7 @@ if __name__ == "__main__":
         factor_rt_r2_cutoff = configfile["factor_rt_r2_cutoff"]
         factor_dt_r2_cutoff = configfile["factor_dt_r2_cutoff"]
 
-        max_num_factors = configfile["max_num_factors"]
+        num_factors_guess = configfile["num_factors_guess"]
         factor_init_method = configfile["init_method"]
         factor_niter_max = configfile["n_iter_max"]
         factor_tol = configfile["tolerance"]
@@ -329,7 +329,7 @@ if __name__ == "__main__":
              factor_plot_output_path=args.factor_plot_out_path,
              ic_plot_output_path=args.ic_plot_out_path,
              gauss_params=args.gauss_params,
-             n_factors=max_num_factors,
+             num_factors_guess=args.num_factors_guess,
              init_method=factor_init_method,
              niter_max=factor_niter_max,
              tol=factor_tol,
