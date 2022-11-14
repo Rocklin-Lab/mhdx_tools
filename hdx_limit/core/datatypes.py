@@ -939,19 +939,12 @@ def gen_factors_with_corr_check(input_grid,
 
             pmem('Factorize: %s # Factors (End)' % num_factors_guess)
 
-            if num_factors_guess > 1:
-                last_corr_check = factor_correlations(factor_output_tmp.factors)
-                factor_output_tmp.corr_check = last_corr_check
-                if last_corr_check < corr_threshold:
-                    factor_output = factor_output_tmp
-                else:
-                    factorize = False
-            else:
-                factor_output_tmp.corr_check = 1
+            last_corr_check = factor_correlations(factor_output_tmp.factors)
+            factor_output_tmp.corr_check = last_corr_check
+            if last_corr_check < corr_threshold:
                 factor_output = factor_output_tmp
+            else:
                 factorize = False
-
-        return factor_output
 
     else:
 
@@ -980,15 +973,13 @@ def gen_factors_with_corr_check(input_grid,
                 factor_output_tmp.corr_check = last_corr_check
                 if last_corr_check < corr_threshold:
                     factor_output = factor_output_tmp
-                else:
-                    factor_output = factor_output_tmp
                     factorize = False
             else:
                 factor_output_tmp.corr_check = 1
                 factor_output = factor_output_tmp
                 factorize = False
 
-        return factor_output
+    return factor_output
 
 
 def calculate_theoretical_isotope_dist_from_sequence(sequence, n_isotopes=None):
