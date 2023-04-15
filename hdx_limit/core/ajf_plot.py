@@ -16,9 +16,10 @@ from pathlib import Path
 from hdx_limit.core.io import limit_read
 
 
-def get_attributes_from_ic(ic):
+def get_attributes_from_ic(tps, ic):
 
-    tp_idx = tps.index(ic.timepoint_idx)
+    tp = ic.timepoint_idx
+    tp_idx = tps.index(tp)
     com = ic.baseline_integrated_mz_com
     rt = ic.retention_labels[0] + (ic.retention_labels[1] - ic.retention_labels[0]) * ic.rt_com
     rt_tensor_center = ic.retention_labels[len(ic.retention_labels) // 2]
@@ -28,15 +29,15 @@ def get_attributes_from_ic(ic):
     maxint = max(ic.baseline_integrated_mz)
 
     return [
-        ic, tp_idx, com, rt, rt_tensor_center, dt, charge, auc, maxint, ic.tensor_auc, ic.factor_auc, ic.ic_auc
+        ic, tp, tp_idx, com, rt, rt_tensor_center, dt, charge, auc, maxint, ic.tensor_auc, ic.factor_auc, ic.ic_auc
     ]
 
 
-def create_df_and_clusterize(atc, prefiltered_ics, winner, output_plot_path=None, output_df_path=None):
+def create_df_and_clusterize(configfile, atc, prefiltered_ics, winner, output_plot_path=None, output_df_path=None):
     """
     Create and returns dataframe from atc, prefiltered_ics and winner ics
     ic: ic object
-    tp_idx: timepoint index
+    tp: timepoint
     com: center of mass (not needed)
     rt: retention time
     dt: drift time
@@ -46,19 +47,21 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, output_plot_path=None
     maxint: max intensity among ics of same charge state
     """
 
+    tps = configfile["timepoints"]
+
     tmp = []
-    for tp in atc:
-        for ic in tp:
-            tmp.append(get_attributes_from_ic(ic) + [0, 0])
+    for ics in atc:
+        for ic in ics:
+            tmp.append(get_attributes_from_ic(tps, ic) + [0, 0])
     if prefiltered_ics is not None:
-        for tp in prefiltered_ics:
-            for ic in tp:
-                tmp.append(get_attributes_from_ic(ic) + [1, 0])
+        for ics in prefiltered_ics:
+            for ic in ics:
+                tmp.append(get_attributes_from_ic(tps, ic) + [1, 0])
     if winner is not None:
         for ic in winner:
-            tmp.append(get_attributes_from_ic(ic) + [0, 1])
+            tmp.append(get_attributes_from_ic(tps, ic) + [0, 1])
 
-    cols = ["ic", "tp_idx", "com", "rt", "rt_tensor_center", "dt", "charge", "auc", "maxint", "tensor_auc",
+    cols = ["ic", "tp", "tp_idx", "com", "rt", "rt_tensor_center", "dt", "charge", "auc", "maxint", "tensor_auc",
             "factor_auc", "ic_auc", "prefiltered", "winner"]
 
     df = pd.DataFrame(tmp, columns=cols)
@@ -83,6 +86,7 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, output_plot_path=None
             row["ic"].baseline_integrated_mz / max(row["ic"].baseline_integrated_mz)), 3
                                                                           )
                                                                     for i, row in
+
                                                                     df[df["tp_idx"] == line["tp_idx"]].iterrows()]
 
     # Normalize auc relative to max intensity of ics with same charge
@@ -570,7 +574,11 @@ def plot_ajf_(configfile, atc, prefiltered_ics, winner, output_plot_path=None, o
         Path(output_plot_path).touch()
         return 0
 
-    df = create_df_and_clusterize(atc, prefiltered_ics, winner, output_df_path=output_df_path)
+    df = create_df_and_clusterize(configfile,
+                                  atc,
+                                  prefiltered_ics,
+                                  winner,
+                                  output_df_path=output_df_path)
 
     ajf_plot(df, winner=winner, tps=configfile["timepoints"], output_plot_path=output_plot_path)
 
@@ -637,10 +645,10 @@ if __name__ == "__main__":
         print("WINNER IS NONE")
 
     plot_ajf_(configfile=configfile,
-             atc=atc,
-             prefiltered_ics=prefiltered_ics,
-             winner=winner,
-             output_plot_path=args.output_plot_path,
-             output_df_path=args.output_df_path)
+              atc=atc,
+              prefiltered_ics=prefiltered_ics,
+              winner=winner,
+              output_plot_path=args.output_plot_path,
+              output_df_path=args.output_df_path)
 
 
