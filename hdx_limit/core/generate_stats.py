@@ -10,13 +10,14 @@ import argparse
 sys.path.append(os.getcwd() + "/workflow/scripts/hdx_limit/")
 from hdx_limit.core.io import limit_read
 
+
 def generate_df_rank(l, cols):
     # Create dataframe from list (l) and column names (cols)
     # Compute score per ic and subrank classification
     # Return dataframe (df)
     df = pd.DataFrame(l, columns=cols)
     df.drop(["ID"], axis=1)
-    df["total_score"] = df.drop(labels=["ID", "mono_or_multi","n_tps"], axis=1).sum(axis=1)
+    df["total_score"] = df.drop(labels=["ID", "mono_or_multi", "n_tps"], axis=1).sum(axis=1)
     df["score_per_ic"] = df["total_score"] / (df["n_tps"] - 1)
     df.sort_values(by="score_per_ic", inplace=True, ignore_index=True)
     df["subrank"] = 0
@@ -26,6 +27,7 @@ def generate_df_rank(l, cols):
             df.loc[df.ID == name, "subrank"] = subrank
             subrank += 1
     return df
+
 
 def plot_distribution(df, key, label, position):
     # Inputs: df: dataframe, key: column name, label (x label string), position (position in the plot)

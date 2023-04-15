@@ -397,11 +397,11 @@ class PathOptimizer:
 
         self.use_rtdt_center = use_rtdt_recenter
 
-        self.select_undeuterated() # selects best undeuterated per charge state
+        self.select_undeuterated()  # selects best undeuterated per charge state
 
-        self.prefiltered_ics = self.prefilter_based_on_charge() # prefilters ics with charges not present in the undeuterated ics set
+        self.prefiltered_ics = self.prefilter_based_on_charge()  # prefilters ics with charges not present in the undeuterated ics set
 
-        self.precalculate_fit_to_ground() # compute ics features, dt_err, rt_err, dt_fit and rt_fit
+        self.precalculate_fit_to_ground()  # compute ics features, dt_err, rt_err, dt_fit and rt_fit
 
         self.first_center = self.undeuts[0].baseline_integrated_mz_com
         self.max_peak_center = len(
@@ -556,7 +556,7 @@ class PathOptimizer:
                                   ic.charge_states[0] in self.undeut_grounds
                                   and ic.baseline_integrated_mz_com <= self.max_peak_center)
              ] for ics in self.prefiltered_ics[1:]
-        ] #if ics[0].timepoint_idx in self.timepoints] # TODO not sure the impact of removing this statement
+        ]  # if ics[0].timepoint_idx in self.timepoints] # TODO not sure the impact of removing this statement
         filtered_atc = np.array([self.undeuts] + filtered_atc, dtype=object)
         filtered_indexes = np.array([True if len(ics) > 0 else False for ics in filtered_atc])
         self.prefiltered_ics = list(filtered_atc[filtered_indexes])
@@ -1211,6 +1211,8 @@ class PathOptimizer:
 
         backward = 0
         forward = 0
+
+        # Compute rate based on tp1-tp0
         previous_rate = max(
             [(ics[1].baseline_integrated_mz_com - ics[0].baseline_integrated_mz_com) / (timepoints[1] - timepoints[0]),
              0.1])
@@ -1234,7 +1236,8 @@ class PathOptimizer:
             if (current_rate / previous_rate) > 1.2:
                 forward += (current_rate / previous_rate) ** 2.0
             previous_rate = current_rate
-        return backward / len(ics), forward / len(ics)
+
+        return backward / (len(ics)-2), forward / (len(ics)-2)
 
     def dt_ground_rmse(
             self, ics
@@ -1249,7 +1252,7 @@ class PathOptimizer:
 
         """
         # rmse penalizes strong single outliers, score is minimized - lower is better
-        return math.sqrt(sum([ic.dt_ground_err ** 2 for ic in ics]) / len(ics))
+        return np.sqrt(np.mean([ic.dt_ground_err ** 2 for ic in ics]))
 
     def rt_ground_rmse(self, ics):
         """Description of function.
@@ -1261,7 +1264,7 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        return math.sqrt(sum([ic.rt_ground_err ** 2 for ic in ics]) / len(ics))
+        return np.sqrt(np.mean([ic.rt_ground_err ** 2 for ic in ics]))
 
     def dt_ground_fit(self, ics):
         """Description of function.
@@ -1273,7 +1276,7 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        return sum([(1.0 / ic.dt_ground_fit) for ic in ics])
+        return np.mean([(1.0 / ic.dt_ground_fit) for ic in ics])
 
     def rt_ground_fit(self, ics):
         """Description of function.
@@ -1285,7 +1288,7 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        return sum([(1.0 / ic.rt_ground_fit) for ic in ics])
+        return np.mean([(1.0 / ic.rt_ground_fit) for ic in ics])
 
     def baseline_peak_error(self, ics):  # Use RMSE instead TODO
         """Description of function.
@@ -1298,7 +1301,7 @@ class PathOptimizer:
 
         """
         # returns avg of peak_errors from baseline subtracted int_mz -> minimize score
-        return np.average([ic.baseline_peak_error for ic in ics])
+        return np.mean([ic.baseline_peak_error for ic in ics])
 
     def auc_ground_rmse(self, ics):
         """Description of function.
@@ -1322,10 +1325,7 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        sd = 0
-        for ic in ics:
-            sd += ic.log_baseline_auc_diff ** 2
-        return math.sqrt(np.mean(sd))
+        return np.sqrt(np.mean([ic.log_baseline_auc_diff ** 2 for ic in ics]))
 
     def rmses_sum(self, ics):
         """Description of function.
@@ -1337,10 +1337,7 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        rmses = 0
-        for ic in ics:
-            rmses += 100 * ic.baseline_integrated_mz_rmse
-        return rmses
+        return 100 * np.mean([ic.baseline_integrated_mz_rmse for ic in ics])
 
     def int_mz_FWHM_rmse(self, ics):
         """Description of function.
@@ -1352,13 +1349,14 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        sd = 0
-        for i in range(2, len(ics)):
-            sd += (
-                          ics[i].baseline_integrated_mz_FWHM - ics[i - 1].baseline_integrated_mz_FWHM
-                  ) ** 2.0
-
-        return math.sqrt(sd)
+        return np.sqrt(
+            np.sum(
+                [
+                    (ics[i].baseline_integrated_mz_FWHM - ics[i - 1].baseline_integrated_mz_FWHM) ** 2 for i in
+                    range(1, len(ics))
+                ]
+            ) / (len(ics) - 1)
+        )
 
     def nearest_neighbor_penalty(self, ics):
         """Description of function.
@@ -1375,7 +1373,12 @@ class PathOptimizer:
             nn_penalty += 100 * (
                 np.min([abs(1.0 - ic.nearest_neighbor_correlation), 0.5])
             ) ** 2.0
-        return nn_penalty
+
+        return 100 * np.mean([
+            np.min(
+                [abs(1.0 - ic.nearest_neighbor_correlation), 0.5]) for ic in ics
+        ]
+        )
 
     # Eventually put defaults here as else statements
     def set_score_weights(
@@ -1435,10 +1438,11 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
+
+        delta_mz_rate_backward, delta_mz_rate_forward = self.delta_mz_rate(ics)
+
         return sum([
             self.baseline_peak_error_weight * self.baseline_peak_error(ics),
-            self.delta_mz_rate_backward_weight * self.delta_mz_rate(ics)[0],
-            self.delta_mz_rate_forward_weight * self.delta_mz_rate(ics)[1],
             self.dt_ground_rmse_weight * self.dt_ground_rmse(ics),
             self.dt_ground_fit_weight * self.dt_ground_fit(ics),
             self.rt_ground_fit_weight * self.rt_ground_fit(ics),
@@ -1446,7 +1450,9 @@ class PathOptimizer:
             self.auc_ground_rmse_weight * self.auc_ground_rmse(ics),
             self.rmses_sum_weight * self.rmses_sum(ics),
             self.int_mz_FWHM_rmse_weight * self.int_mz_FWHM_rmse(ics),
-            self.nearest_neighbor_penalty_weight * self.nearest_neighbor_penalty(ics)
+            self.nearest_neighbor_penalty_weight * self.nearest_neighbor_penalty(ics),
+            self.delta_mz_rate_backward_weight * delta_mz_rate_backward,
+            self.delta_mz_rate_forward_weight * delta_mz_rate_forward,
         ])
 
     def combo_score_mono(self, ics):

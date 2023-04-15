@@ -3,7 +3,6 @@ import numpy as np
 from hdx_limit.core.io import limit_read
 
 
-
 def check_drift_labels(drift_labels, min_length=3, low_dt_value=0.2):
     """
     check if the drift labels are okay
