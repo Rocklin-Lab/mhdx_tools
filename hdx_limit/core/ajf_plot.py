@@ -16,9 +16,25 @@ from pathlib import Path
 from hdx_limit.core.io import limit_read
 
 
-def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, output=None):
+def get_attributes_from_ic(ic):
+
+    tp_idx = tps.index(ic.timepoint_idx)
+    com = ic.baseline_integrated_mz_com
+    rt = ic.retention_labels[0] + (ic.retention_labels[1] - ic.retention_labels[0]) * ic.rt_com
+    rt_tensor_center = ic.retention_labels[len(ic.retention_labels) // 2]
+    dt = ic.drift_labels[0] + (ic.drift_labels[1] - ic.drift_labels[0]) * ic.dt_coms
+    charge = ic.charge_states[0]
+    auc = ic.auc[0]
+    maxint = max(ic.baseline_integrated_mz)
+
+    return [
+        ic, tp_idx, com, rt, rt_tensor_center, dt, charge, auc, maxint, ic.tensor_auc, ic.factor_auc, ic.ic_auc
+    ]
+
+
+def create_df_and_clusterize(atc, prefiltered_ics, winner, output_plot_path=None, output_df_path=None):
     """
-    Create and returns dataframe from prefiltered_ics and winner ics
+    Create and returns dataframe from atc, prefiltered_ics and winner ics
     ic: ic object
     tp_idx: timepoint index
     com: center of mass (not needed)
@@ -30,52 +46,21 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, output=None):
     maxint: max intensity among ics of same charge state
     """
 
-    cols = ["ic", "tp_idx", "com", "rt", "dt", "charge", "auc", "winner", "maxint", "tensor_auc", "factor_auc",
-            "ic_auc", "prefiltered"]
-
     tmp = []
     for tp in atc:
         for ic in tp:
-            tp_idx = tps.index(ic.timepoint_idx)
-            # if tp_idx == 0 and ic.idotp < 0.99:
-            #     continue
-            com = ic.baseline_integrated_mz_com
-            rt = ic.retention_labels[0] + (ic.retention_labels[1] - ic.retention_labels[0]) * ic.rt_com
-            dt = ic.drift_labels[0] + (ic.drift_labels[1] - ic.drift_labels[0]) * ic.dt_coms
-            charge = ic.charge_states[0]
-            auc = ic.auc[0]
-            win = 0
-            prefiltered = 0
-            maxint = max(ic.baseline_integrated_mz)
-            tmp.append([ic, tp_idx, com, rt, dt, charge, auc, win, maxint, ic.tensor_auc, ic.factor_auc, ic.ic_auc,
-                        prefiltered])
+            tmp.append(get_attributes_from_ic(ic) + [0, 0])
     if prefiltered_ics is not None:
         for tp in prefiltered_ics:
             for ic in tp:
-                tp_idx = tps.index(ic.timepoint_idx)
-                com = ic.baseline_integrated_mz_com
-                rt = ic.retention_labels[0] + (ic.retention_labels[1] - ic.retention_labels[0]) * ic.rt_com
-                dt = ic.drift_labels[0] + (ic.drift_labels[1] - ic.drift_labels[0]) * ic.dt_coms
-                charge = ic.charge_states[0]
-                auc = ic.auc[0]
-                win = 0
-                prefiltered = 1
-                maxint = max(ic.baseline_integrated_mz)
-                tmp.append([ic, tp_idx, com, rt, dt, charge, auc, win, maxint, ic.tensor_auc, ic.factor_auc, ic.ic_auc,
-                            prefiltered])
+                tmp.append(get_attributes_from_ic(ic) + [1, 0])
     if winner is not None:
         for ic in winner:
-            tp_idx = tps.index(ic.timepoint_idx)
-            com = ic.baseline_integrated_mz_com
-            rt = ic.retention_labels[0] + (ic.retention_labels[1] - ic.retention_labels[0]) * ic.rt_com
-            dt = ic.drift_labels[0] + (ic.drift_labels[1] - ic.drift_labels[0]) * ic.dt_coms
-            charge = ic.charge_states[0]
-            auc = ic.auc[0]
-            win = 1
-            prefiltered = 0
-            maxint = max(ic.baseline_integrated_mz)
-            tmp.append([ic, tp_idx, com, rt, dt, charge, auc, win, maxint, ic.tensor_auc, ic.factor_auc, ic.ic_auc,
-                        prefiltered])
+            tmp.append(get_attributes_from_ic(ic) + [0, 1])
+
+    cols = ["ic", "tp_idx", "com", "rt", "rt_tensor_center", "dt", "charge", "auc", "maxint", "tensor_auc",
+            "factor_auc", "ic_auc", "prefiltered", "winner"]
+
     df = pd.DataFrame(tmp, columns=cols)
 
     # Remove lines with NAN values. This is pretty rare!
@@ -85,8 +70,8 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, output=None):
     # And small AUCs # TODO Check why auc are so large or why Rts suffer from deviation: gaussian extrapolation failing?
     df["auc"] = np.where(df["auc"] > 1e10, np.percentile(df["auc"], 95), df["auc"])
     df["auc"] = np.where(df["auc"] < 1e1, 1e1, df["auc"])
-    # Replace unreasonable RT
-    df["rt"] = np.where(abs(df["rt"] - np.median(df["rt"])) > 0.5, np.median(df["rt"])+0.5, df["rt"])
+    # # Replace unreasonable RT
+    # df["rt"] = np.where((df["rt"] - np.median(df["rt"])) > 0.5, np.median(df["rt"])+0.5, df["rt"])
 
     # Compute dot product between winner ic and all other ics from that timepoint
     df["ic_winner_corr"] = -1
@@ -100,10 +85,8 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, output=None):
                                                                     for i, row in
                                                                     df[df["tp_idx"] == line["tp_idx"]].iterrows()]
 
-    # Normlize auc relative to max intensity of ics with same charge
-    df["auc_size"] = 0
-    for i, line in df.iterrows():
-        df.loc[i, "auc_size"] = np.log2(df.loc[i]["auc"])  # / df[df["charge"] == df.loc[i]["charge"]]["auc"].min()
+    # Normalize auc relative to max intensity of ics with same charge
+    df["auc_size"] = np.log2(df.loc["auc"])
 
     # z-score dt
     df["dt_norm"] = 0
@@ -113,12 +96,12 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, output=None):
         std = df[df["charge"] == charge]["dt"].std()
         if not math.isnan(std):
             df.loc[df["charge"] == charge, "dt_norm"] = (df[df["charge"] == charge]["dt"] - avg) / std
-        else:
-            df.loc[df["charge"] == charge, "dt_norm"] = 0
 
     # Create a correction RT based on time wrapped retention labels
-    for i, line in df.iterrows():
-        df.loc[i, "rt_corr"] = line["rt"] - line["ic"].retention_labels[int(len(line["ic"].retention_labels) / 2)]
+    df["rt_corr"] = df["rt"] - df["rt_tensor_center"]
+    # Limit offset on the rt dimension
+    df["rt_corr"] = np.where(df["rt_corr"] > 0.45, 0.45, df["rt_corr"])
+    df["rt_corr"] = np.where(df["rt_corr"] < -0.45, -0.45, df["rt_corr"])
     # z-score rt
     df["rt_norm"] = (df["rt_corr"] - df["rt_corr"].mean()) / df["rt_corr"].std()
 
@@ -127,17 +110,17 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, output=None):
     if n > 9:
         n = 9
     kmeans = KMeans(n_clusters=n)
-    df["clusters"] = kmeans.fit_predict(df[["rt_norm", "dt_norm"]])
+    df["kmeans_clusters"] = kmeans.fit_predict(df[["rt_norm", "dt_norm"]])
 
-    if output is not None:
+    if output_plot_path is not None:
         # Plot rt/dt scatter plot coloring dots according to charge or cluster id
         fig, ax = plt.subplots(1, 3, figsize=(21, 5), dpi=200)
         sns.scatterplot(x=df["dt"], y=df["rt_corr"], hue=df["charge"], palette="bright", ax=ax[0],
                         s=5 * (df["auc_size"]),
                         alpha=0.7)
-        sns.scatterplot(x=df["dt_norm"], y=df["rt_norm"], hue=df["clusters"], palette="bright", ax=ax[1],
+        sns.scatterplot(x=df["dt_norm"], y=df["rt_norm"], hue=df["kmeans_clusters"], palette="bright", ax=ax[1],
                         s=5 * (df["auc_size"]), alpha=0.7)
-        sns.scatterplot(x=df["dt"], y=df["rt_corr"], hue=df["clusters"], palette="bright", ax=ax[2],
+        sns.scatterplot(x=df["dt"], y=df["rt_corr"], hue=df["kmeans_clusters"], palette="bright", ax=ax[2],
                         s=5 * (df["auc_size"]), alpha=0.7)
         ax[0].set_xlabel("DT")
         ax[0].set_ylabel("RT")
@@ -146,18 +129,22 @@ def create_df_and_clusterize(atc, prefiltered_ics, winner, tps, output=None):
         ax[2].set_xlabel("DT")
         ax[2].set_ylabel("RT")
         plt.tight_layout()
-        plt.savefig(output, dpi=200)
+        plt.savefig(output_plot_path, dpi=200)
         plt.close()
+
+    if output_df_path is not None:
+
+        df.save_json(output_df_path)
 
     return df
 
 
-def ajf_plot(df, winner, tps, output_path=None, dpi=300):
+def ajf_plot(df, winner, tps, output_plot_path=None, dpi=300):
 
     ic_winner_corr_cutoff = 0.95
     pal = sns.color_palette("bright")
     n_cols = 6 * len(set(df.charge)) + 6
-    min_clust = min(df["clusters"])
+    min_clust = min(df["kmeans_clusters"])
 
     x_max = len(df.iloc[0]["ic"].baseline_integrated_mz)
 
@@ -193,7 +180,7 @@ def ajf_plot(df, winner, tps, output_path=None, dpi=300):
     for i, charge in enumerate(charge_states):
         ax_scatter_atc[i] = fig.add_subplot(gs0[6 * i + 6:6 * i + 9])
         sns.scatterplot(data=df[(df["charge"] == charge) & (df["prefiltered"] == 0)], x="dt", y="rt_corr",
-                        hue=df["clusters"] - min_clust,
+                        hue=df["kmeans_clusters"] - min_clust,
                         palette="bright", ax=ax_scatter_atc[i],
                         s=5 * (df[(df["charge"] == charge) & (df["prefiltered"] == 0)]["auc_size"]), alpha=0.7)
         ax_scatter_atc[i].set_ylim(-0.4, 0.4)
@@ -215,8 +202,8 @@ def ajf_plot(df, winner, tps, output_path=None, dpi=300):
         for ic in winner:
             tp_idx = tps.index(ic.timepoint_idx)
             charge = ic.charge_states[0]
-            rt = df[df["ic"] == ic]["rt_corr"]
-            dt = df[df["ic"] == ic]["dt"]
+            rt = df[df["ic"] == ic]["rt_corr"].values[0]
+            dt = df[df["ic"] == ic]["dt"].values[0]
             ax_scatter_atc[charge_states.index(int(charge))].text(dt, rt, str(tp_idx), fontsize=8)
 
     if prefiltered_ics is not None:
@@ -225,7 +212,7 @@ def ajf_plot(df, winner, tps, output_path=None, dpi=300):
         for i, charge in enumerate(charge_states):
             ax_scatter_prefiltered[i] = fig.add_subplot(gs0[6 * i + 9:6 * i + 12])
             sns.scatterplot(data=df[(df["charge"] == charge) & (df["prefiltered"] == 1)], x="dt", y="rt_corr",
-                            hue=df["clusters"] - min_clust,
+                            hue=df["kmeans_clusters"] - min_clust,
                             palette="bright", ax=ax_scatter_prefiltered[i],
                             s=5 * (df[(df["charge"] == charge) & (df["prefiltered"] == 1)]["auc_size"]), alpha=0.7)
             ax_scatter_prefiltered[i].set_ylim(-0.4, 0.4)
@@ -247,14 +234,14 @@ def ajf_plot(df, winner, tps, output_path=None, dpi=300):
             for ic in winner:
                 tp_idx = tps.index(ic.timepoint_idx)
                 charge = ic.charge_states[0]
-                rt = df[df["ic"] == ic]["rt_corr"]
-                dt = df[df["ic"] == ic]["dt"]
+                rt = df[df["ic"] == ic]["rt_corr"].values[0]
+                dt = df[df["ic"] == ic]["dt"].values[0]
                 ax_scatter_prefiltered[charge_states.index(int(charge))].text(dt, rt, str(tp_idx), fontsize=8)
 
 
     # Add legend for cluster information
     legend_elements = [Circle(1, label="cluster %i" % i,
-                              facecolor=pal[i - min_clust]) for i in sorted(set(df["clusters"].values))]
+                              facecolor=pal[i - min_clust]) for i in sorted(set(df["kmeans_clusters"].values))]
     ax_clean.legend(handles=legend_elements, prop={"size": 12}, loc="right",
                     bbox_to_anchor=(0.85, 0.5), bbox_transform=ax_clean.transAxes, borderpad=0.02, columnspacing=0.4,
                     handletextpad=0.3, frameon=False)
@@ -266,7 +253,7 @@ def ajf_plot(df, winner, tps, output_path=None, dpi=300):
     if winner is not None:
         for ic in winner:
             tp_idx = tps.index(ic.timepoint_idx)
-            color_index = int(df[(df["ic"] == ic) & (df["winner"] == 1)]["clusters"] - min_clust)
+            color_index = int(df[(df["ic"] == ic) & (df["winner"] == 1)]["kmeans_clusters"] - min_clust)
             ax_win.plot(ic.baseline_integrated_mz / max(ic.baseline_integrated_mz) - tp_idx, c=pal[color_index])
             ax_win.text(0.02, 0.8 - tp_idx, "tp_idx=%i" % int(tp_idx), horizontalalignment="left",
                         verticalalignment="center",
@@ -357,27 +344,27 @@ def ajf_plot(df, winner, tps, output_path=None, dpi=300):
                     (line["ic"].baseline_integrated_mz / max(line["ic"].baseline_integrated_mz)) * (
                             np.log2(line["auc"]) / np.log2(df[(df["charge"] == line["charge"])]["auc"].max())) - int(
                         line["tp_idx"]),
-                    c=pal[int(line["clusters"]) - min_clust], lw=4)
+                    c=pal[int(line["kmeans_clusters"]) - min_clust], lw=4)
             else:
                 ax_charge_states_ics_atc[i].plot(
                     (line["ic"].baseline_integrated_mz / max(line["ic"].baseline_integrated_mz)) * (
                             np.log2(line["auc"]) / np.log2(df[(df["charge"] == line["charge"])]["auc"].max())) - int(
                         line["tp_idx"]),
-                    c=pal[int(line["clusters"]) - min_clust])
+                    c=pal[int(line["kmeans_clusters"]) - min_clust])
         if prefiltered_ics is not None:
             for _, line in df[(df["charge"] == charge) & (df["prefiltered"] == 1) & (df["tp_idx"] == 0)].iterrows():
                 ax_charge_states_ics_atc[i].plot(
                     (line["ic"].baseline_integrated_mz / max(line["ic"].baseline_integrated_mz)) * (
                             np.log2(line["auc"]) / np.log2(df[(df["charge"] == line["charge"])]["auc"].max())) - int(
                         line["tp_idx"]),
-                    c=pal[int(line["clusters"]) - min_clust])
+                    c=pal[int(line["kmeans_clusters"]) - min_clust])
         if winner is not None:
             for _, line in df[(df["charge"] == charge) & (df["winner"] == 1)].iterrows():
                 ax_charge_states_ics_atc[i].plot(
                     (line["ic"].baseline_integrated_mz / max(line["ic"].baseline_integrated_mz)) * (
                             np.log2(line["auc"]) / np.log2(df[(df["charge"] == line["charge"])]["auc"].max())) - int(
                         line["tp_idx"]),
-                    c=pal[int(line["clusters"]) - min_clust], lw=4)
+                    c=pal[int(line["kmeans_clusters"]) - min_clust], lw=4)
         set_tps = set(df[(df["charge"] == charge) & (df["prefiltered"] == 0)]["tp_idx"])
         for tp in set_tps:
             if tp != 0:
@@ -426,14 +413,14 @@ def ajf_plot(df, winner, tps, output_path=None, dpi=300):
                         (line["ic"].baseline_integrated_mz / max(line["ic"].baseline_integrated_mz)) * (
                                 np.log2(line["auc"]) / np.log2(df[(df["charge"] == line["charge"])]["auc"].max())) - int(
                             line["tp_idx"]),
-                        c=pal[int(line["clusters"]) - min_clust], lw=4)
+                        c=pal[int(line["kmeans_clusters"]) - min_clust], lw=4)
                 else:
                     ax_charge_states_ics_prefiltered[i].plot(
                         (line["ic"].baseline_integrated_mz / max(line["ic"].baseline_integrated_mz)) * (
                                 np.log2(line["auc"]) / np.log2(
                             df[(df["charge"] == line["charge"])]["auc"].max())) - int(
                             line["tp_idx"]),
-                        c=pal[int(line["clusters"]) - min_clust])
+                        c=pal[int(line["kmeans_clusters"]) - min_clust])
             if winner is not None:
                 for _, line in df[(df["charge"] == charge) & (df["winner"] == 1)].iterrows():
                     ax_charge_states_ics_prefiltered[i].plot(
@@ -441,7 +428,7 @@ def ajf_plot(df, winner, tps, output_path=None, dpi=300):
                                 np.log2(line["auc"]) / np.log2(
                             df[(df["charge"] == line["charge"])]["auc"].max())) - int(
                             line["tp_idx"]),
-                        c=pal[int(line["clusters"]) - min_clust], lw=4)
+                        c=pal[int(line["kmeans_clusters"]) - min_clust], lw=4)
             set_tps = set(df[(df["charge"] == charge) & (df["prefiltered"] == 1)]["tp_idx"])
             for tp in set_tps:
                 if tp != 0:
@@ -489,7 +476,7 @@ def ajf_plot(df, winner, tps, output_path=None, dpi=300):
                 sns.scatterplot(data=df[(df["charge"] == charge) & (df["tp_idx"] == j) & (df["prefiltered"] == 1)],
                                 x="dt",
                                 y="rt_corr",
-                                hue=df["clusters"] - min_clust, palette="bright",
+                                hue=df["kmeans_clusters"] - min_clust, palette="bright",
                                 s=5 * (
                                     df[(df["charge"] == charge) & (df["tp_idx"] == j) & (df["prefiltered"] == 1)][
                                         "auc_size"]),
@@ -501,7 +488,7 @@ def ajf_plot(df, winner, tps, output_path=None, dpi=300):
                                                              "x", fontsize=10, color="black", ha="center", va="center")
             sns.scatterplot(data=df[(df["charge"] == charge) & (df["tp_idx"] == j) & (df["prefiltered"] == 0)], x="dt",
                             y="rt_corr",
-                            hue=df["clusters"] - min_clust, palette="bright",
+                            hue=df["kmeans_clusters"] - min_clust, palette="bright",
                             s=5 * (
                                 df[(df["charge"] == charge) & (df["tp_idx"] == j) & (df["prefiltered"] == 0)][
                                     "auc_size"]),
@@ -532,7 +519,7 @@ def ajf_plot(df, winner, tps, output_path=None, dpi=300):
                 sns.scatterplot(data=df[(df["charge"] == charge) & (df["tp_idx"] == j) & (df["prefiltered"] == 1)],
                                 x="dt",
                                 y="rt_corr",
-                                hue=df["clusters"] - min_clust, palette="bright",
+                                hue=df["kmeans_clusters"] - min_clust, palette="bright",
                                 s=5 * (
                                     df[(df["charge"] == charge) & (df["tp_idx"] == j) & (df["prefiltered"] == 1)][
                                         "auc_size"]),
@@ -565,30 +552,27 @@ def ajf_plot(df, winner, tps, output_path=None, dpi=300):
                     for key, spine in ax_charge_states_scatter_prefiltered[i + j].spines.items():
                         spine.set_linewidth(3)
 
-    if output_path is not None:
-        plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
+    if output_plot_path is not None:
+        plt.savefig(output_plot_path, dpi=dpi, bbox_inches="tight")
         plt.close("all")
     else:
         plt.show()
 
 
-def plot_ajf_(configfile, atc, prefiltered_ics, winner, output_path, df_output_path):
+def plot_ajf_(configfile, atc, prefiltered_ics, winner, output_plot_path=None, output_df_path=None):
 
-    if output_path is not None:
-        if (not os.path.isdir(os.path.dirname(output_path))) and (len(os.path.dirname(output_path)) != 0):
-            os.makedirs(os.path.dirname(output_path))
+    if output_plot_path is not None:
+        if (not os.path.isdir(os.path.dirname(output_plot_path))) and (len(os.path.dirname(output_plot_path)) != 0):
+            os.makedirs(os.path.dirname(output_plot_path))
 
     if (atc is None) or (len(atc) < 3):
-        print(f"Not enough ICs. Producing empty file: {output_path}")
-        Path(output_path).touch()
+        print(f"Not enough ICs. Producing empty file: {output_plot_path}")
+        Path(output_plot_path).touch()
         return 0
 
-    df = create_df_and_clusterize(atc, prefiltered_ics, winner, tps=configfile["timepoints"])
+    df = create_df_and_clusterize(atc, prefiltered_ics, winner, output_df_path=output_df_path)
 
-    if df_output_path is not None:
-        df.to_pickle(df_output_path)
-
-    ajf_plot(df, winner=winner, tps=configfile["timepoints"], output_path=output_path)
+    ajf_plot(df, winner=winner, tps=configfile["timepoints"], output_plot_path=output_plot_path)
 
 
 if __name__ == "__main__":
@@ -620,13 +604,13 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-o",
-        "--output",
+        "--output_plot_path",
         help=
-        "Output path"
+        "Output ajf plot path"
     )
     parser.add_argument(
         "-d",
-        "--df_output_path",
+        "--output_df_path",
         help=
         "df output path",
         default=None
@@ -656,7 +640,7 @@ if __name__ == "__main__":
              atc=atc,
              prefiltered_ics=prefiltered_ics,
              winner=winner,
-             output_path=args.output,
-             df_output_path=args.df_output_path)
+             output_plot_path=args.output_plot_path,
+             output_df_path=args.output_df_path)
 
 
