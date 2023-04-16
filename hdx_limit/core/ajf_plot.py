@@ -90,7 +90,7 @@ def create_df_and_clusterize(configfile, atc, prefiltered_ics, winner, output_pl
                                                                     df[df["tp_idx"] == line["tp_idx"]].iterrows()]
 
     # Normalize auc relative to max intensity of ics with same charge
-    df["auc_size"] = np.log2(df.loc["auc"])
+    df["auc_size"] = np.log2(df["auc"])
 
     # z-score dt
     df["dt_norm"] = 0
@@ -113,7 +113,8 @@ def create_df_and_clusterize(configfile, atc, prefiltered_ics, winner, output_pl
     n = df[(df["prefiltered"] == 0) & (df["tp_idx"] != 0)].groupby(by="tp_idx", sort=True).count().max()[0]
     if n > 9:
         n = 9
-    kmeans = KMeans(n_clusters=n)
+    kmeans = KMeans(n_clusters=n,
+                    n_init="auto")
     df["kmeans_clusters"] = kmeans.fit_predict(df[["rt_norm", "dt_norm"]])
 
     if output_plot_path is not None:
@@ -143,7 +144,14 @@ def create_df_and_clusterize(configfile, atc, prefiltered_ics, winner, output_pl
     return df
 
 
-def ajf_plot(df, winner, tps, output_plot_path=None, dpi=300):
+def ajf_plot(df, configfile, output_plot_path=None, dpi=300):
+
+    if len(df.query("winner == 1")) > 0:
+        winner = df.query("winner == 1")["ic"].values
+    else:
+        winner = None
+
+    tps = configfile["timepoints"]
 
     ic_winner_corr_cutoff = 0.95
     pal = sns.color_palette("bright")
@@ -163,19 +171,14 @@ def ajf_plot(df, winner, tps, output_plot_path=None, dpi=300):
     ax_clean.axis("off")
 
     # Add information if files are present
-    if len(df) > 0:
-        ax_clean.text(0, 0.9, "ATC is present", fontsize=12, weight="bold", ha="left")
-    else:
+    if len(df) == 0:
         ax_clean.text(0, 0.9, "ATC is NONE", fontsize=12, weight="bold", ha="left")
     if len(df[df["prefiltered"] == 1]) > 0:
         prefiltered_ics = True
-        ax_clean.text(0, 0.7, "PREFILTERED is present", fontsize=12, weight="bold", ha="left")
     else:
         prefiltered_ics = None
         ax_clean.text(0, 0.7, "PREFILTERED is NONE", fontsize=12, weight="bold", ha="left")
-    if winner is not None:
-        ax_clean.text(0, 0.5, "WINNER is present", fontsize=12, weight="bold", ha="left")
-    else:
+    if winner is None:
         ax_clean.text(0, 0.5, "WINNER is NONE", fontsize=12, weight="bold", ha="left")
 
     charge_states = sorted(np.unique(df.charge.values))
@@ -247,7 +250,7 @@ def ajf_plot(df, winner, tps, output_plot_path=None, dpi=300):
     legend_elements = [Circle(1, label="cluster %i" % i,
                               facecolor=pal[i - min_clust]) for i in sorted(set(df["kmeans_clusters"].values))]
     ax_clean.legend(handles=legend_elements, prop={"size": 12}, loc="right",
-                    bbox_to_anchor=(0.85, 0.5), bbox_transform=ax_clean.transAxes, borderpad=0.02, columnspacing=0.4,
+                    bbox_to_anchor=(0.87, 0.5), bbox_transform=ax_clean.transAxes, borderpad=0.02, columnspacing=0.4,
                     handletextpad=0.3, frameon=False)
 
     gs1 = gridspec.GridSpecFromSubplotSpec(1, n_cols, subplot_spec=gs[1], wspace=0.3, hspace=0.0)
@@ -272,7 +275,7 @@ def ajf_plot(df, winner, tps, output_plot_path=None, dpi=300):
                             horizontalalignment="left",
                             verticalalignment="baseline",
                             transform=ax_win.transAxes,
-                            fontsize=12, weight="bold")
+                            fontsize=14, weight="bold")
         ax_win.set_ylim(-len(tps) + 0.95, 1.05)
         ax_win.set_yticks([])
         ax_win.set_xticks(np.arange(0, x_max + 1, 10))
@@ -294,7 +297,7 @@ def ajf_plot(df, winner, tps, output_plot_path=None, dpi=300):
     ax_alt_atc.set_ylim(-len(tps) + 0.95, 1.05)
     ax_alt_atc.set_yticks([])
     ax_alt_atc.set_xticks(np.arange(0, x_max + 1, 10))
-    ax_alt_atc.text(0.5, 0.995, "All ATC", transform=ax_alt_atc.transAxes, ha="center", weight="bold")
+    ax_alt_atc.text(0.5, 1.01, "All ATC", transform=ax_alt_atc.transAxes, ha="center", weight="bold", fontsize=14)
 
     # Plot alternatives charge states all together 3rd column PREFILTERED
     ax_alt_prefiltered = fig.add_subplot(gs1[4:6])
@@ -306,8 +309,8 @@ def ajf_plot(df, winner, tps, output_plot_path=None, dpi=300):
         ax_alt_prefiltered.set_ylim(-len(tps) + 0.95, 1.05)
         ax_alt_prefiltered.set_yticks([])
         ax_alt_prefiltered.set_xticks(np.arange(0, x_max + 1, 10))
-        ax_alt_prefiltered.text(0.5, 0.995, "All PREFILTERED", transform=ax_alt_prefiltered.transAxes, ha="center",
-                                weight="bold")
+        ax_alt_prefiltered.text(0.5, 1.01, "All PREFILTERED", transform=ax_alt_prefiltered.transAxes, ha="center",
+                                weight="bold", fontsize=14)
 
         # Legend elements for alternative ics, 2nd and 3rd columns
         legend_elements = [Circle(1, label="%i+" % charge_states[i],
@@ -388,7 +391,7 @@ def ajf_plot(df, winner, tps, output_plot_path=None, dpi=300):
                                                  verticalalignment="center", fontsize=10)
         ax_charge_states_ics_atc[i].grid()
         ax_charge_states_ics_atc[i].text(0, 1.1, "ATC charge=%i+" % int(charge),
-                                         horizontalalignment="left", verticalalignment="baseline", fontsize=12,
+                                         horizontalalignment="left", verticalalignment="baseline", fontsize=14,
                                          weight="bold")
         ax_charge_states_ics_atc[i].text(x_max, 0.9,
                                          "max_auc=%.1e" % df[df["charge"] == charge]["auc"].max(),
@@ -455,7 +458,7 @@ def ajf_plot(df, winner, tps, output_plot_path=None, dpi=300):
             ax_charge_states_ics_prefiltered[i].grid()
             ax_charge_states_ics_prefiltered[i].text(0, 1.1, "PREFILTERED charge=%i+" % int(charge),
                                                      horizontalalignment="left", verticalalignment="baseline",
-                                                     fontsize=12,
+                                                     fontsize=14,
                                                      weight="bold")
             ax_charge_states_ics_prefiltered[i].text(x_max, 0.9,
                                                      "max_auc=%.1e" % df[df["charge"] == charge]["auc"].max(),
@@ -580,7 +583,7 @@ def plot_ajf_(configfile, atc, prefiltered_ics, winner, output_plot_path=None, o
                                   winner,
                                   output_df_path=output_df_path)
 
-    ajf_plot(df, winner=winner, tps=configfile["timepoints"], output_plot_path=output_plot_path)
+    ajf_plot(df, configfile, output_plot_path=output_plot_path)
 
 
 if __name__ == "__main__":
