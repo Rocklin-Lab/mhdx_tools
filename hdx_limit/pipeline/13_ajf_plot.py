@@ -45,15 +45,15 @@ if __name__ == "__main__":
                   atc=atc,
                   prefiltered_ics=prefiltered_ics,
                   winner=winner_multi,
-                  output_path=output_multi,
-                  df_output_path=df_output_multi)
+                  output_plot_path=output_multi,
+                  output_df_path=df_output_multi)
 
         plot_ajf_(configfile=configfile,
                   atc=atc,
                   prefiltered_ics=prefiltered_ics,
                   winner=winner_mono,
-                  output_path=output_mono,
-                  df_output_path=df_output_mono)
+                  output_plot_path=output_mono,
+                  output_df_path=df_output_mono)
     else:
         parser = argparse.ArgumentParser()
         parser.add_argument(
@@ -133,12 +133,12 @@ if __name__ == "__main__":
                   atc=atc,
                   prefiltered_ics=prefiltered_ics,
                   winner=winner_mono,
-                  output_path=args.output_mono,
-                  df_output_path=df_output_mono)
+                  output_plot_path=args.output_mono,
+                  output_df_path=df_output_mono)
 
         plot_ajf_(configfile=configfile,
                   atc=atc,
                   prefiltered_ics=prefiltered_ics,
                   winner=winner_multi,
-                  output_path=args.output_multi,
-                  df_output_path=df_output_multi)
+                  output_plot_path=args.output_multi,
+                  output_df_path=df_output_multi)
