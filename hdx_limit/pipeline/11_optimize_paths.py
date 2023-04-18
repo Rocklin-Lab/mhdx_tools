@@ -3,6 +3,7 @@ import yaml
 import argparse
 import numpy as np
 import pandas as pd
+import json
 from pathlib import Path
 from hdx_limit.core.io import limit_read, limit_write, check_for_create_dirs, optimize_paths_inputs
 from hdx_limit.core.processing import PathOptimizer
@@ -48,6 +49,13 @@ def write_baseline_integrated_mz_to_csv(path_object_list, output_path, norm_dist
         return out_dict
 
 
+def load_json(fpath):
+    f = open(fpath)
+    d = json.load(f)
+    f.close()
+    return d
+
+
 def main(library_info_path,
          configfile,
          all_timepoints_clusters_input_path=None,
@@ -73,6 +81,7 @@ def main(library_info_path,
          multi_rtdt_com_cvs_out_path=None,
          multi_winner_csv_out_path=None,
          ajf_plot_out_path=None,
+         dictionary_thresholds_path=None,
          ):
     """Uses PathOptimzier class to generate best-estimate hdx-timeseries of IsotopeClusters for a given library protein.
 
@@ -136,6 +145,13 @@ def main(library_info_path,
         name = all_timepoints_clusters_input_path[0].split("/")[-2]
     else:
         name = rt_group_name
+
+    # Load dictionary of thresholds if any. Update values on configfile["thresholds"]
+    if dictionary_thresholds_path is not None:
+        dictionary_thresholds = load_json(dictionary_thresholds_path)
+
+        for key in dictionary_thresholds:
+            configfile["thresholds"][key] = dictionary_thresholds[key]
 
     atc = limit_read(all_timepoints_clusters_input_path)
 
@@ -258,6 +274,7 @@ if __name__ == "__main__":
         library_info_path = snakemake.input[0]
         configfile = yaml.load(open(snakemake.input[1], "rb").read(), Loader=yaml.Loader)
         all_timepoints_clusters_input_path = snakemake.input[2]
+        dictionary_thresholds_path = snakemake.input[3]
         old_data_dir = None
         rt_group_name = snakemake.params.rt_group_name
         prefiltered_ics_out_path = snakemake.output[0]
@@ -303,6 +320,7 @@ if __name__ == "__main__":
              multi_rtdt_com_cvs_out_path=multi_rtdt_com_cvs_out_path,
              multi_winner_csv_out_path=multi_winner_csv_out_path,
              ajf_plot_out_path=None,
+             dictionary_thresholds_path=dictionary_thresholds_path,
              )
 
     else:
@@ -394,6 +412,9 @@ if __name__ == "__main__":
         parser.add_argument("--ajf_plot_out_path",
                             default=None,
                             help="path/to/ajf_plot file")
+        parser.add_argument("--dictionary_thresholds_path",
+                            default=None,
+                            help="path/to/dictionary_thresholds_path file")
 
         args = parser.parse_args()
 
@@ -431,4 +452,5 @@ if __name__ == "__main__":
              multi_rtdt_com_cvs_out_path=args.multi_rtdt_com_cvs_out_path,
              multi_winner_csv_out_path=args.multi_winner_cvs_out_path,
              ajf_plot_out_path=args.ajf_plot_out_path,
+             dictionary_thresholds_path=args.dictionary_thresholds_path,
              )
