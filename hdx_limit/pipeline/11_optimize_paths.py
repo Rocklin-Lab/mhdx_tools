@@ -26,8 +26,12 @@ def write_baseline_integrated_mz_to_csv(path_object_list, output_path, norm_dist
     :return: None
     """
     timepoint_list = [ic.timepoint_idx for ic in path_object_list]
+    timepoint_index_list = [ic.tp_ind for ic in path_object_list]
     timepoint_str = ",".join([str(x) for x in timepoint_list])
-    header = "idx,"+ timepoint_str + "\n"
+    tp_idx_str = ",".join([str(x) for x in timepoint_index_list])
+    header1 = "#tp_ind," + tp_idx_str + "\n"
+    header2 = "#tp," + timepoint_str + "\n"
+
     if norm_dist:
         integrated_mz_distribution_list = [ic.baseline_integrated_mz/max(ic.baseline_integrated_mz) for ic in path_object_list]
     else:
@@ -40,12 +44,13 @@ def write_baseline_integrated_mz_to_csv(path_object_list, output_path, norm_dist
         data_string += "{},{}\n".format(ind, arr_str)
 
     with open(output_path, "w") as outfile:
-        outfile.write(header + data_string)
+        outfile.write(header1 + header2 + data_string)
 
     if return_flag:
         out_dict = dict()
         out_dict["integrated_mz_distribution_array"] = integrated_mz_distribution_array
         out_dict["timepoint_list"] = timepoint_list
+        out_dict["timepoint_index_list"] = timepoint_index_list
         return out_dict
 
 

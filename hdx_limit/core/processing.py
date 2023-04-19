@@ -91,6 +91,7 @@ def generate_tensor_factors(tensor_fpath,
                             gauss_params,
                             mz_centers,
                             normalization_factor,
+                            tp_ind=None,
                             num_factors_guess=5,
                             init_method="nndsvd",
                             niter_max=100000,
@@ -133,6 +134,7 @@ def generate_tensor_factors(tensor_fpath,
     data_tensor = TensorGenerator(filename=tensor_fpath,
                                   library_info=library_info_df,
                                   timepoint_index=timepoint_index,
+                                  tp_ind=tp_ind,
                                   mz_centers=mz_centers,
                                   normalization_factor=normalization_factor
                                   )
@@ -207,7 +209,7 @@ class TensorGenerator:
     hd_mass_diff = 1.006277
     c13_mass_diff = 1.00335
 
-    def __init__(self, filename, timepoint_index, library_info, mz_centers, normalization_factor,
+    def __init__(self, filename, timepoint_index, tp_ind, library_info, mz_centers, normalization_factor,
                  **kwargs):
         """Initializes the TensorGenerator object to create a DataTensor.
 
@@ -225,6 +227,7 @@ class TensorGenerator:
         """
         self.filename = filename
         self.timepoint_index = timepoint_index
+        self.tp_ind = tp_ind
         self.library_info = library_info
         self.mz_centers = mz_centers
         self.normalization_factor = normalization_factor
@@ -272,6 +275,7 @@ class TensorGenerator:
             source_file=self.filename,
             tensor_idx=self.lib_idx,
             timepoint_idx=self.timepoint_index,
+            tp_ind=self.tp_ind,
             name=self.name,
             total_mass_window=self.total_mass_window,
             n_concatenated=1,
