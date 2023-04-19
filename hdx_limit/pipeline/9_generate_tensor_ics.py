@@ -58,11 +58,13 @@ def main(library_info_path,
     my_centers = my_row["mz_centers"].values
     centers = my_centers[0]
 
+    my_tp_ind = None # if timepoint not found in config file, put None
     # Finds timepoint of passed filename by config comparison.
     for tp in configfile["timepoints"]:
         for fn in configfile[tp]:
             if fn in tensor_input_path:
                 my_tp = tp
+                my_tp_ind = configfile["timepoints"].index(my_tp)
 
     # set up vars for calculating idotp if 0 timepoint index
     calc_idotp = False
@@ -74,6 +76,7 @@ def main(library_info_path,
     data_tensor = generate_tensor_factors(tensor_fpath=tensor_input_path,
                                           library_info_df=library_info,
                                           timepoint_index=my_tp,
+                                          tp_ind=my_tp_ind,
                                           gauss_params=gauss_params,
                                           num_factors_guess=num_factors_guess,
                                           init_method=init_method,

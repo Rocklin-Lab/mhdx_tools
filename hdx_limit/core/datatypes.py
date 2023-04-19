@@ -1310,7 +1310,7 @@ class DataTensor:
 
     """
 
-    def __init__(self, source_file, tensor_idx, timepoint_idx, name,
+    def __init__(self, source_file, tensor_idx, timepoint_idx, tp_ind, name,
                  total_mass_window, n_concatenated, charge_states, integrated_mz_limits, bins_per_isotope_peak,
                  normalization_factor, **kwargs):
         """Initializes an instance of the DataTensor class from 
@@ -1339,6 +1339,7 @@ class DataTensor:
         self.source_file = source_file
         self.tensor_idx = tensor_idx
         self.timepoint_idx = timepoint_idx
+        self.tp_ind = tp_ind
         self.name = name
         self.total_mass_window = total_mass_window
         self.n_concatenated = n_concatenated
@@ -1537,6 +1538,7 @@ class DataTensor:
                 factor_obj = Factor(source_file=self.source_file,
                                     tensor_idx=self.tensor_idx,
                                     timepoint_idx=self.timepoint_idx,
+                                    tp_ind=self.tp_ind,
                                     name=self.name,
                                     charge_states=self.charge_states,
                                     rts=factor_output.factors[0].T[num],
@@ -1676,6 +1678,7 @@ class Factor:
         source_file,
         tensor_idx,
         timepoint_idx,
+        tp_ind,
         name,
         charge_states,
         rts,
@@ -1719,6 +1722,7 @@ class Factor:
         self.source_file = source_file
         self.tensor_idx = tensor_idx
         self.timepoint_idx = timepoint_idx
+        self.tp_ind = tp_ind
         self.name = name
         self.charge_states = charge_states
         self.rts = rts
@@ -1897,6 +1901,7 @@ class Factor:
                                        source_file=self.source_file,
                                        tensor_idx=self.tensor_idx,
                                        timepoint_idx=self.timepoint_idx,
+                                       tp_ind=self.tp_ind,
                                        n_factors=self.n_factors,
                                        factor_idx=self.factor_idx,
                                        cluster_idx=cluster_idx,
@@ -2003,6 +2008,7 @@ class IsotopeCluster:
         source_file,
         tensor_idx,
         timepoint_idx,
+        tp_ind,
         n_factors,
         factor_idx,
         cluster_idx,
@@ -2160,6 +2166,7 @@ class IsotopeCluster:
         self.source_file = source_file
         self.tensor_idx = tensor_idx
         self.timepoint_idx = timepoint_idx
+        self.tp_ind = tp_ind
         self.n_factors = n_factors
         self.factor_idx = factor_idx
         self.cluster_idx = cluster_idx
