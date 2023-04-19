@@ -139,7 +139,7 @@ def create_df_and_clusterize(configfile, atc, prefiltered_ics, winner, output_pl
 
     if output_df_path is not None:
 
-        df.save_json(output_df_path)
+        df.to_json(output_df_path)
 
     return df
 
