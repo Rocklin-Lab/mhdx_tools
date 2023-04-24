@@ -372,17 +372,17 @@ class PathOptimizer:
             
         """
         # Set score weights
-        self.baseline_peak_error_weight = 10  # 100 before
-        self.delta_mz_rate_backward_weight = 0.165
-        self.delta_mz_rate_forward_weight = 0.162
-        self.dt_ground_rmse_weight = 7.721
-        self.dt_ground_fit_weight = 13.277
-        self.rt_ground_fit_weight = 1.304
-        self.rt_ground_rmse_weight = 3.859
-        self.auc_ground_rmse_weight = 5.045
-        self.rmses_sum_weight = 0.242
-        self.int_mz_FWHM_rmse_weight = 0.072
-        self.nearest_neighbor_penalty_weight = 0.151
+        self.baseline_peak_error_weight = 0.5 #10  # 100 before
+        self.delta_mz_rate_backward_weight = 0.1  #0.165
+        self.delta_mz_rate_forward_weight = 0.1 #0.162
+        self.dt_ground_rmse_weight = 5 #7.721
+        self.dt_ground_fit_weight = 5 #13.277
+        self.rt_ground_fit_weight = 5 #1.304
+        self.rt_ground_rmse_weight = 1 #3.859
+        self.auc_ground_rmse_weight = 1 #5.045
+        self.rmses_sum_weight = 0.25 #0.242
+        self.int_mz_FWHM_rmse_weight = 0.1 #0.072
+        self.nearest_neighbor_penalty_weight = 0.1 #0.151
 
         self.name = name
         self.all_tp_clusters = all_tp_clusters
@@ -1280,7 +1280,7 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        return np.mean([(1.0 / ic.dt_ground_fit) for ic in ics])
+        return np.mean([(1.0 / ic.dt_ground_fit)**4 for ic in ics])
 
     def rt_ground_fit(self, ics):
         """Description of function.
@@ -1292,7 +1292,7 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        return np.mean([(1.0 / ic.rt_ground_fit) for ic in ics])
+        return np.mean([(1.0 / ic.rt_ground_fit)**4 for ic in ics])
 
     def baseline_peak_error(self, ics):  # Use RMSE instead TODO
         """Description of function.
