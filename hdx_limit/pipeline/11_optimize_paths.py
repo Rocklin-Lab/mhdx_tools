@@ -160,6 +160,11 @@ def main(library_info_path,
 
     atc = limit_read(all_timepoints_clusters_input_path)
 
+    # Populate ics with tp_ind
+    for ics in atc:
+        for ic in ics:
+            ic.tp_ind = configfile["timepoints"].index(ic.timepoint_idx)
+
     if len([ic for ic in atc[0] if ic.idotp > configfile["thresholds"]["idotp_cutoff"]]) == 0:
         print("No tp=0 with idotp greater than threshold found. Creating empty files...")
         check_for_create_files(monobody_path_arguments)
