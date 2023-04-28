@@ -293,7 +293,6 @@ if __name__ == "__main__":
         ajf_plot_out_path = None
 
         if snakemake.params.tmp:
-            multi_winner_out_path = snakemake.output[0]
             dictionary_thresholds_path = None
             prefiltered_ics_out_path = None
             mono_path_plot_out_path = None
@@ -303,10 +302,11 @@ if __name__ == "__main__":
             mono_winner_scores_out_path = None
             mono_rtdt_com_cvs_out_path = None
             mono_winner_csv_out_path = None
+            multi_winner_out_path = snakemake.output[0]
             multi_path_plot_out_path = None
             multi_runner_out_path = None
             multi_undeut_ground_out_path = None
-            multi_winner_scores_out_path = None
+            multi_winner_scores_out_path = snakemake.output[1]
             multi_rtdt_com_cvs_out_path = None
             multi_winner_csv_out_path = None
         else:
