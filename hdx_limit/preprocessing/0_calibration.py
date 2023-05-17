@@ -204,7 +204,7 @@ def generate_thr_exp_pairs(scan_times,
     if output_extracted_signals is not None:
         fig, ax = plt.subplots(len(mzs_thr), time_bins, figsize=(3 * time_bins, 2*len(mzs_thr)), dpi=200)
 
-    for i, t in enumerate(range(0, runtime, time_step)):
+    for i, t in enumerate(np.arange(0, runtime, time_step)):
         keep = (scan_times >= t) & (scan_times < t + time_step)
         obs_spec = np.sum(tensor[keep], axis=0)
         thr_peaks, obs_peaks = get_closest_peaks(mzs_thr, mzs, obs_spec,
