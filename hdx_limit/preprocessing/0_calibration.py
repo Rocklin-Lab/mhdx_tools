@@ -70,10 +70,30 @@ def get_mzs_thr(lockmass_compound, m0=300, m1=2000):
         exit()
 
 
-def generate_tensor(mzml_gz_path):
+def filter_mask(reference_array, query_array, ppm_threshold):
+    # Create a boolean mask for the elements in the second array
+    # that are within the distance threshold from any element in the first array
+    mask = np.any(1e6 * np.abs(query_array[:, np.newaxis] - reference_array) / reference_array <= ppm_threshold, axis=1)
+
+    return mask
+
+
+def filter_array(reference_array, query_array, ppm_threshold=100):
+    # Create a boolean mask for the elements in the second array
+    mask = filter_mask(reference_array=reference_array, query_array=query_array, ppm_threshold=ppm_threshold)
+
+    # Filter the second array based on the mask
+    filtered_array = query_array[mask]
+
+    return filtered_array
+
+
+def generate_tensor(mzml_gz_path, lockmass_compound, ppm_threshold=100):
     """
     Generate mz_bins and 2d tensor for lockmass
     """
+
+    reference_array = get_mzs_thr(lockmass_compound=lockmass_compound)
 
     msrun = pymzml.run.Reader(mzml_gz_path)
 
@@ -84,7 +104,8 @@ def generate_tensor(mzml_gz_path):
         if scan.id_dict["function"] == 2:
             scan_times.append(scan.scan_time_in_minutes())
             spectrum = np.array(scan.peaks("raw")).astype(np.float32)
-            raw_scans.append(spectrum[spectrum[:, 1] > 10])
+            mask = filter_mask(reference_array=reference_array, query_array=spectrum[:, 0], ppm_threshold=ppm_threshold)
+            raw_scans.append(spectrum[mask][spectrum[mask][:, 1] > 10])
 
     mzs = []
     for scan in raw_scans:
@@ -412,7 +433,10 @@ def main(mzml_gz_path,
     if output_kde is not None:
         check_dir(output_kde)
 
-    scan_times, mzs, tensor = generate_tensor(mzml_gz_path=mzml_gz_path)
+    scan_times, mzs, tensor = generate_tensor(mzml_gz_path=mzml_gz_path,
+                                              lockmass_compound=lockmass_compound,
+                                              ppm_threshold=ppm_radius,
+                                              )
 
     mzs_thr = get_mzs_thr(lockmass_compound=lockmass_compound)
 
