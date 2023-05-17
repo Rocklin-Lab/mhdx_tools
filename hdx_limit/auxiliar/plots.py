@@ -73,7 +73,7 @@ def rt_distribution_plot(configfile,
 
     runs = {}
     if len(intermediates) == 1:
-        runs[0] = pd.read_csv(intermediates)
+        runs[0] = pd.read_csv(intermediates[0])
         titles = [configfile[0][0]]
     else:
         fs = sorted(intermediates)
