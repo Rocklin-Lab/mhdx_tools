@@ -53,10 +53,10 @@ def rt_correlation_plot(intermediates,
 
         ax[i][0].plot([i for i in range(30)], [i for i in range(30)], "--r", lw=1)
         ax[i][1].axvline(0, ls="--", color="red")
-        ax[i][0].set_xlabel(f"RT_%{combinations[i][0]}/ min")
-        ax[i][0].set_ylabel(f"RT_%{combinations[i][1]}/ min")
+        ax[i][0].set_xlabel(f"RT_{combinations[i][0]}/ min")
+        ax[i][0].set_ylabel(f"RT_{combinations[i][1]}/ min")
         ax[i][1].set_xlabel(r"$\Delta$RT/ min")
-        ax[i][1].set_xlim(-5, 5)
+        ax[i][1].set_xlim(-2, 2)
 
     if output_path is not None:
         plt.savefig(output_path, format="pdf", dpi=dpi, bbox_inches="tight")
