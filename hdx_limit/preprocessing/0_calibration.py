@@ -219,12 +219,12 @@ def generate_thr_exp_pairs(scan_times,
                 ax[j][i].plot(mzs[mask], np.sum(tensor[keep], axis=0)[mask], c="orange")
                 try:
                     H, A, x0, sigma = gauss_fit(mzs[mask], obs_spec[mask])
+                    ax[j][i].plot(np.linspace(mzs[mask][0], mzs[mask][-1], 50),
+                                  gaussian_function(np.linspace(mzs[mask][0], mzs[mask][-1], 50), H, A, x0, sigma),
+                                  c="blue")
                 except:
                     x0 = mz_thr
                     A = 0
-                ax[j][i].plot(np.linspace(mzs[mask][0], mzs[mask][-1], 50),
-                              gaussian_function(np.linspace(mzs[mask][0], mzs[mask][-1], 50), H, A, x0, sigma),
-                              c="blue")
                 ax[j][i].axvline(mz_thr, ls="--", c="red")
                 ax[j][i].axvline(x0, ls="--", c="blue")
                 ax[j][i].set_yticks([])
