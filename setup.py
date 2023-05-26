@@ -8,7 +8,7 @@ with open(os.path.join(here, "README.md"), encoding="utf-8") as f:
 
 setup(
     name="hdx_limit",
-    version="0.2.0",
+    version="0.8which.0",
     description="Tools for analysis of LC-IMS-MS data represented as 3D tensors.",
 
     long_description=long_description,
@@ -16,8 +16,8 @@ setup(
 
     url="https://github.com/Rocklin-Lab/hdx_limit",
 
-    author="Robert Wes Ludwig, Sugyan Dixit, Állan Ferrari, Gabriel Rocklin",
-    author_email="robert.wes.ludwig@gmail.com, suggie@northwestern.edu, ajrferrari@northwestern.edu, grocklin@gmail.com",
+    author="Állan Ferrari, Sugyan Dixit, Robert Wes Ludwig, Gabriel Rocklin",
+    author_email="ajrferrari@gmail.com, suggie@northwestern.edu, robert.wes.ludwig@gmail.com,  grocklin@gmail.com",
 
     classifiers=[  # Optional
         # How mature is this project? Common values are
