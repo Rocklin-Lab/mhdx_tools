@@ -424,6 +424,10 @@ def main(names_and_seqs_path,
     # Create rt-groups, remove duplicates, and reset_index
     catdf = create_rt_groups(catdf, rt_group_cutoff=rt_group_cutoff)
 
+    # Reorganize and remove unneeded columns
+    catdf = catdf[["name_rt-group", "weighted_average_rt", "name", "charge", "RT", "im_mono", "ab_cluster_total", "expect_mz",
+        "obs_mz", "ppm", "abs_ppm", "cluster"]]
+
     # catdf.loc[:, "sequence"] = None
     # for i, line in name_and_seq.iterrows():
     #     catdf.loc[catdf["name"] == line["name"], "sequence"] = line["sequence"]
