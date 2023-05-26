@@ -14,7 +14,6 @@ from scipy.spatial.distance import euclidean
 from hdx_limit.core.io import limit_read
 from hdx_limit.auxiliar.plots import rt_correlation_plot, rt_distribution_plot
 
-
 matplotlib.use("Agg")
 
 
@@ -135,17 +134,17 @@ def intersection_filter(final, intersections, n_df):
     [[final_copy[i].discard(j)
       for j in intersections]
      for i in range(len(final_copy))
-    ]  # modifies final_copy in place, removing intersection values from each cluster in final_copy
+     ]  # modifies final_copy in place, removing intersection values from each cluster in final_copy
     means = [
-        np.mean(n_df.loc[n_df["idx"].isin(list(st))]["pred_RT"].values)
+        np.mean(n_df.loc[n_df["idx"].isin(list(st))]["RT"].values)
         for st in final_copy
     ]  # generates mean pred_RT of each mutualy exclusive cluster, order maps to final_copy
     dists = [[
-        abs(n_df.loc[n_df["idx"] == i]["pred_RT"].values - mean)
+        abs(n_df.loc[n_df["idx"] == i]["RT"].values - mean)
         for mean in means
     ]
-             for i in intersections
-            ]  # outer order maps to intersections, inner maps to final_copy
+        for i in intersections
+    ]  # outer order maps to intersections, inner maps to final_copy
     [
         final_copy[dists[i].index(min(dists[i]))].add(intersections[i])
         for i in range(len(intersections))
@@ -234,7 +233,7 @@ def gen_stretched_times(tic_file_list, stretched_times_plot_outpath=None):
     ref_tic_dict = limit_read(tic_file_list[0])
     ref_tic_base_sum = ref_tic_dict["tics_base_sums"]
     ref_tic_cumulative_sum = ref_tic_dict["tic_cumulative_sum"]
-    
+
     stretched_ts1_times = []
     stretched_ts2_times = []
 
@@ -268,6 +267,63 @@ def gen_stretched_times(tic_file_list, stretched_times_plot_outpath=None):
 
     return stretched_ts1_times, stretched_ts2_times
 
+
+def shrink_group(group, rt_threshold=0.2):
+    diff = np.abs(group['RT'].values - group['RT'].values[0])
+    return group.iloc[0], group[diff > rt_threshold]
+
+
+def remove_duplicated_charge_rt(group, rt_threshold=0.2):
+    if len(group) == 1:
+        return group
+    else:
+        result = []
+        while len(group) > 0:
+            unique_row, group = shrink_group(group, rt_threshold=rt_threshold)
+            result.append(unique_row)
+
+        return pd.DataFrame(result)
+
+
+def create_rt_groups(df, rt_group_cutoff=0.2):
+    # Sort the DataFrame by Name and RT
+    df = df.sort_values(['name', 'RT']).reset_index(drop=True)
+
+    # Initialize variables
+    current_cluster = 0
+    current_name = ""
+    cluster_column = []
+
+    # Iterate over rows
+    for index, row in df.iterrows():
+        if row['name'] != current_name:
+            # Assign a new cluster number if the name changes
+            current_cluster += 1
+            current_name = row['name']
+        elif row['RT'] - df.loc[index - 1, 'RT'] > rt_group_cutoff:
+            # Assign a new cluster number if the RT difference is greater than threshold
+            current_cluster += 1
+
+        # Assign the cluster number to the current row
+        cluster_column.append(current_cluster)
+
+    # Add the cluster column to the DataFrame
+    df['cluster'] = cluster_column
+
+    df["name_rt-group"] = None
+    df["weighted_average_rt"] = None
+    for cluster_ in set(df.cluster):
+        df_tmp = df.query(f"cluster == {cluster_}")
+        name_ = df_tmp["name"].values[0]
+        rt_weighted = np.average(df_tmp["RT"], weights=df_tmp["ab_cluster_total"])
+        df.loc[df["cluster"] == cluster_, "name_rt-group"] = f"{name_}_{rt_weighted:.2f}"
+        df.loc[df["cluster"] == cluster_, "weighted_average_rt"] = f"{rt_weighted:.2f}"
+
+    # Drops duplicate charge states, keeps lower error duplicates.
+    df = df.sort_values(["name_rt-group", "charge", "abs_ppm"])
+    df = df.drop_duplicates(subset=["name_rt-group", "charge"]).reset_index(drop=True)
+
+    return df
 
 def main(names_and_seqs_path,
          undeut_mzml,
@@ -305,145 +361,168 @@ def main(names_and_seqs_path,
     """
     name_and_seq = pd.read_csv(names_and_seqs_path)
 
-    # If plot is none, function runs without plotting.
-    stretched_ts1_times, stretched_ts2_times = gen_stretched_times(tics, stretched_times_plot_outpath=stretched_times_plot_outpath)
-
-    lo_time, hi_time, n_lc_timepoints = set_global_scan_bounds(undeut_mzml)
-
     # Lists undeuterated dataframes to warp and concatenate.
     undfs = []
     for file in intermediates:
         undfs.append(pd.read_csv(file))
 
-    # Applies warp from provided undeut_mzml to each other undeut mzml, including itself.
-    for i in range(len(undfs)):
-        undfs[i]["pred_RT"] = [
-            pred_time(rt, stretched_ts1_times[i], lo_time, hi_time,
-                      n_lc_timepoints) for rt in undfs[i]["RT"]
-        ]
-        undfs[i]["UN"] = [i for line in undfs[i]["RT"]
-                         ]  #apply source index to each line
+
+    if use_time_warping: # TODO: reimplement timewarping
+
+        # If plot is none, function runs without plotting.
+        stretched_ts1_times, stretched_ts2_times = gen_stretched_times(tics,
+                                                                       stretched_times_plot_outpath=stretched_times_plot_outpath)
+
+        lo_time, hi_time, n_lc_timepoints = set_global_scan_bounds(undeut_mzml)
+
+
+        # Applies warp from provided undeut_mzml to each other undeut mzml, including itself.
+        for i in range(len(undfs)):
+            undfs[i]["pred_RT"] = [
+                pred_time(rt, stretched_ts1_times[i], lo_time, hi_time,
+                          n_lc_timepoints) for rt in undfs[i]["RT"]
+            ]
+            undfs[i]["UN"] = [i for line in undfs[i]["RT"]
+                              ]  # apply source index to each line
 
     # Combines undfs and sort.
     catdf = pd.concat(undfs)
-    catdf = catdf[catdf["im_mono"] > 10] # Remove unresonable DT-based signals
-    catdf = catdf.sort_values(["name", "charge", "RT", "pred_RT", "abs_ppm"])
+    catdf = catdf[catdf["im_mono"] > 10]  # Remove unresonable DT-based signals
+    # catdf = catdf.sort_values(["name", "charge", "RT", "pred_RT", "abs_ppm"])
+    catdf = catdf.sort_values(["name", "charge", "RT", "abs_ppm"])
     catdf.index = range(len(catdf))
 
-    if use_time_warping:
-        rt_key = "pred_RT"
-    else:
-        rt_key = "RT"
+    # if use_time_warping:
+    #     rt_key = "pred_RT"
+    # else:
+    #     rt_key = "RT"
+    # rt_key = "RT"
+
     # Clears duplicate charges close in RT.
-    dups = [False]
-    for i in range(1, len(catdf)):
-        if ((catdf["name"].values[i] == catdf["name"].values[i - 1]) and
-            (catdf["charge"].values[i] == catdf["charge"].values[i - 1]) and
-            (abs(catdf[rt_key].values[i] - catdf[rt_key].values[i - 1]) <
-             rt_group_cutoff)):
-            dups.append(True)
-        else:
-            dups.append(False)
-    catdf["dup"] = dups
-    catdf = catdf.query("dup == False")
+    # dups = [False]
+    # for i in range(1, len(catdf)):
+    #     if ((catdf["name"].values[i] == catdf["name"].values[i - 1]) and
+    #             (catdf["charge"].values[i] == catdf["charge"].values[i - 1]) and
+    #             (abs(catdf[rt_key].values[i] - catdf[rt_key].values[i - 1]) <
+    #              rt_group_cutoff)):
+    #         dups.append(True)
+    #     else:
+    #         dups.append(False)
+    # catdf["dup"] = dups
+    # catdf = catdf.query("dup == False")
 
-    # Adds sequences to dataframe.
-    catdf.loc[:, "sequence"] = None
-    for i, line in name_and_seq.iterrows():
-        catdf.loc[catdf["name"] == line["name"], "sequence"] = line["sequence"]
+    # Adds sequences from name_and_seq to catdf dataframe using merging function
+    # catdf = catdf.merge(name_and_seq, on="name", how="left")
 
-    # Applies index after sorting and removing duplicates.
-    catdf.loc[:, "idx"] = [i for i in range(len(catdf))]
+    # Removes duplicate names and charges with similar RTs
+    catdf = catdf.groupby(by=["name", "charge"]).apply(
+        remove_duplicated_charge_rt, threshold=rt_group_cutoff).reset_index(drop=True)
 
-    # Clusters RT values and renames.
-    name_dict = OrderedDict.fromkeys(catdf["name"].values)
-    [
-        rt_cluster(catdf, name_dict, key, rt_group_cutoff, rt_key=rt_key)
-        for key in name_dict.keys()
-    ]  # TODO possibly automate rt_group cutoff determination in the future
+    # Populate with sequences from name_and_seq
+    catdf = catdf.merge(name_and_seq[["name", "sequence"]], how="left", on="name")
 
-    for key in name_dict.keys():
-        for cluster in name_dict[key]:
-            mean = np.mean(catdf.iloc[list(cluster)][rt_key].values)
-            for line in list(cluster):
-                catdf.iat[line, 0] = catdf.iloc[line]["name"] + "_" + str(
-                    round(mean, 2))
+    # Create rt-groups, remove duplicates, and reset_index
+    catdf = create_rt_groups(catdf, rt_group_cutoff=rt_group_cutoff)
 
-    # Drops duplicate charge states, keeps lower error duplicates.
-    catdf = catdf.sort_values(["name", "charge", "abs_ppm"])
-    catdf = catdf.drop_duplicates(subset=["name", "charge"])
+    # catdf.loc[:, "sequence"] = None
+    # for i, line in name_and_seq.iterrows():
+    #     catdf.loc[catdf["name"] == line["name"], "sequence"] = line["sequence"]
 
-    # Makes rt-group averages weighted by total intensity.
-    weighted_avgs = {}
-    for name in set(catdf["name"].values):
-        weighted_avgs[name] = np.average(
-            catdf.loc[catdf["name"]==name][rt_key].values,
-            weights=catdf.loc[catdf["name"]==name]["ab_cluster_total"])
-    
-    # Applies weighted avg to all rt-group members.
-    catdf["weighted_average_rt"] = [weighted_avgs[x] for x in catdf["name"].values]
+    # # Applies index after sorting and removing duplicates.
+    # catdf.loc[:, "idx"] = [i for i in range(len(catdf))]
 
-    catdf = catdf.sort_values(["weighted_average_rt", "charge"])
-    catdf.index = range(len(catdf))
+    # # Clusters RT values and renames.
+    # name_dict = OrderedDict.fromkeys(catdf["name"].values)
+    # [
+    #     rt_cluster(catdf, name_dict, key, rt_group_cutoff, rt_key=rt_key)
+    #     for key in name_dict.keys()
+    # ]  # TODO possibly automate rt_group cutoff determination in the future
+    #
+    # for key in name_dict.keys():
+    #     for cluster in name_dict[key]:
+    #         mean = np.mean(catdf.iloc[list(cluster)][rt_key].values)
+    #         for line in list(cluster):
+    #             catdf.iat[line, 0] = catdf.iloc[line]["name"] + "_" + str(
+    #                 round(mean, 2))
 
-    # Creates RT_n_m names, where n is the index of the timepoint the source tic came from, and m is the filename index of the tic sourcefile in config[timepoint].
-    rt_columns = []
-    for i in range(len(configfile["timepoints"])):
-        base = "RT_%s" % i
-        if len(configfile[configfile["timepoints"][i]]) > 1:
-            for j in range(len(configfile[configfile["timepoints"][i]])):
-                rt_columns.append(base + "_%s" % j)
-        else:
-            rt_columns.append(base + "_0")
+    # # Drops duplicate charge states, keeps lower error duplicates.
+    # catdf = catdf.sort_values(["name", "charge", "abs_ppm"])
+    # catdf = catdf.drop_duplicates(subset=["name", "charge"])
 
-    # Applies warp from provided undeut_mzml RT to each later timepoint RT for each charged species identified.
-    for i, stretched in enumerate(stretched_ts2_times):
-        catdf[rt_columns[i]] = [
-            pred_time(x, stretched, lo_time, hi_time, n_lc_timepoints)
-            for x in catdf["pred_RT"]
-        ]
+    # # Makes rt-group averages weighted by total intensity.
+    # weighted_avgs = {}
+    # for name in set(catdf["name"].values):
+    #     weighted_avgs[name] = np.average(
+    #         catdf.loc[catdf["name"] == name][rt_key].values,
+    #         weights=catdf.loc[catdf["name"] == name]["ab_cluster_total"])
+    #
+    # # Applies weighted avg to all rt-group members.
+    # catdf["weighted_average_rt"] = [weighted_avgs[x] for x in catdf["name"].values]
 
-    # Determines rt-group average pred-RT-n times from above.
-    prev_name = None
-    all_tp_mean_preds = [[] for i in range(len(rt_columns))]
-    catdf = catdf.sort_values(["weighted_average_rt", "name"])
-    for i in range(len(catdf)):
-        if catdf.iloc[i]["name"] != prev_name:
-            # Get sub frame of rt-group.
-            protein_name = catdf.iloc[i]["name"]
-            subdf = catdf.loc[catdf["name"] == protein_name]
-            # Takes weighted-avg of rt-tp-predictions for all charges in rt-group, if single species group, use species pred-rts as "mean" stand-ins.
-            if len(subdf) > 1:
-                name_rt_preds = [
-                    np.average(subdf.iloc[:, j].values, weights=catdf.loc[catdf["name"]==protein_name]["ab_cluster_total"])
-                    for j in np.arange(-len(rt_columns), 0, 1)
-                ]
-            else:
-                name_rt_preds = subdf.iloc[0, -len(rt_columns):].values
-            # Sets avg rt preds for all lines in rt-group
-            [[
-                all_tp_mean_preds[i].append(name_rt_preds[i])
-                for i in range(len(all_tp_mean_preds))
-            ]
-             for j in range(len(subdf))]
+    # catdf = catdf.sort_values(["weighted_average_rt", "charge"])
+    # catdf.index = range(len(catdf))
 
-            prev_name = catdf.iloc[i]["name"]
-        else:
-            pass
-    # Sets new columns to give all lines their rt-group RT_n consensus rt-positions.
-    for i in range(len(all_tp_mean_preds)):
-        catdf["rt_group_mean_" + rt_columns[i]] = all_tp_mean_preds[i]
+    # # Creates RT_n_m names, where n is the index of the timepoint the source tic came from, and m is the filename index of the tic sourcefile in config[timepoint].
+    # rt_columns = []
+    # for i in range(len(configfile["timepoints"])):
+    #     base = "RT_%s" % i
+    #     if len(configfile[configfile["timepoints"][i]]) > 1:
+    #         for j in range(len(configfile[configfile["timepoints"][i]])):
+    #             rt_columns.append(base + "_%s" % j)
+    #     else:
+    #         rt_columns.append(base + "_0")
 
-    ref_mzml_path = [mzml_path for mzml_path in mzml_sum_paths if configfile[0][0] in mzml_path][0] # Default first undeuterated replicate.
+    # # Applies warp from provided undeut_mzml RT to each later timepoint RT for each charged species identified.
+    # for i, stretched in enumerate(stretched_ts2_times):
+    #     catdf[rt_columns[i]] = [
+    #         pred_time(x, stretched, lo_time, hi_time, n_lc_timepoints)
+    #         for x in catdf["pred_RT"]
+    #     ]
+
+    # # Determines rt-group average pred-RT-n times from above.
+    # prev_name = None
+    # all_tp_mean_preds = [[] for i in range(len(rt_columns))]
+    # catdf = catdf.sort_values(["weighted_average_rt", "name"])
+    # for i in range(len(catdf)):
+    #     if catdf.iloc[i]["name"] != prev_name:
+    #         # Get sub frame of rt-group.
+    #         protein_name = catdf.iloc[i]["name"]
+    #         subdf = catdf.loc[catdf["name"] == protein_name]
+    #         # Takes weighted-avg of rt-tp-predictions for all charges in rt-group, if single species group, use species pred-rts as "mean" stand-ins.
+    #         if len(subdf) > 1:
+    #             name_rt_preds = [
+    #                 np.average(subdf.iloc[:, j].values,
+    #                            weights=catdf.loc[catdf["name"] == protein_name]["ab_cluster_total"])
+    #                 for j in np.arange(-len(rt_columns), 0, 1)
+    #             ]
+    #         else:
+    #             name_rt_preds = subdf.iloc[0, -len(rt_columns):].values
+    #         # Sets avg rt preds for all lines in rt-group
+    #         [[
+    #             all_tp_mean_preds[i].append(name_rt_preds[i])
+    #             for i in range(len(all_tp_mean_preds))
+    #         ]
+    #             for j in range(len(subdf))]
+    #
+    #         prev_name = catdf.iloc[i]["name"]
+    #     else:
+    #         pass
+    # # Sets new columns to give all lines their rt-group RT_n consensus rt-positions.
+    # for i in range(len(all_tp_mean_preds)):
+    #     catdf["rt_group_mean_" + rt_columns[i]] = all_tp_mean_preds[i]
+
+    ref_mzml_path = [mzml_path for mzml_path in mzml_sum_paths if configfile[0][0] in mzml_path][
+        0]  # Default first undeuterated replicate.
     ref_sum = float(open(ref_mzml_path, "r").read())
     # Initializes normalization_factors dict with reference mzml.
-    normalization_factors = {"mzml": ["_".join(ref_mzml_path.split("/")[-1].split("_")[:-1])], "sum": [ref_sum], "normalization_factor": [1]}
+    normalization_factors = {"mzml": ["_".join(ref_mzml_path.split("/")[-1].split("_")[:-1])], "sum": [ref_sum],
+                             "normalization_factor": [1]}
     for mzml_sum_path in mzml_sum_paths[1:]:
         my_sum = float(open(mzml_sum_path, "r").read())
-        my_mzml = "_".join(mzml_sum_path.split("/")[-1].split("_")[:-1]) #expects path/to/<mzml>_sum.txt
+        my_mzml = "_".join(mzml_sum_path.split("/")[-1].split("_")[:-1])  # expects path/to/<mzml>_sum.txt
         normalization_factors["mzml"].append(my_mzml)
         normalization_factors["sum"].append(my_sum)
-        normalization_factors["normalization_factor"].append(my_sum/ref_sum)
+        normalization_factors["normalization_factor"].append(my_sum / ref_sum)
 
     # Handles output options:
     if out_path is not None:
@@ -456,15 +535,15 @@ def main(names_and_seqs_path,
         fig = plt.figure()
         fig.suptitle("Normalization Factor Magnitudes")
         ax1 = fig.add_subplot(111)
-        ax1.bar(range(len(normalization_factors["mzml"])), normalization_factors["normalization_factor"]) 
-        ax1.set(xlabel="TIC .mzML Source", ylabel = "Normalization Factor Magnitude")
+        ax1.bar(range(len(normalization_factors["mzml"])), normalization_factors["normalization_factor"])
+        ax1.set(xlabel="TIC .mzML Source", ylabel="Normalization Factor Magnitude")
         plt.savefig(normalization_factors_plot_outpath)
 
     if rt_correlation_plot_outpath is not None:
         if len(intermediates) > 1:
             rt_correlation_plot(intermediates=intermediates, output_path=rt_correlation_plot_outpath)
         else:
-            #touch empty file if only one run is present
+            # touch empty file if only one run is present
             Path(rt_correlation_plot_outpath).touch()
 
     if rt_distribution_plot_outpath is not None:
@@ -480,22 +559,29 @@ def main(names_and_seqs_path,
 if __name__ == "__main__":
 
     if "snakemake" in globals():
-        names_and_seqs_path = snakemake.input[0]
-        configfile = yaml.load(open(snakemake.input[1], "rt"),Loader=yaml.FullLoader)
-        undeut_mzml = [fn for fn in snakemake.input if fn.endswith(".mzML.gz")][0]
-        tics = [fn for fn in snakemake.input if ".tic" in fn]
+
+        # Handle input options:
+        configfile = yaml.load(open(snakemake.input[1], "rt"), Loader=yaml.FullLoader)
+        names_and_seqs_path = configfile["names_and_seqs"]
         intermediates = sorted([fn for fn in snakemake.input if "_intermediate.csv" in fn])
         mzml_sum_paths = [fn for fn in snakemake.input if "_sum.txt" in fn]
-        out_path = snakemake.output[0]
-        stretched_times_plot_outpath = snakemake.output[1]
-        normalization_factors_outpath = snakemake.output[2]
-        normalization_factors_plot_outpath = snakemake.output[3]
-        rt_correlation_plot_outpath = snakemake.output[4]
-        rt_distribution_plot_outpath = snakemake.output[5]
-        use_time_warping = configfile["use_time_warping"]
+
+        # Handle time warping options if applicable:
+        use_time_warping = True if configfile["use_time_warping"] else False
+        stretched_times_plot_outpath = [fn for fn in snakemake.output if
+                                        "_stretched_times_plot.png" in fn] if use_time_warping else None
+        tics = [fn for fn in snakemake.input if ".tic" in fn] if use_time_warping else None
+        undeut_mzml = [fn for fn in snakemake.input if fn.endswith(".mzML.gz")][0] if use_time_warping else None
+
+        # Handle output options:
+        library_info_outpath = snakemake.output[0]
+        normalization_factors_outpath = snakemake.output[1]
+        normalization_factors_plot_outpath = snakemake.output[2]
+        rt_correlation_plot_outpath = snakemake.output[3]
+        rt_distribution_plot_outpath = snakemake.output[4]
 
         main(names_and_seqs_path=names_and_seqs_path,
-             out_path=out_path,
+             out_path=library_info_outpath,
              undeut_mzml=undeut_mzml,
              intermediates=intermediates,
              tics=tics,
@@ -528,25 +614,15 @@ if __name__ == "__main__":
                             help="path/to/dir/ containing intermediate imtbx files")
         parser.add_argument("-t",
                             "--tics_dir",
+                            default=None,
                             help="path/to/dir/ containing .ims.mz.tic files")
         parser.add_argument("-n",
                             "--undeut_mzml",
                             help="path/to/file, one undeuterated .mzML")
         parser.add_argument(
             "-j",
-            "--intermediates",
-            nargs="+",
-            help="used in snakemake, list of all imtbx intermediate file paths")
-        parser.add_argument(
-            "-u",
-            "--tics",
-            nargs="+",
-            help="used in snakemake, list of all .imx.mz.tic file paths")
-        parser.add_argument(
-            "-v",
-            "--mzml_sum_paths",
-            nargs="+",
-            help="used in snakemake, list of all mzml_sum.txt file paths")
+            "--intermediates_dir",
+            help="directory with intermediate file paths")
         parser.add_argument(
             "-e",
             "--configfile",
@@ -584,32 +660,52 @@ if __name__ == "__main__":
                             help="path/to/rt_distribution_plot.pdf")
         parser.add_argument("-u",
                             "--use_time_warping",
-                            default=True,
+                            default=False,
                             help="Use time warping to clusterize data")
         args = parser.parse_args()
 
-        # Generates explicit filenames and open configfile .yaml.
-        if args.mzml_dir is not None and args.undeut_match_string is not None and args.undeut_mzMLs is None:
-            args.undeut_mzml = list(
-                glob.glob(args.mzml_dir + "*" + args.undeut_match_string + "*" + ".mzML"))
-        if args.intermediates_dir is not None and args.intermediates is None:
-            args.intermediates = sorted(list(
-                glob.glob(args.intermediates_dir + "*intermediate.csv")))
-        if args.tics_dir is not None and args.tics is None:
-            args.tics = list(glob.glob(args.tics_dir + "*.ims.mz.tic.cpickle.zlib"))
+        # Handle input options:
         configfile = yaml.load(open(args.configfile, "rt"), Loader=yaml.FullLoader)
+        names_and_seqs_path = configfile["names_and_seqs"]
+        intermediates = sorted(glob.glob(args.intermediates_dir + "/*intermediate.csv"))
+        mzml_sum_paths = glob.glob(args.tics_dir + "/*_sum.txt")
+
+
+        # Handle time warping options:
+        use_time_warping = args.use_time_warping
+        streched_times_plot_outpath = args.stretched_times_plot_outpath if use_time_warping else None
+        tics = glob.glob(args.tics_dir + "/*.ims.mz.tic.cpickle.zlib") if use_time_warping else None
+        undeut_mzml = args.undeut_mzml if use_time_warping else None
+
+        # Handle output options:
+        library_info_outpath = args.out_path
+        normalization_factors_outpath = args.normalization_factors_outpath
+        normalization_factors_plot_outpath = args.normalization_factors_plot_outpath
+        rt_correlation_plot_outpath = args.rt_correlation_plot_outpath
+        rt_distribution_plot_outpath = args.rt_distribution_plot_outpath
+
+        # # Generates explicit filenames and open configfile .yaml.
+        # if args.mzml_dir is not None and args.undeut_match_string is not None and args.undeut_mzMLs is None:
+        #     args.undeut_mzml = list(
+        #         glob.glob(args.mzml_dir + "*" + args.undeut_match_string + "*" + ".mzML"))
+        # if args.intermediates_dir is not None and args.intermediates is None:
+        #     args.intermediates = sorted(list(
+        #         glob.glob(args.intermediates_dir + "*intermediate.csv")))
+        # if args.tics_dir is not None and args.tics is None:
+        #     args.tics = list(glob.glob(args.tics_dir + "*.ims.mz.tic.cpickle.zlib"))
+
 
         main(args.names_and_seqs_path,
-             out_path=args.out_path,
-             undeut_mzml=args.undeut_mzml,
+             out_path=library_info_outpath,
+             undeut_mzml=undeut_mzml,
              intermediates=args.intermediates,
-             tics=args.tics,
-             mzml_sum_paths=args.mzml_sum_paths,
+             tics=tics,
+             mzml_sum_paths=mzml_sum_paths,
              configfile=configfile,
              rt_group_cutoff=args.rt_group_cutoff,
-             stretched_times_plot_outpath=args.stretched_times_plot_outpath,
-             normalization_factors_outpath=args.normalization_factors_outpath,
-             normalization_factors_plot_outpath=args.normalization_factors_plot_outpath,
-             rt_correlation_plot_outpath=args.rt_correlation_plot_outpath,
-             rt_distribution_plot_outpath=args.rt_correlation_plot_outpath,
-             use_time_warping=args.use_time_warping)
+             stretched_times_plot_outpath=streched_times_plot_outpath,
+             normalization_factors_outpath=normalization_factors_outpath,
+             normalization_factors_plot_outpath=normalization_factors_plot_outpath,
+             rt_correlation_plot_outpath=rt_correlation_plot_outpath,
+             rt_distribution_plot_outpath=rt_distribution_plot_outpath,
+             use_time_warping=use_time_warping)
