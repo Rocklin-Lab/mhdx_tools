@@ -561,7 +561,7 @@ if __name__ == "__main__":
     if "snakemake" in globals():
 
         # Handle input options:
-        configfile = yaml.load(open(snakemake.input[1], "rt"), Loader=yaml.FullLoader)
+        configfile = yaml.load(open(snakemake.input[0], "rt"), Loader=yaml.FullLoader)
         names_and_seqs_path = configfile["names_and_seqs"]
         intermediates = sorted([fn for fn in snakemake.input if "_intermediate.csv" in fn])
         mzml_sum_paths = [fn for fn in snakemake.input if "_sum.txt" in fn]
