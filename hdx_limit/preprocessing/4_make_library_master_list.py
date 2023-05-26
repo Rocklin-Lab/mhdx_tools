@@ -268,18 +268,18 @@ def gen_stretched_times(tic_file_list, stretched_times_plot_outpath=None):
     return stretched_ts1_times, stretched_ts2_times
 
 
-def shrink_group(group, rt_threshold=0.2):
+def shrink_group(group, rt_group_cutoff=0.2):
     diff = np.abs(group['RT'].values - group['RT'].values[0])
-    return group.iloc[0], group[diff > rt_threshold]
+    return group.iloc[0], group[diff > rt_group_cutoff]
 
 
-def remove_duplicated_charge_rt(group, rt_threshold=0.2):
+def remove_duplicated_charge_rt(group, rt_group_cutoff=0.2):
     if len(group) == 1:
         return group
     else:
         result = []
         while len(group) > 0:
-            unique_row, group = shrink_group(group, rt_threshold=rt_threshold)
+            unique_row, group = shrink_group(group, rt_group_cutoff=rt_group_cutoff)
             result.append(unique_row)
 
         return pd.DataFrame(result)
@@ -416,7 +416,7 @@ def main(names_and_seqs_path,
 
     # Removes duplicate names and charges with similar RTs
     catdf = catdf.groupby(by=["name", "charge"]).apply(
-        remove_duplicated_charge_rt, threshold=rt_group_cutoff).reset_index(drop=True)
+        remove_duplicated_charge_rt, rt_group_cutoff=rt_group_cutoff).reset_index(drop=True)
 
     # Populate with sequences from name_and_seq
     catdf = catdf.merge(name_and_seq[["name", "sequence"]], how="left", on="name")
