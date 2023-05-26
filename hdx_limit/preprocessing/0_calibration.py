@@ -107,13 +107,10 @@ def generate_tensor(mzml_gz_path, lockmass_compound, ppm_threshold=100):
             mask = filter_mask(reference_array=reference_array, query_array=spectrum[:, 0], ppm_threshold=ppm_threshold)
             raw_scans.append(spectrum[mask][spectrum[mask][:, 1] > 10])
 
-    mzs = []
-    for scan in raw_scans:
-        mzs = np.unique(list(mzs) + list(scan[:, 0]))
+    mzs = np.unique(np.concatenate(raw_scans)[:, 0]).astype(np.float32)
     tensor = np.zeros(shape=(len(scan_times), len(mzs)))
     for i, scan in enumerate(raw_scans):
         tensor[i, np.searchsorted(mzs, scan[:, 0])] = scan[:, 1]
-    tensor = tensor.reshape(len(scan_times), len(mzs))
 
     return np.array(scan_times), mzs, tensor
 
