@@ -426,7 +426,7 @@ def main(names_and_seqs_path,
 
     # Reorganize and remove unneeded columns
     catdf = catdf[["name_rt-group", "weighted_average_rt", "name", "charge", "RT", "im_mono", "ab_cluster_total", "expect_mz",
-        "obs_mz", "ppm", "abs_ppm", "cluster"]]
+        "obs_mz", "ppm", "abs_ppm", "sequence", "cluster"]]
 
     # catdf.loc[:, "sequence"] = None
     # for i, line in name_and_seq.iterrows():
