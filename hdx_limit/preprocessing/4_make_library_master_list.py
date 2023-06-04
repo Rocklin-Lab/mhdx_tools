@@ -1,5 +1,7 @@
 import copy
 import glob
+import sys
+
 import yaml
 import pymzml
 import argparse
@@ -570,7 +572,10 @@ if __name__ == "__main__":
         # Handle input options:
         configfile = yaml.load(open(snakemake.input[0], "rt"), Loader=yaml.FullLoader)
         names_and_seqs_path = configfile["names_and_seqs"]
-        intermediates = sorted([fn for fn in snakemake.input if "_intermediate.csv" in fn])
+        intermediates = sorted(set([fn for fn in snakemake.input if "_intermediate.csv" in fn]))
+        if len(intermediates) == 0:
+            print("No intermediate files found, exiting.")
+            sys.exit()
         mzml_sum_paths = [fn for fn in snakemake.input if "_sum.txt" in fn]
 
         # Handle time warping options if applicable:
