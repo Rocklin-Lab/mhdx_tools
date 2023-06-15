@@ -49,16 +49,17 @@ setup(
 
     python_requires=">=3.6, <4",
 
-    install_requires=["pandas>=1.2,<2",
+    install_requires=["pandas==1.5.3",
                       "scikit-learn>=0.24,<0.3",
                       "matplotlib>=3.3,<4",
                       "scipy>=1.6,<2",
-                      "peakutils>=1.3,<2",
-                      "pyyaml>=5.4,<6",
+                      "peakutils==1.3.4",
+                      "pyyaml==6.0",
                       "seaborn>=0.11,<0.12",
-                      "nn-fac>=0.1.2",
-                      "molmass>=2020.1.1,<2023",
+                      "nn-fac>=0.2.1",
+                      "molmass==2020.1.1",
                       "ipdb>=0.13,<0.14",
+                      "snakemake==7.26.0"
                       ],  # external packages as dependencies
 
     project_urls={
