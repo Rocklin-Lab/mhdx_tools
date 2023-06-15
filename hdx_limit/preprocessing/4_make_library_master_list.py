@@ -574,8 +574,7 @@ if __name__ == "__main__":
         names_and_seqs_path = configfile["names_and_seqs"]
         intermediates = sorted(set([fn for fn in snakemake.input if "_intermediate.csv" in fn]))
         if len(intermediates) == 0:
-            print("No intermediate files found, exiting.")
-            sys.exit()
+            FileNotFoundError("No intermediate files found, exiting.")
         mzml_sum_paths = [fn for fn in snakemake.input if "_sum.txt" in fn]
 
         # Handle time warping options if applicable:
@@ -613,7 +612,8 @@ if __name__ == "__main__":
         )
         parser.add_argument(
             "names_and_seqs_path",
-            help="path/to/file .csv of protein library names and sequences")
+            help="path/to/file .csv of protein library names and sequences",
+        required=True)
         parser.add_argument("-m",
                             "--mzml_dir",
                             help="path/to/dir/ containing undeuterated .mzML files")
