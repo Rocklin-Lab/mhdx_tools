@@ -1372,15 +1372,15 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        nn_penalty = 0
-        for ic in ics:
-            nn_penalty += 100 * (
-                np.min([abs(1.0 - ic.nearest_neighbor_correlation), 0.5])
-            ) ** 2.0
+        # nn_penalty = 0
+        # for ic in ics:
+        #     nn_penalty += 100 * (
+        #         np.min([abs(1.0 - ic.nearest_neighbor_correlation), 0.5])
+        #     ) ** 2.0
 
         return 100 * np.mean([
             np.min(
-                [abs(1.0 - ic.nearest_neighbor_correlation), 0.5]) for ic in ics
+                [abs(1.0 - ic.nearest_neighbor_correlation), 0.2]) for ic in ics
         ]
         )
 
