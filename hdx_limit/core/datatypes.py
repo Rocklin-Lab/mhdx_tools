@@ -211,7 +211,7 @@ def cluster_df(testq, allseq, ppm=50, adjusted=False):
 
             n_ambiguous += 1
 
-    if len(sum_df) > 0:
+    if len(sum_data) > 0:
         sum_df = pd.DataFrame(sum_data)
         sum_df.columns = [
             "name",
