@@ -211,25 +211,28 @@ def cluster_df(testq, allseq, ppm=50, adjusted=False):
 
             n_ambiguous += 1
 
-    sum_df = pd.DataFrame(sum_data)
-    sum_df.columns = [
-        "name",
-        "RT",
-        "im_mono",
-        "ab_cluster_total",
-        "MW",
-        "charge",
-        "expect_mz",
-        "obs_mz",
-        "ppm",
-        "abs_ppm",
-        "cluster",
-    ]
-    sum_df["ppm"] = [float(x) for x in sum_df["ppm"]]
+    if len(sum_df) > 0:
+        sum_df = pd.DataFrame(sum_data)
+        sum_df.columns = [
+            "name",
+            "RT",
+            "im_mono",
+            "ab_cluster_total",
+            "MW",
+            "charge",
+            "expect_mz",
+            "obs_mz",
+            "ppm",
+            "abs_ppm",
+            "cluster",
+        ]
+        sum_df["ppm"] = [float(x) for x in sum_df["ppm"]]
 
-    print(f"Found {n_ambiguous} ambigous identifications...")
+        print(f"Found {n_ambiguous} ambigous identifications...")
 
-    return sum_df
+        return sum_df
+    else:
+        return None
 
 
 def load_pickle_file(pickle_fpath):
@@ -348,6 +351,11 @@ def gen_mz_error_calib_output(
         intensity_threshold=int_tol,
         cluster_correlation=cluster_corr_tol,
     )
+
+    if cluster_hq_df is None:
+        print("No high quality cluster signals found, calibration not generated")
+        print("Please, disable protein polyfit calibration or adjust the parameters")
+        print("Exiting...")
 
     # generate calibration dictionary
     calib_dict = gen_mz_ppm_error_calib_polyfit(
@@ -1156,7 +1164,7 @@ class Preprocessing:
 
                 self.post_protein_polyfit_df = cluster_df(testq, allseq, ppm=50, adjusted=True)
 
-            if (not self.configfile["lockmass"]) and (not self.configfile["protein_polyfit"]):
+            if (not self.configfile["lockmass"]) and (not self.configfile["protein_polyfit"]) and (self.precorrection_df is not None):
 
                 offset, offset_peak_width = find_offset(self.precorrection_df)
                 if offset > 0:
