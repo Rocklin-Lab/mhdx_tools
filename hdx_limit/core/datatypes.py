@@ -99,7 +99,7 @@ def apply_cluster_weights(dataframe,
 
 
 def cluster_lines(dataframe, min_samples=5, eps=0.5):
-    # Create dbscan object, fit, and apply cluster ids to testq lines.
+    # Create dbscan object, fit, and apply cluster ids to self.testq lines.
     db = DBSCAN(min_samples=min_samples, eps=eps)
     db.fit(dataframe[["cluster_im", "cluster_RT", "cluster_mz", "charge"]])
     clusters = db.fit_predict(
@@ -165,12 +165,12 @@ def cluster_df(testq, allseq, ppm=50, adjusted=False):
     """Determine clustered charged-species signals and label with their cluster index.
 
     Args:
-        testq (Pandas DataFrame): DF containing getnear() output
+        self.testq (Pandas DataFrame): DF containing getnear() output
         ppm (int or float): parts-per-million error cutoff to consider a signal
         adjusted (bool): flag to alert func to use updated m/Z values
 
     Returns:
-        sum_df (Pandas DataFrame): testq with cluster index labels added
+        sum_df (Pandas DataFrame): self.testq with cluster index labels added
 
     """
     n_ambiguous = 0
@@ -249,14 +249,14 @@ def cluster_df_hq_signals(testq,
     """Cluster high quality mz signals based on intensities and cluster correlation, applies cluster lables to the input DF.
 
     Args:
-        testq (Pandas DataFrame): dataframe from imtbx
+        self.testq (Pandas DataFrame): dataframe from imtbx
         ppm (float): ppm error to include for mz signals
         intensity_threshold (float): minimum intensity value required for mz signals
         cluster_correlation (float): cluster correlation from imtbx. higher correlation means better isotopic distribution
         adjusted (bool): Boolean to indicate if mz signals have already been corrected
 
     Returns:
-        sum_df (Pandas DataFrame): testq with cluster lables applied
+        sum_df (Pandas DataFrame): self.testq with cluster lables applied
     """
 
     if "mz_mono_fix_lockmass" in testq.columns:
@@ -331,7 +331,7 @@ def gen_mz_error_calib_output(
     """Generate calibration using the dataframe from imtbx.
 
     Args:
-        testq: dataframe from imtbx
+        self.testq: dataframe from imtbx
         calib_pk_fpath: pickle filepath to save calibration information
         polyfit_degree: polyfit degree
         ppm_tol: ppm tolerance for selecting mz signals for calibration
@@ -1085,17 +1085,17 @@ class Preprocessing:
 
             self.configfile = yaml.load(open(configfile_path, "rb").read(), Loader=yaml.Loader)
 
-            df_imtbx = load_isotopes_file(isotopes_path)
-            allseq = load_names_and_seqs(names_and_seqs_path)
+            self.df_imtbx = load_isotopes_file(isotopes_path)
+            self.allseq = load_names_and_seqs(names_and_seqs_path)
 
             # Make buffer of df
-            testq = copy.deepcopy(df_imtbx)
+            self.testq = copy.deepcopy(self.df_imtbx)
 
             # Cluster lines
-            apply_cluster_weights(testq, adjusted=False)
-            cluster_lines(testq)
+            apply_cluster_weights(self.testq, adjusted=False)
+            cluster_lines(self.testq)
 
-            self.precorrection_df = cluster_df(testq, allseq, ppm=50, adjusted=False)
+            self.precorrection_df = cluster_df(self.testq, self.allseq, ppm=50, adjusted=False)
 
             # Apply lockmass calibration
             if lockmass_calibration_dict is not None:
@@ -1104,32 +1104,32 @@ class Preprocessing:
 
                 runtime = self.configfile["runtime"]
                 self.calib_dict_lockmass = load_pickle_file(lockmass_calibration_dict)
-                testq["mz_mono_fix_lockmass"] = 0
+                self.testq["mz_mono_fix_lockmass"] = 0
                 if self.calib_dict_lockmass[0]["polyfit_deg"] == 0:
                     delta = int(runtime / len(self.calib_dict_lockmass))
                     for i, rt in enumerate(range(0, runtime, delta)):
-                        testq.loc[(testq["RT"] >= rt) & (testq["RT"] <= rt + delta), "mz_mono_fix_lockmass"] = \
-                            self.calib_dict_lockmass[i]["polyfit_coeffs"] * testq[(testq["RT"] >= rt) &
-                                                                                  (testq["RT"] <= rt + delta)][
+                        self.testq.loc[(self.testq["RT"] >= rt) & (self.testq["RT"] <= rt + delta), "mz_mono_fix_lockmass"] = \
+                            self.calib_dict_lockmass[i]["polyfit_coeffs"] * self.testq[(self.testq["RT"] >= rt) &
+                                                                                  (self.testq["RT"] <= rt + delta)][
                                 "mz_mono"].values
                 else:
                     delta = int(runtime / len(self.calib_dict_lockmass))
                     for i, rt in enumerate(range(0, runtime, delta)):
-                        testq.loc[
-                            (testq["RT"] >= rt) & (testq["RT"] <= rt + delta), "mz_mono_fix_lockmass"] = np.polyval(
-                            self.calib_dict_lockmass[i]["polyfit_coeffs"], testq[(testq["RT"] >= rt) &
-                                                                                 (testq["RT"] <= rt + delta)][
+                        self.testq.loc[
+                            (self.testq["RT"] >= rt) & (self.testq["RT"] <= rt + delta), "mz_mono_fix_lockmass"] = np.polyval(
+                            self.calib_dict_lockmass[i]["polyfit_coeffs"], self.testq[(self.testq["RT"] >= rt) &
+                                                                                 (self.testq["RT"] <= rt + delta)][
                                 "mz_mono"].values)
-                testq["mz_mono_fix_round_lockmass"] = np.round(testq["mz_mono_fix_lockmass"].values, 3)
+                self.testq["mz_mono_fix_round_lockmass"] = np.round(self.testq["mz_mono_fix_lockmass"].values, 3)
 
-                testq["mz_mono_fix"] = testq["mz_mono_fix_lockmass"]
-                testq["mz_mono_fix_round"] = testq["mz_mono_fix_round_lockmass"]
+                self.testq["mz_mono_fix"] = self.testq["mz_mono_fix_lockmass"]
+                self.testq["mz_mono_fix_round"] = self.testq["mz_mono_fix_round_lockmass"]
 
-                self.post_lockmass_df = cluster_df(testq, allseq, ppm=50, adjusted=True)
+                self.post_lockmass_df = cluster_df(self.testq, self.allseq, ppm=50, adjusted=True)
 
                 # Cluster lines
-                apply_cluster_weights(testq, adjusted=True)
-                cluster_lines(testq)
+                apply_cluster_weights(self.testq, adjusted=True)
+                cluster_lines(self.testq)
 
                 # Apply protein polyfit calibration
             if self.configfile["protein_polyfit"]:
@@ -1141,8 +1141,8 @@ class Preprocessing:
                     sys.exit()
 
                 self.calib_dict_protein_polyfit = gen_mz_error_calib_output(
-                    testq=testq,
-                    allseq=allseq[~allseq["name"].str.contains("decoy")],
+                    testq=self.testq,
+                    allseq=self.allseq[~self.allseq["name"].str.contains("decoy")],
                     calib_pk_fpath=protein_polyfit_output,
                     polyfit_degree=self.configfile["polyfit_deg"],
                     ppm_tol=self.configfile["ppm_tolerance"],
@@ -1150,50 +1150,50 @@ class Preprocessing:
                     cluster_corr_tol=self.configfile["cluster_corr_tolerance"]
                 )
 
-                if "mz_mono_fix_lockmass" in testq.columns:
+                if "mz_mono_fix_lockmass" in self.testq.columns:
                     x = "mz_mono_fix_lockmass"
                 else:
                     x = "mz_mono"
 
-                testq["mz_mono_fix_protein_polyfit"] = apply_polyfit_cal_mz(
-                    polyfit_coeffs=self.calib_dict_protein_polyfit["polyfit_coeffs"], mz=testq[x])
-                testq["mz_mono_fix_round_protein_polyfit"] = np.round(testq["mz_mono_fix_protein_polyfit"].values, 3)
+                self.testq["mz_mono_fix_protein_polyfit"] = apply_polyfit_cal_mz(
+                    polyfit_coeffs=self.calib_dict_protein_polyfit["polyfit_coeffs"], mz=self.testq[x])
+                self.testq["mz_mono_fix_round_protein_polyfit"] = np.round(self.testq["mz_mono_fix_protein_polyfit"].values, 3)
 
-                testq["mz_mono_fix"] = testq["mz_mono_fix_protein_polyfit"]
-                testq["mz_mono_fix_round"] = testq["mz_mono_fix_round_protein_polyfit"]
+                self.testq["mz_mono_fix"] = self.testq["mz_mono_fix_protein_polyfit"]
+                self.testq["mz_mono_fix_round"] = self.testq["mz_mono_fix_round_protein_polyfit"]
 
-                self.post_protein_polyfit_df = cluster_df(testq, allseq, ppm=50, adjusted=True)
+                self.post_protein_polyfit_df = cluster_df(self.testq, self.allseq, ppm=50, adjusted=True)
 
             if (not self.configfile["lockmass"]) and (not self.configfile["protein_polyfit"]) and (self.precorrection_df is not None):
 
                 offset, offset_peak_width = find_offset(self.precorrection_df)
                 if offset > 0:
-                    testq["mz_mono_fix_offset"] = [
-                        x * (1000000 - offset) / (1000000) for x in testq["mz_mono"]
+                    self.testq["mz_mono_fix_offset"] = [
+                        x * (1000000 - offset) / (1000000) for x in self.testq["mz_mono"]
                     ]
-                    testq["mz_mono_fix_offset_round"] = np.round(testq["mz_mono_fix_offset"].values,
+                    self.testq["mz_mono_fix_offset_round"] = np.round(self.testq["mz_mono_fix_offset"].values,
                                                           3)
                 else:
-                    testq["mz_mono_fix_offset"] = [
-                        x * (1000000 + offset) / (1000000) for x in testq["mz_mono"]
+                    self.testq["mz_mono_fix_offset"] = [
+                        x * (1000000 + offset) / (1000000) for x in self.testq["mz_mono"]
                     ]
-                    testq["mz_mono_fix_offset_round"] = np.round(testq["mz_mono_fix_offset"].values,
+                    self.testq["mz_mono_fix_offset_round"] = np.round(self.testq["mz_mono_fix_offset"].values,
                                                           3)
 
-                testq["mz_mono_fix"] = testq["mz_mono_fix_offset"]
-                testq["mz_mono_fix_round"] = testq["mz_mono_fix_offset"]
+                self.testq["mz_mono_fix"] = self.testq["mz_mono_fix_offset"]
+                self.testq["mz_mono_fix_round"] = self.testq["mz_mono_fix_offset"]
 
-                self.offset_df = cluster_df(testq, allseq, ppm=50, adjusted=True)
+                self.offset_df = cluster_df(self.testq, self.allseq, ppm=50, adjusted=True)
 
                 # ppm_refilter = math.ceil(offset_peak_width / 2)
 
             # Cluster lines
-            apply_cluster_weights(testq, adjusted=True)
-            cluster_lines(testq)
+            apply_cluster_weights(self.testq, adjusted=True)
+            cluster_lines(self.testq)
 
-            self.for_kde_df = cluster_df(testq, allseq, ppm=20, adjusted=True)
+            self.for_kde_df = cluster_df(self.testq, self.allseq, ppm=20, adjusted=True)
 
-            self.imtbx_df = cluster_df(testq, allseq, ppm=self.configfile["ppm_refilter"], adjusted=True)
+            self.imtbx_df = cluster_df(self.testq, self.allseq, ppm=self.configfile["ppm_refilter"], adjusted=True)
 
             # send sum_df to main output
             if output_path is not None:
