@@ -52,19 +52,19 @@ def plot_mz_data(fig, gs, row_num, col_num, mz_label, mz_data, plot_label, idotp
 
     ax = fig.add_subplot(gs[row_num, col_num])
     plt.plot(mz_label, mz_data, linewidth=0.5, label=plot_label)
-    plt.text(0.75, 1.2, s='sum_int=%.2f' % mz_sum, fontsize=10, transform=ax.transAxes)
+    plt.text(0.75, 1.2, s="sum_int=%.2f" % mz_sum, fontsize=10, transform=ax.transAxes)
     if idotp is not None:
-        plt.text(0, 1.2, s='idotp=%.3f' % idotp, fontsize=10, transform=ax.transAxes)
+        plt.text(0, 1.2, s="idotp=%.3f" % idotp, fontsize=10, transform=ax.transAxes)
     ax.set_yticks([])
     ax.tick_params(length=3, pad=3)
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    plt.legend(loc='best', fontsize='small')
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    plt.legend(loc="best", fontsize="small")
 
 
 def plot_ics(list_of_ics_from_a_factor):
-    """Creates a plot showing a Factor's m/Z and the m/Z of all ICs made from that Factor.
+    """Creates a plot showing a Factor"s m/Z and the m/Z of all ICs made from that Factor.
 
     Args:
         list_of_ics_from_a_factor(list of IsotopeCluster objects): List of ICs made from a Factor.
@@ -98,7 +98,7 @@ def plot_ics(list_of_ics_from_a_factor):
                  col_num=n_cols,
                  mz_label=pad_factor_mz_label,
                  mz_data=pad_factor_mz,
-                 plot_label='factor_mz')
+                 plot_label="factor_mz")
 
 
     # Plots m/Z for all ICs from Factor.
@@ -125,7 +125,7 @@ def plot_ics(list_of_ics_from_a_factor):
         else:
             n_cols += 1
 
-    title = 'Factor num %s' % list_of_ics_from_a_factor[0].factor_idx
+    title = "Factor num %s" % list_of_ics_from_a_factor[0].factor_idx
 
     plt.suptitle(title)
     plt.tight_layout()
@@ -169,6 +169,6 @@ def plot_ics_from_icfile(ic_fpath, output_path):
                           output_path=output_path)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     pass

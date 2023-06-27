@@ -1,44 +1,10 @@
-"""Example Google style docstrings.
-
-This module demonstrates documentation as specified by the `Google Python
-Style Guide`_. Docstrings may extend over multiple lines. Sections are created
-with a section header and a colon followed by a block of indented text.
-
-Example:
-    Examples can be given using either the ``Example`` or ``Examples``
-    sections. Sections support any reStructuredText formatting, including
-    literal blocks::
-
-        $ python example_google.py
-
-Section breaks are created by resuming unindented text. Section breaks
-are also implicitly created anytime a new section starts.
-
-Attributes:
-    module_level_variable1 (int): Module level variables may be documented in
-        either the ``Attributes`` section of the module docstring, or in an
-        inline docstring immediately following the variable.
-
-        Either form is acceptable, but the two should not be mixed. Choose
-        one convention to document module level variables and be consistent
-        with it.
-
-Todo:
-    * For module TODOs
-    * You have to also use ``sphinx.ext.todo`` extension
-
-.. _Google Python Style Guide:
-   http://google.github.io/styleguide/pyguide.html
-
-"""
 import os
 from dataclasses import dataclass
 import time
 import sys
-import math
 import copy
 import psutil
-import peakutils
+import yaml
 import molmass
 import numpy as np
 import nn_fac
@@ -50,6 +16,510 @@ from scipy.optimize import curve_fit
 from sklearn.metrics import mean_squared_error
 from scipy.stats import norm
 from scipy.stats import linregress
+from Bio.SeqUtils import ProtParam
+import pandas as pd
+from sklearn.cluster import DBSCAN
+import pickle as pk
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+
+def load_names_and_seqs(names_and_seqs_path):
+    # read list of all proteins in sample
+    allseq = pd.read_csv(names_and_seqs_path)
+    allseq["MW"] = [
+        ProtParam.ProteinAnalysis(seq, monoisotopic=True).molecular_weight()
+        for seq in allseq["sequence"]
+    ]
+    allseq["len"] = [len(seq) for seq in allseq["sequence"]]
+
+    return allseq
+
+
+def load_isotopes_file(isotopes_path):
+    with open(isotopes_path) as file:
+        lines = [x.strip() for x in file.readlines()]
+    out = []
+    for i, line in enumerate(lines):
+        if line == "SCAN_START":
+            RT = float(lines[i + 1].split()[2][3:-1])
+            j = i + 3
+            while lines[j] != "SCAN_END":
+                out.append([float(x) for x in lines[j].split()] + [RT])
+                j += 1
+
+    df = pd.DataFrame(out)
+    df.columns = [
+        "mz_mono",
+        "im_mono",
+        "ab_mono_peak",
+        "ab_mono_total",
+        "mz_top",
+        "im_top",
+        "ab_top_peak",
+        "ab_top_total",
+        "cluster_peak_count",
+        "idx_top",
+        "charge",
+        "mz_cluster_avg",
+        "ab_cluster_peak",
+        "ab_cluster_total",
+        "cluster_corr",
+        "noise",
+        "RT"
+    ]
+
+    return df
+
+
+def apply_cluster_weights(dataframe,
+                          dt_weight=5,
+                          rt_weight=0.6,
+                          mz_weight=0.006,
+                          adjusted=False):
+    """Applies heuristic weights to raw physical values for cluster scoring.
+
+    Args:
+        dataframe (Pandas DataFrame): DF of charged species to reweight
+        dt_weight (float): divisor for dt
+        rt_weight (float): divisor for rt
+        mz_weight (float): divisor for mz
+
+    Returns:
+        None
+
+    """
+    # TODO: This is not great style, this should accept 3 lists and 3 weights and return 3 new lists
+    dataframe["cluster_im"] = dataframe["im_mono"] / dt_weight
+    dataframe["cluster_RT"] = dataframe["RT"] / rt_weight
+    if adjusted:
+        dataframe["cluster_mz"] = dataframe["mz_mono_fix_round"] / mz_weight
+    else:
+        dataframe["cluster_mz"] = dataframe["mz_mono"] / mz_weight
+
+
+def cluster_lines(dataframe, min_samples=5, eps=0.5):
+    # Create dbscan object, fit, and apply cluster ids to self.testq lines.
+    db = DBSCAN(min_samples=min_samples, eps=eps)
+    db.fit(dataframe[["cluster_im", "cluster_RT", "cluster_mz", "charge"]])
+    clusters = db.fit_predict(
+        dataframe[["cluster_im", "cluster_RT", "cluster_mz", "charge"]])
+    dataframe["cluster"] = clusters
+
+
+def getnear(x, allseq, charge=None, ppm=50):
+    """Creates sub-DataFrame of sumdf near a given mass
+
+    Args:
+        x (float): molecular weight of a library protein
+        charge (int): charge-state filter for search
+        miz (int): DEPRECATED
+        ppm (float or int): Parts-per-million error-radius around base-peak m/z to search
+
+
+    Returns:
+        tempdf (Pandas DataFrame): DF of charged species near the given mass
+
+    """
+    subdf = allseq
+    if charge != None:
+        low, high = (
+            ((x * charge) - (1.007825 * charge)) * ((1e6 - ppm) / 1e6),
+            ((x * charge) - (1.007825 * charge)) * ((1e6 + ppm) / 1e6),
+        )
+        mlow, mhigh = allseq["MW"] > low, allseq["MW"] < high
+        tempdf = allseq[mlow & mhigh].sort_values("MW")[[
+            "MW", "name", "len", "sequence"
+        ]]
+        tempdf["plus%s" % int(charge)] = [
+            (q + (1.007825 * charge)) / charge for q in tempdf["MW"]
+        ]
+        tempdf["ppm"] = [
+            "%.1f" % ((1.0 - (q / x)) * 1e6)
+            for q in tempdf["plus%s" % int(charge)]
+        ]
+        tempdf["abs_ppm"] = [
+            np.abs(((1.0 - (q / x)) * 1e6))
+            for q in tempdf["plus%s" % int(charge)]
+        ]
+        return tempdf[[
+            "plus%s" % int(charge),
+            "ppm",
+            "abs_ppm",
+            "MW",
+            "name",
+            "len",
+            "sequence",
+        ]]
+    else:
+        low, high = x - 1e-6 * x, x + 1e-6 * x
+        mlow, mhigh = allseq["MW"] > low, allseq["MW"] < high
+        tempdf = subdf[mlow & mhigh].sort_values("MW")[[
+            "MW", "name", "len", "sequence"
+        ]]
+        tempdf["ppm"] = [ 1e6 * (x - q) / q for q in tempdf["MW"] ]
+        return tempdf
+
+
+def cluster_df(testq, allseq, ppm=50, adjusted=False):
+    """Determine clustered charged-species signals and label with their cluster index.
+
+    Args:
+        self.testq (Pandas DataFrame): DF containing getnear() output
+        ppm (int or float): parts-per-million error cutoff to consider a signal
+        adjusted (bool): flag to alert func to use updated m/Z values
+
+    Returns:
+        sum_df (Pandas DataFrame): self.testq with cluster index labels added
+
+    """
+    n_ambiguous = 0
+    sum_data = []
+    for c in range(0, max(testq["cluster"]) + 1):
+        cluster_df = testq[testq["cluster"] == c]
+        charge = np.median(cluster_df["charge"])
+        if adjusted:
+            mz = np.average(cluster_df["mz_mono_fix_round"],
+                            weights=cluster_df["ab_cluster_total"])
+        else:
+            mz = np.average(cluster_df["mz_mono"],
+                            weights=cluster_df["ab_cluster_total"])
+        RT = np.average(cluster_df["RT"],
+                        weights=cluster_df["ab_cluster_total"])
+        im = np.average(cluster_df["im_mono"],
+                        weights=cluster_df["ab_cluster_total"])
+
+        near = getnear(mz, allseq, charge=charge, ppm=ppm)
+
+        if len(near) == 1:
+
+            sum_data.append([
+                near["name"].values[0],
+                RT,
+                im,
+                sum(cluster_df["ab_cluster_total"]),
+                near["MW"].values[0],
+                charge,
+                near["plus%s" % int(charge)].values[0],
+                mz,
+                near["ppm"].values[0],
+                near["abs_ppm"].values[0],
+                c,
+            ])
+
+        elif len(near) > 1:
+
+            n_ambiguous += 1
+
+    if len(sum_data) > 0:
+        sum_df = pd.DataFrame(sum_data)
+        sum_df.columns = [
+            "name",
+            "RT",
+            "im_mono",
+            "ab_cluster_total",
+            "MW",
+            "charge",
+            "expect_mz",
+            "obs_mz",
+            "ppm",
+            "abs_ppm",
+            "cluster",
+        ]
+        sum_df["ppm"] = [float(x) for x in sum_df["ppm"]]
+
+        print(f"Found {n_ambiguous} ambigous identifications...")
+
+        return sum_df
+    else:
+        return None
+
+
+def load_pickle_file(pickle_fpath):
+    with open(pickle_fpath, "rb") as file:
+        pk_object = pk.load(file)
+    return pk_object
+
+
+def cluster_df_hq_signals(testq,
+                          allseq,
+                          ppm=50,
+                          intensity_threshold=1e4,
+                          cluster_correlation=0.99):
+    """Cluster high quality mz signals based on intensities and cluster correlation, applies cluster lables to the input DF.
+
+    Args:
+        self.testq (Pandas DataFrame): dataframe from imtbx
+        ppm (float): ppm error to include for mz signals
+        intensity_threshold (float): minimum intensity value required for mz signals
+        cluster_correlation (float): cluster correlation from imtbx. higher correlation means better isotopic distribution
+        adjusted (bool): Boolean to indicate if mz signals have already been corrected
+
+    Returns:
+        sum_df (Pandas DataFrame): self.testq with cluster lables applied
+    """
+
+    if "mz_mono_fix_lockmass" in testq.columns:
+        x = "mz_mono_fix_lockmass"
+    else:
+        x = "mz_mono"
+
+    hq_dataframe = testq[(testq["cluster_corr"] > cluster_correlation) &
+                         (testq["ab_cluster_total"] > (intensity_threshold))]
+
+    sum_data = []
+    for c in range(0, max(hq_dataframe["cluster"]) + 1):
+
+        cluster_df = hq_dataframe[hq_dataframe["cluster"] == c]
+
+        if (len(cluster_df) > 0):
+
+            charge = np.median(cluster_df["charge"])
+            mz = np.average(
+                cluster_df[x],
+                weights=cluster_df["ab_cluster_total"]
+            )
+            RT = np.average(cluster_df["RT"],
+                            weights=cluster_df["ab_cluster_total"])
+            im = np.average(cluster_df["im_mono"],
+                            weights=cluster_df["ab_cluster_total"])
+
+            near = getnear(mz, allseq, charge=charge, ppm=ppm)
+
+            if len(near) == 1:
+                sum_data.append([
+                    near["name"].values[0],
+                    RT,
+                    im,
+                    sum(cluster_df["ab_cluster_total"]),
+                    near["MW"].values[0],
+                    charge,
+                    near["plus%s" % int(charge)].values[0],
+                    mz,
+                    near["ppm"].values[0],
+                    near["abs_ppm"].values[0],
+                    c,
+                ])
+
+    sum_df = pd.DataFrame(sum_data)
+    sum_df.columns = [
+        "name",
+        "RT",
+        "im_mono",
+        "ab_cluster_total",
+        "MW",
+        "charge",
+        "expect_mz",
+        "obs_mz",
+        "ppm",
+        "abs_ppm",
+        "cluster",
+    ]
+    sum_df["ppm"] = [float(x) for x in sum_df["ppm"]]
+    return sum_df
+
+
+def gen_mz_error_calib_output(
+        testq,
+        allseq,
+        calib_pk_fpath=None,
+        polyfit_degree=1,
+        ppm_tol=50,
+        int_tol=1e4,
+        cluster_corr_tol=0.99,
+):
+    """Generate calibration using the dataframe from imtbx.
+
+    Args:
+        self.testq: dataframe from imtbx
+        calib_pk_fpath: pickle filepath to save calibration information
+        polyfit_degree: polyfit degree
+        ppm_tol: ppm tolerance for selecting mz signals for calibration
+        int_tol: intensity tolerance for selecting mz signals for calibration
+        cluster_corr_tol: cluster correlation tolerance for selecting mz signals for calibration
+
+    Returns:
+        calib_dict (dict): dictionary containing the dataset used for calibration, polyfit, and ppm error before and after calibration
+
+    """
+
+    # generate high quality cluster mz signals
+    cluster_hq_df = cluster_df_hq_signals(
+        testq=testq,
+        allseq=allseq,
+        ppm=ppm_tol,
+        intensity_threshold=int_tol,
+        cluster_correlation=cluster_corr_tol,
+    )
+
+    if cluster_hq_df is None:
+        print("No high quality cluster signals found, calibration not generated")
+        print("Please, disable protein polyfit calibration or adjust the parameters")
+        print("Exiting...")
+
+    # generate calibration dictionary
+    calib_dict = gen_mz_ppm_error_calib_polyfit(
+        obs_mz=cluster_hq_df["obs_mz"].values,
+        thr_mz=cluster_hq_df["expect_mz"].values,
+        polyfit_deg=polyfit_degree,
+    )
+
+    # save calibration dictionary for further use
+    if calib_pk_fpath is not None:
+        save_pickle_object(calib_dict, calib_pk_fpath)
+
+    return calib_dict
+
+
+def find_offset(sum_df):
+    """Returns suspected systemic ppm error and width of poi peak of run data from sum_df.
+
+    Assumes protein of interest within +/- 50ppm of 0ppm, selects closest peak to 0 if sufficiently prominent.
+
+    Args:
+        sum_df (Pandas DataFrame): DF containing all charged species being considered
+
+    Returns:
+        offset (float): simple linear adjustment which best corrects centering of ppm gaussian around 0
+        offset_peak_width (float): full-width-half-max of the ppm distribution
+
+    """
+    # Maybe make this save the distplot too.
+    ppm_dist = sns.distplot(sum_df["ppm"].values).get_lines()[0].get_data()
+    peaks = sp.signal.find_peaks(ppm_dist[1])[0]
+    xs, ys = ppm_dist[0][peaks], ppm_dist[1][peaks]
+    # If lowest ppm peak is also highest frequency within window, we hope this will be the common case in our 50 ppm initial window
+    try:
+        xs[np.argmin(abs(xs))] == ys[np.argmax(ys)]
+    except:
+        print("Error fiding offset")
+        sys.exit()
+    if xs[np.argmin(abs(xs))] == ys[np.argmax(ys)]:
+        return xs[np.argmin(abs(xs))]
+        # Lowest ppm peak is not most prominent, determine relative height of lowest ppm peak
+    else:
+        # If peak closer to zero is less than half the height of the more prominent peak, check larger peak"s ppm
+        if ys[np.argmin(abs(xs))] < ys[np.argmax(ys)] / 2:
+            # If most prominent peak is heuristically close to 0, or lowest ppm peak is relatively very small (10% of major peak): use big peak
+            if (xs[np.argmax(ys)] < 25 or
+                    ys[np.argmin(abs(xs))] < ys[np.argmax(ys)] / 10):
+                offset = xs[np.argmax(ys)]
+            else:
+                offset = xs[np.argmin(abs(xs))]
+        else:
+            offset = xs[np.argmin(abs(xs))]
+
+    # Having selected our offset peak, determine its 80%-max width to construct a gaussian which will give the width of our final ppm filter
+    peak_widths = sp.signal.peak_widths(ppm_dist[1], peaks, rel_height=0.8)
+    # This line returns the rounded value of the 80%-max width found by matching the offset to its position in xs, and feeding that index position into peaks - a list of indices, returning the peaks-list index of the xs index. The peaks index corresponds to the peak-widths index, returning the width.
+    offset_peak_width = np.round(
+        np.asarray(peak_widths)[
+            0, list(peaks).index(list(peaks)[list(xs).index(offset)])])
+    return (offset, offset_peak_width)
+
+
+def gen_mz_ppm_error_calib_polyfit(obs_mz, thr_mz, polyfit_deg=1):
+    """Use polyfit to generate a function to correlate observed and theoretical mz values. The function is used as calibration
+    for the mz values. User can specify the degree of the polyfit.
+
+    Args:
+        obs_mz (list): observed mz values
+        thr_mz (list): theoretical mz values
+        polyfit_deg (int): degree for polynomial fit
+
+    Returns:
+        cal_dict (dict): dictionary containing the dataset used for calibration, polyfit, and ppm error before and after calibration
+
+    """
+    polyfit_coeffs = np.polyfit(x=obs_mz, y=thr_mz, deg=polyfit_deg)
+    obs_mz_corr = apply_polyfit_cal_mz(polyfit_coeffs, obs_mz)
+    ppm_error_before_corr = calc_mz_ppm_error(obs_mz, thr_mz)
+    ppm_error_after_corr = calc_mz_ppm_error(obs_mz_corr, thr_mz)
+
+    cal_dict = gen_calib_dict(
+        polyfit_bool=True,
+        thr_mz=thr_mz,
+        obs_mz=obs_mz,
+        polyfit_coeffs=polyfit_coeffs,
+        polyfit_deg=polyfit_deg,
+        obs_mz_corr=obs_mz_corr,
+        ppm_error_before_corr=ppm_error_before_corr,
+        ppm_error_after_corr=ppm_error_after_corr,
+    )
+
+    return cal_dict
+
+
+def apply_polyfit_cal_mz(polyfit_coeffs, mz):
+    """Apply polyfit coeff to transform the mz values.
+
+    Args:
+        polyfit_coeffs (list): polyfit coefficients
+        mz (Numpy ndarray): mz values
+    Returns:
+        mz_corr (Numpy ndarray): transformed mz values
+
+    """
+    mz_corr = np.polyval(polyfit_coeffs, mz)
+    return mz_corr
+
+
+def calc_mz_ppm_error(obs_mz, thr_mz):
+    """Calculate mz ppm error.
+
+    Args:
+        obs_mz (float): observed mz value for a signal
+        thr_mz (float): theoreteical or expected mz value based on chemical composition
+
+    Returns:
+        ppm_err (float): ppm error between observed and theoretical m/Z
+
+    """
+    ppm_err = 1e6 * (obs_mz - thr_mz) / thr_mz
+    return ppm_err
+
+
+def gen_calib_dict(polyfit_bool=False, **args):
+    """Generate calibration dictionary with keywords.
+
+    Args:
+        polyfit_bool (bool): flag to perform polyfit calibration
+        args (key-value pairs): each additional argument creates key-value pair in the output dict, usually includes:
+            thr_mz,
+            obs_mz,
+            polyfit_coeffs,
+            polyfit_deg
+            obs_mz_corr,
+            ppm_error_before_corr,
+            ppm_error_after_corr
+
+    calib_dict (dict): calibration dictionary containing relevant calibration parameters and outputs
+
+    """
+    calib_dict = dict()
+
+    calib_dict["polyfit_bool"] = polyfit_bool
+
+    if polyfit_bool:
+        for param, value in args.items():
+            calib_dict[param] = value
+
+    return calib_dict
+
+
+def save_pickle_object(obj, fpath):
+    """Wrapper function to output an object as a pickle.
+
+    Args:
+        obj (Any Python object): Any python object to pickle
+        fpath (string): path/to/output.pickle
+
+    Returns:
+        None
+
+    """
+    with open(fpath, "wb") as outfile:
+        pk.dump(obj, outfile)
 
 
 def pmem(id_str):
@@ -131,7 +601,7 @@ def adjrsquared(r2, param, num):
     """Calculates the adjusted R^2 for a parametric fit to data.
 
     Args:
-         r2 (float): R^2 or 'coefficient of determination' of a linear regression between fitted and observed values.
+         r2 (float): R^2 or "coefficient of determination" of a linear regression between fitted and observed values.
          param (int): Number of parameters in fitting model.
          num (int): Number of datapoints in sample.
 
@@ -154,7 +624,7 @@ def fit_gaussian(x_data, y_data, data_label="dt"):
     Returns:
         gauss_fit_dict (dict): Contains the following key-value pairs describing the Guassian and linear regression parameters.
             "gauss_fit_success" (bool): Boolean indicating the success (True) or failure (False) of the fitting operation.
-            "y_baseline" (float): Fitted parameter for the Gaussian function's offset from y=0.
+            "y_baseline" (float): Fitted parameter for the Gaussian function"s offset from y=0.
             "y_amp" (float): Fitted parameter for the amplitude of the Gaussian function.
             "xc" (float): Fitted parameter for the center of the Gaussian in the x dimension.
             "width" (float): Fitted parameter for the x dimensional width of the Gaussian function.
@@ -164,20 +634,20 @@ def fit_gaussian(x_data, y_data, data_label="dt"):
             "fit_lingress_intercept" (float): The intercept point of the line fit to the residuals.
             "fit_lingress_pvalue" (float): The p-value for a hypothesis test whose null hypothesis is that the above slope is zero
             "fit_lingress_stderr" (float): Standard error of the estimated slope under the assumption of residual normality.
-            "fit_lingress_r2" (float): R^2 or 'coeffiecient of determination' of linear regression over residuals.
+            "fit_lingress_r2" (float): R^2 or "coeffiecient of determination" of linear regression over residuals.
             "fit_lingress_adj_r2" (float): Adjusted R^2, always <= R^2, decreases with extraneous parameters.
             "auc" (float): Area under the curve, cumulative distribution function of fitted gaussian evaluated over the length of x_data.
 
     """
     init_guess = estimate_gauss_param(y_data, x_data)
     gauss_fit_dict = dict()
-    gauss_fit_dict['data_label'] = data_label
-    gauss_fit_dict['gauss_fit_success'] = False
-    gauss_fit_dict['xc'] = center_of_mass(y_data)[0]
-    gauss_fit_dict['auc'] = 1.0
-    gauss_fit_dict['fit_rmse'] = 100.0
-    gauss_fit_dict['fit_linregress_r2'] = 0.0
-    gauss_fit_dict['fit_lingress_adj_r2'] = 0.0
+    gauss_fit_dict["data_label"] = data_label
+    gauss_fit_dict["gauss_fit_success"] = False
+    gauss_fit_dict["xc"] = center_of_mass(y_data)[0]
+    gauss_fit_dict["auc"] = 1.0
+    gauss_fit_dict["fit_rmse"] = 100.0
+    gauss_fit_dict["fit_linregress_r2"] = 0.0
+    gauss_fit_dict["fit_lingress_adj_r2"] = 0.0
 
     try:
         popt, pcov = curve_fit(gauss_func, x_data, y_data, p0=init_guess, maxfev=100000)
@@ -190,20 +660,20 @@ def fit_gaussian(x_data, y_data, data_label="dt"):
             fit_rmse = mean_squared_error(y_data/max(y_data), y_fit/max(y_fit), squared=False)
             slope, intercept, rvalue, pvalue, stderr = linregress(y_data, y_fit)
             adj_r2 = adjrsquared(r2=rvalue**2, param=4, num=len(y_data))
-            gauss_fit_dict['gauss_fit_success'] = True
-            gauss_fit_dict['y_baseline'] = popt[0]
-            gauss_fit_dict['y_amp'] = popt[1]
-            gauss_fit_dict['xc'] = popt[2]
-            gauss_fit_dict['width'] = popt[3]
-            gauss_fit_dict['y_fit'] = y_fit
-            gauss_fit_dict['fit_rmse'] = fit_rmse
-            gauss_fit_dict['fit_lingress_slope'] = slope
-            gauss_fit_dict['fit_lingress_intercept'] = intercept
-            gauss_fit_dict['fit_lingress_pvalue'] = pvalue
-            gauss_fit_dict['fit_lingress_stderr'] = stderr
-            gauss_fit_dict['fit_linregress_r2'] = rvalue ** 2
-            gauss_fit_dict['fit_lingress_adj_r2'] = adj_r2
-            gauss_fit_dict['auc'] = cal_area_under_curve_from_normal_distribution(low_bound=x_data[0],
+            gauss_fit_dict["gauss_fit_success"] = True
+            gauss_fit_dict["y_baseline"] = popt[0]
+            gauss_fit_dict["y_amp"] = popt[1]
+            gauss_fit_dict["xc"] = popt[2]
+            gauss_fit_dict["width"] = popt[3]
+            gauss_fit_dict["y_fit"] = y_fit
+            gauss_fit_dict["fit_rmse"] = fit_rmse
+            gauss_fit_dict["fit_lingress_slope"] = slope
+            gauss_fit_dict["fit_lingress_intercept"] = intercept
+            gauss_fit_dict["fit_lingress_pvalue"] = pvalue
+            gauss_fit_dict["fit_lingress_stderr"] = stderr
+            gauss_fit_dict["fit_linregress_r2"] = rvalue ** 2
+            gauss_fit_dict["fit_lingress_adj_r2"] = adj_r2
+            gauss_fit_dict["auc"] = cal_area_under_curve_from_normal_distribution(low_bound=x_data[0],
                                                                                   upper_bound=x_data[-1],
                                                                                   center=popt[2],
                                                                                   width=popt[3])
@@ -271,7 +741,7 @@ def factor_correlations(factors):
 
 
 def factorize_tensor(input_grid,
-                     init_method='random',
+                     init_method="random",
                      factors_0=[],
                      factor_rank=15,
                      n_iter_max=100000,
@@ -285,7 +755,7 @@ def factorize_tensor(input_grid,
 
     Args:
         input_grid: input grid for factorization
-        init_method: initialization method: 'random', 'nndsvd', or 'custom'
+        init_method: initialization method: "random", "nndsvd", or "custom"
         factors_0: factors to iniitialize with
         factor_rank: factor rank
         n_iter_max: max iteration
@@ -339,10 +809,72 @@ def factorize_tensor(input_grid,
     return nnfac_output
 
 
+# def gen_factors_with_corr_check(input_grid,
+#                                 init_method="random",
+#                                 factors_0=[],
+#                                 max_num_factors=15,
+#                                 n_iter_max=100000,
+#                                 tolerance=1e-8,
+#                                 sparsity_coefficients=[],
+#                                 fixed_modes=[],
+#                                 normalize=[],
+#                                 verbose=False,
+#                                 return_errors=True,
+#                                 corr_threshold=0.17):
+#     """
+#     generate factors with reducing the rank while checking factor correlations
+#     Args:
+#         input_grid: input grid for factorization
+#         init_method: initialization method: "random", "nndsvd", or "custom"
+#         factors_0: factors to iniitialize with
+#         max_num_factors: max number of factor rank
+#         n_iter_max: max iteration
+#         tolerance: tolerance criteria for rec error for convergence
+#         sparsity_coefficients: sparsity coeffs
+#         fixed_modes: fixing modes for W and H
+#         normalize: normalize boolean list for modes (l2 normalization)
+#         verbose: True for printing out nnfac operation
+#         return_errors: True for return errors, toc, convergence etc
+#         corr_threshold: factor correlation threshold. factors have to have a correlation smaller than this value
+#
+#     Returns:
+#
+#     """
+#
+#     last_corr_check = 1.0
+#     max_num_factors += 1
+#
+#     factor_output = None
+#
+#     while max_num_factors > 2 and last_corr_check > corr_threshold:
+#
+#         max_num_factors -= 1
+#
+#         pmem("Factorize: %s # Factors (Start)" % max_num_factors)
+#
+#         factor_output = factorize_tensor(input_grid=input_grid,
+#                                          init_method=init_method,
+#                                          factors_0=factors_0,
+#                                          factor_rank=max_num_factors,
+#                                          n_iter_max=n_iter_max,
+#                                          tolerance=tolerance,
+#                                          sparsity_coefficients=sparsity_coefficients,
+#                                          fixed_modes=fixed_modes,
+#                                          normalize=normalize,
+#                                          verbose=verbose,
+#                                          return_errors=return_errors)
+#
+#         pmem("Factorize: %s # Factors (End)" % max_num_factors)
+#
+#         if max_num_factors > 1:
+#             last_corr_check = factor_correlations(factor_output.factors)
+#
+#     return factor_output
+
 def gen_factors_with_corr_check(input_grid,
-                                init_method='random',
+                                init_method='nndsvd',
                                 factors_0=[],
-                                max_num_factors=15,
+                                num_factors_guess=5,
                                 n_iter_max=100000,
                                 tolerance=1e-8,
                                 sparsity_coefficients=[],
@@ -350,7 +882,7 @@ def gen_factors_with_corr_check(input_grid,
                                 normalize=[],
                                 verbose=False,
                                 return_errors=True,
-                                corr_threshold=0.17):
+                                corr_threshold=0.4):
     """
     generate factors with reducing the rank while checking factor correlations
     Args:
@@ -371,11 +903,11 @@ def gen_factors_with_corr_check(input_grid,
 
     """
 
-    last_corr_check = 1.0
-    max_num_factors += 1
+    factorize = True
 
-    factor_output = None
+    pmem('Factorize: %s # Factors (Start)' % num_factors_guess)
 
+<<<<<<< HEAD
     while max_num_factors >= 2 and last_corr_check > corr_threshold:
 
         max_num_factors -= 1
@@ -383,9 +915,12 @@ def gen_factors_with_corr_check(input_grid,
         pmem('Factorize: %s # Factors (Start)' % max_num_factors)
 
         factor_output = factorize_tensor(input_grid=input_grid,
+=======
+    factor_output_tmp = factorize_tensor(input_grid=input_grid,
+>>>>>>> 7a6e907d6872f996ee3380c8c6608ebbd5dc4f2f
                                          init_method=init_method,
                                          factors_0=factors_0,
-                                         factor_rank=max_num_factors,
+                                         factor_rank=num_factors_guess,
                                          n_iter_max=n_iter_max,
                                          tolerance=tolerance,
                                          sparsity_coefficients=sparsity_coefficients,
@@ -394,10 +929,73 @@ def gen_factors_with_corr_check(input_grid,
                                          verbose=verbose,
                                          return_errors=return_errors)
 
-        pmem('Factorize: %s # Factors (End)' % max_num_factors)
+    pmem('Factorize: %s # Factors (End)' % num_factors_guess)
 
-        if max_num_factors > 1:
-            last_corr_check = factor_correlations(factor_output.factors)
+    factor_output = factor_output_tmp
+
+    last_corr_check = factor_correlations(factor_output_tmp.factors)
+
+    if last_corr_check < corr_threshold:
+
+        while factorize:
+
+            num_factors_guess += 1
+
+            pmem('Factorize: %s # Factors (Start)' % num_factors_guess)
+
+            factor_output_tmp = factorize_tensor(input_grid=input_grid,
+                                                 init_method=init_method,
+                                                 factors_0=factors_0,
+                                                 factor_rank=num_factors_guess,
+                                                 n_iter_max=n_iter_max,
+                                                 tolerance=tolerance,
+                                                 sparsity_coefficients=sparsity_coefficients,
+                                                 fixed_modes=fixed_modes,
+                                                 normalize=normalize,
+                                                 verbose=verbose,
+                                                 return_errors=return_errors)
+
+            pmem('Factorize: %s # Factors (End)' % num_factors_guess)
+
+            last_corr_check = factor_correlations(factor_output_tmp.factors)
+            factor_output_tmp.corr_check = last_corr_check
+            if last_corr_check < corr_threshold:
+                factor_output = factor_output_tmp
+            else:
+                factorize = False
+
+    else:
+
+        while factorize:
+
+            num_factors_guess -= 1
+
+            pmem('Factorize: %s # Factors (Start)' % num_factors_guess)
+
+            factor_output_tmp = factorize_tensor(input_grid=input_grid,
+                                                 init_method=init_method,
+                                                 factors_0=factors_0,
+                                                 factor_rank=num_factors_guess,
+                                                 n_iter_max=n_iter_max,
+                                                 tolerance=tolerance,
+                                                 sparsity_coefficients=sparsity_coefficients,
+                                                 fixed_modes=fixed_modes,
+                                                 normalize=normalize,
+                                                 verbose=verbose,
+                                                 return_errors=return_errors)
+
+            pmem('Factorize: %s # Factors (End)' % num_factors_guess)
+
+            if num_factors_guess > 1:
+                last_corr_check = factor_correlations(factor_output_tmp.factors)
+                factor_output_tmp.corr_check = last_corr_check
+                if last_corr_check < corr_threshold:
+                    factor_output = factor_output_tmp
+                    factorize = False
+            else:
+                factor_output_tmp.corr_check = 1
+                factor_output = factor_output_tmp
+                factorize = False
 
     return factor_output
 
@@ -462,15 +1060,251 @@ def calculate_isotope_dist_dot_product(sequence, undeut_integrated_mz_array):
     return dot_product
 
 
+class Preprocessing:
+
+    def __init__(self):
+
+        self.info = "Preprocessing class. Subclasses defined to handle raw data or intermediate data and return protein identification dataframe"
+
+    class IMTBX:
+
+        def __init__(self
+                     ):
+
+            self.imtbx_df = None
+            self.precorrection_df = None
+            self.post_lockmass_df = None
+            self.post_protein_polyfit_df = None
+            self.offset_df = None
+            self.configfile = None
+            self.calib_dict_lockmass = None
+            self.calib_dict_protein_polyfit = None
+            self.for_kde_df = None
+
+        def load_imtbx(self,
+                       configfile_path,
+                       names_and_seqs_path,
+                       isotopes_path,
+                       lockmass_calibration_dict=None,
+                       protein_polyfit_output=None,
+                       output_path=None):
+
+            # Load config file
+            # Load isotopes file
+            # Load names and sequences
+
+            self.configfile = yaml.load(open(configfile_path, "rb").read(), Loader=yaml.Loader)
+
+            self.df_imtbx = load_isotopes_file(isotopes_path)
+            self.allseq = load_names_and_seqs(names_and_seqs_path)
+
+            # Make buffer of df
+            self.testq = copy.deepcopy(self.df_imtbx)
+
+            # Cluster lines
+            apply_cluster_weights(self.testq, adjusted=False)
+            cluster_lines(self.testq)
+
+            self.precorrection_df = cluster_df(self.testq, self.allseq, ppm=50, adjusted=False)
+
+            # Apply lockmass calibration
+            if lockmass_calibration_dict is not None:
+
+                print("Running lockmass_calibration...")
+
+                runtime = self.configfile["runtime"]
+                self.calib_dict_lockmass = load_pickle_file(lockmass_calibration_dict)
+                self.testq["mz_mono_fix_lockmass"] = 0
+                if self.calib_dict_lockmass[0]["polyfit_deg"] == 0:
+                    delta = int(runtime / len(self.calib_dict_lockmass))
+                    for i, rt in enumerate(range(0, runtime, delta)):
+                        self.testq.loc[(self.testq["RT"] >= rt) & (self.testq["RT"] <= rt + delta), "mz_mono_fix_lockmass"] = \
+                            self.calib_dict_lockmass[i]["polyfit_coeffs"] * self.testq[(self.testq["RT"] >= rt) &
+                                                                                  (self.testq["RT"] <= rt + delta)][
+                                "mz_mono"].values
+                else:
+                    delta = int(runtime / len(self.calib_dict_lockmass))
+                    for i, rt in enumerate(range(0, runtime, delta)):
+                        self.testq.loc[
+                            (self.testq["RT"] >= rt) & (self.testq["RT"] <= rt + delta), "mz_mono_fix_lockmass"] = np.polyval(
+                            self.calib_dict_lockmass[i]["polyfit_coeffs"], self.testq[(self.testq["RT"] >= rt) &
+                                                                                 (self.testq["RT"] <= rt + delta)][
+                                "mz_mono"].values)
+                self.testq["mz_mono_fix_round_lockmass"] = np.round(self.testq["mz_mono_fix_lockmass"].values, 3)
+
+                self.testq["mz_mono_fix"] = self.testq["mz_mono_fix_lockmass"]
+                self.testq["mz_mono_fix_round"] = self.testq["mz_mono_fix_round_lockmass"]
+
+                self.post_lockmass_df = cluster_df(self.testq, self.allseq, ppm=50, adjusted=True)
+
+                # Cluster lines
+                apply_cluster_weights(self.testq, adjusted=True)
+                cluster_lines(self.testq)
+
+                # Apply protein polyfit calibration
+            if self.configfile["protein_polyfit"]:
+
+                print("Running protein_polyfit...")
+
+                if protein_polyfit_output is None:
+                    print("Missing protein_calibration_outpath")
+                    sys.exit()
+
+                self.calib_dict_protein_polyfit = gen_mz_error_calib_output(
+                    testq=self.testq,
+                    allseq=self.allseq[~self.allseq["name"].str.contains("decoy")],
+                    calib_pk_fpath=protein_polyfit_output,
+                    polyfit_degree=self.configfile["polyfit_deg"],
+                    ppm_tol=self.configfile["ppm_tolerance"],
+                    int_tol=self.configfile["intensity_tolerance"],
+                    cluster_corr_tol=self.configfile["cluster_corr_tolerance"]
+                )
+
+                if "mz_mono_fix_lockmass" in self.testq.columns:
+                    x = "mz_mono_fix_lockmass"
+                else:
+                    x = "mz_mono"
+
+                self.testq["mz_mono_fix_protein_polyfit"] = apply_polyfit_cal_mz(
+                    polyfit_coeffs=self.calib_dict_protein_polyfit["polyfit_coeffs"], mz=self.testq[x])
+                self.testq["mz_mono_fix_round_protein_polyfit"] = np.round(self.testq["mz_mono_fix_protein_polyfit"].values, 3)
+
+                self.testq["mz_mono_fix"] = self.testq["mz_mono_fix_protein_polyfit"]
+                self.testq["mz_mono_fix_round"] = self.testq["mz_mono_fix_round_protein_polyfit"]
+
+                self.post_protein_polyfit_df = cluster_df(self.testq, self.allseq, ppm=50, adjusted=True)
+
+            if (not self.configfile["lockmass"]) and (not self.configfile["protein_polyfit"]) and (self.precorrection_df is not None):
+
+                offset, offset_peak_width = find_offset(self.precorrection_df)
+                if offset > 0:
+                    self.testq["mz_mono_fix_offset"] = [
+                        x * (1000000 - offset) / (1000000) for x in self.testq["mz_mono"]
+                    ]
+                    self.testq["mz_mono_fix_offset_round"] = np.round(self.testq["mz_mono_fix_offset"].values,
+                                                          3)
+                else:
+                    self.testq["mz_mono_fix_offset"] = [
+                        x * (1000000 + offset) / (1000000) for x in self.testq["mz_mono"]
+                    ]
+                    self.testq["mz_mono_fix_offset_round"] = np.round(self.testq["mz_mono_fix_offset"].values,
+                                                          3)
+
+                self.testq["mz_mono_fix"] = self.testq["mz_mono_fix_offset"]
+                self.testq["mz_mono_fix_round"] = self.testq["mz_mono_fix_offset"]
+
+                self.offset_df = cluster_df(self.testq, self.allseq, ppm=50, adjusted=True)
+
+                # ppm_refilter = math.ceil(offset_peak_width / 2)
+
+            # Cluster lines
+            apply_cluster_weights(self.testq, adjusted=True)
+            cluster_lines(self.testq)
+
+            self.for_kde_df = cluster_df(self.testq, self.allseq, ppm=20, adjusted=True)
+
+            self.imtbx_df = cluster_df(self.testq, self.allseq, ppm=self.configfile["ppm_refilter"], adjusted=True)
+
+            # send sum_df to main output
+            if output_path is not None:
+                self.imtbx_df.to_csv(output_path, index=False)
+
+        def plot_kde(self,
+                     dpi=300,
+                     output_path=None):
+
+            if self.configfile is None:
+                print("Configfile not present. Exiting...")
+                sys.exit()
+
+            sns.set_context("talk", font_scale=0.8)
+
+            fig, ax = plt.subplots(2, 3, figsize=(15, 6), dpi=200)
+
+            if self.precorrection_df is not None:
+                sns.kdeplot(self.precorrection_df[~self.precorrection_df.name.str.contains("decoy")].ppm, ax=ax[0][0],
+                            c="blue", label="no correction")
+                sns.kdeplot(self.precorrection_df[self.precorrection_df.name.str.contains("decoy")].ppm, ax=ax[0][1],
+                            c="blue", label="no correction")
+                sns.kdeplot(self.precorrection_df.ppm, ax=ax[0][2], c="blue", label="no correction")
+            if self.post_lockmass_df is not None:
+                sns.kdeplot(self.post_lockmass_df[~self.post_lockmass_df.name.str.contains("decoy")].ppm, ax=ax[0][0],
+                            c="orange", label="lockmass")
+                sns.kdeplot(self.post_lockmass_df[self.post_lockmass_df.name.str.contains("decoy")].ppm, ax=ax[0][1],
+                            c="orange", label="lockmass")
+                sns.kdeplot(self.post_lockmass_df.ppm, ax=ax[0][2], c="orange", label="lockmass")
+            if self.post_protein_polyfit_df is not None:
+                sns.kdeplot(self.post_protein_polyfit_df[~self.post_protein_polyfit_df.name.str.contains("decoy")].ppm,
+                            ax=ax[0][0], c="green", label="protein polyfit")
+                sns.kdeplot(self.post_protein_polyfit_df[self.post_protein_polyfit_df.name.str.contains("decoy")].ppm,
+                            ax=ax[0][1], c="green", label="protein polyfit")
+                sns.kdeplot(self.post_protein_polyfit_df.ppm, ax=ax[0][2], c="green", label="protein polyfit")
+            if self.offset_df is not None:
+                sns.kdeplot(self.offset_df[~self.offset_df.name.str.contains("decoy")].ppm,
+                            ax=ax[0][0], c="green", label="offset correction")
+                sns.kdeplot(self.offset_df[self.offset_df.name.str.contains("decoy")].ppm,
+                            ax=ax[0][1], c="green", label="offset correction")
+                sns.kdeplot(self.offset_df.ppm, ax=ax[0][2], c="green", label="offset correction")
+
+            for x in ax[0]:
+                x.axvline(0, c="red", ls="--")
+
+            ax[0][0].legend(prop={"size": 12}, frameon=False, bbox_to_anchor=(-0.25, 1))
+
+            ax[0][0].text(0, 1.05, "No decoys", transform=ax[0][0].transAxes)
+            ax[0][1].text(0, 1.05, "Only decoys", transform=ax[0][1].transAxes)
+            ax[0][2].text(0, 1.05, "Everything", transform=ax[0][2].transAxes)
+
+            sns.kdeplot(self.imtbx_df[~self.imtbx_df.name.str.contains("decoy")].ppm, c="black", label="No decoys",
+                        ls="-", ax=ax[1][0])
+            sns.kdeplot(self.imtbx_df[self.imtbx_df.name.str.contains("decoy")].ppm, c="black", label="Only decoys",
+                        ls="--", ax=ax[1][0])
+            ax[1][0].legend(prop={"size": 12}, frameon=False, bbox_to_anchor=(-0.25, 1))
+            ax[1][0].text(0, 1.05, "Filtered", transform=ax[1][0].transAxes)
+
+            decoy_level = self.configfile["decoy_level"]
+
+            xs, ys1, ys2 = [], [], []
+            for ppm in np.arange(1, 21, 1):
+                mask = abs(self.for_kde_df.ppm) < ppm
+                xs.append(ppm)
+                ys1.append(
+                    len(set(self.for_kde_df[(self.for_kde_df.name.str.contains("decoy")) & mask].name)) / decoy_level)
+                ys2.append(len(set(self.for_kde_df[(~self.for_kde_df.name.str.contains("decoy")) & mask].name)))
+
+            ys1 = np.array(ys1)
+            ys2 = np.array(ys2)
+
+            ax[1][1].scatter(xs, ys1 / ys2, c="blue", edgecolors="black", s=50)
+            ax[1][1].set_xlim(20, 0)
+            ax[1][1].axvline(self.configfile["ppm_refilter"], c="red", ls="--")
+            ax[1][1].set_xlabel("ppm threshold")
+            ax[1][1].set_ylabel("FDR")
+
+            ax[1][2].scatter(xs, ys2, c="blue", edgecolors="black", s=50)
+            ax[1][2].set_xlim(20, 0)
+            ax[1][2].axvline(self.configfile["ppm_refilter"], c="red", ls="--")
+            ax[1][2].set_xlabel("ppm threshold")
+            ax[1][2].set_ylabel("# identifications")
+
+            plt.tight_layout()
+
+            if output_path is not None:
+                plt.savefig(output_path, dpi=dpi, format="pdf", bbox_inches="tight")
+                plt.close()
+            else:
+                plt.show()
+
+
 class DataTensor:
     """A container for LC-IMS-MS data that includes smoothing and factorization methods.
 
     Attributes:
-        source_file (str): Path of DataTensor's parent resources/tensors/.cpickle.zlib file.
+        source_file (str): Path of DataTensor"s parent resources/tensors/.cpickle.zlib file.
         tensor_idx (int): Index of the DataTensor in a concatenated DataTensor (concatenation of tensors is deprecated, this value always 0).
         timepoint_idx (int): Index of the DataTensors HDX timepoint in config["timepoints"].
-        name (str): Name of DataTensor's rt-group.
-        total_mass_window (int): Magnitude of DataTensor's m/Z dimension in bins.
+        name (str): Name of DataTensor"s rt-group.
+        total_mass_window (int): Magnitude of DataTensor"s m/Z dimension in bins.
         n_concatenated (int): Number of DataTensors combined to make the instance DataTensor. Deprecated, value always 1.
         charge_states (list with one int): Net positive charge on protein represented in DataTensor, format left over from concatenation.
         integrated_mz_limits (numpy 2D array): Values for low and high m/Z limits of integration around expected peak centers.
@@ -483,28 +1317,28 @@ class DataTensor:
         int_seq_out_float (numpy array of float64):  Intensities integrated over all dimensions in a flat array, cast as float64.
         int_grid_out (numpy array): int_seq_out reshaped to a 3D array by rt, dt, and m/Z dimension magnitudes.
         int_gauss_grids (numpy array): int_grid_out after applying gaussian smoothing.
-        concat_dt_idxs (list of ints): Deprecated - Indices marking the boundaries between different DataTensors' concatenated DT dimensions.
+        concat_dt_idxs (list of ints): Deprecated - Indices marking the boundaries between different DataTensors" concatenated DT dimensions.
         concatenated_grid (numpy array): Deprecated - int_grid_out from multiple DataTensors concatenated along the dt axis.
-        retention_labels (list of floats): Mapping of DataTensor's RT bins to corresponding absolute retention time in minutes.
-        drift_labels (list of floats): Mapping of DataTensor's DT bins to corresponding absolute drift time in miliseconds.
-        mz_labels (list of floats): Mapping of DataTensor's m/Z bins to corresponding m/Z.
+        retention_labels (list of floats): Mapping of DataTensor"s RT bins to corresponding absolute retention time in minutes.
+        drift_labels (list of floats): Mapping of DataTensor"s DT bins to corresponding absolute drift time in miliseconds.
+        mz_labels (list of floats): Mapping of DataTensor"s m/Z bins to corresponding m/Z.
         full_grid_out (numpy array): Reprofiled tensor with intensities integrated within bounds defined in integrated_mz_limits.
         full_gauss_grids (numpy array): full_grid_out after the application of gaussian smoothing to the RT and DT dimensions.
         factors (list of Factor objects): List of Factor objects resulting from the factorize method.
 
     """
 
-    def __init__(self, source_file, tensor_idx, timepoint_idx, name,
+    def __init__(self, source_file, tensor_idx, timepoint_idx, tp_ind, name,
                  total_mass_window, n_concatenated, charge_states, integrated_mz_limits, bins_per_isotope_peak,
                  normalization_factor, **kwargs):
         """Initializes an instance of the DataTensor class from 
 
         Args:
-            source_file (str): Path of DataTensor's parent resources/tensors/.cpickle.zlib file.
+            source_file (str): Path of DataTensor"s parent resources/tensors/.cpickle.zlib file.
             tensor_idx (int): Deprecated - Index of this tensor in a concatenated tensor, now always 0.
-            timepoint_idx (int): Index of tensor's source timepoint in config["timepoints"].
+            timepoint_idx (int): Index of tensor"s source timepoint in config["timepoints"].
             name (str): Name of rt-group DataTensor is a member of.
-            total_mass_window (int): Magnitude of DataTensor's m/Z dimension in bins.
+            total_mass_window (int): Magnitude of DataTensor"s m/Z dimension in bins.
             n_concatenated (int): Number of DataTensors combined to make the instance DataTensor. Deprecated value always 1. 
             charge_states (list with one int): Net positive charge on protein represented in DataTensor, format left over from concatenation.
             integrated_mz_limits (numpy 2D array): Values for low and high m/Z limits of integration around expected peak centers.
@@ -516,13 +1350,14 @@ class DataTensor:
             dts (numpy array): Intensity summer over each dt bin, from source tensor file.
             seq_out (numpy array): Intensity summed over each m/Z bin in a flat array, from source tensor file.
             int_seq_out (numpy array): Intensities integrated over all dimensions in a flat array. (TODO: Review, not sure about this)
-            concat_dt_idxs (list of ints): Deprecated - Indices marking the boundaries between different DataTensors' concatenated DT dimensions.
+            concat_dt_idxs (list of ints): Deprecated - Indices marking the boundaries between different DataTensors" concatenated DT dimensions.
             concatenated_grid (numpy array): Deprecated - int_grid_out from multiple DataTensors concatenated along the dt axis.
 
         """
         self.source_file = source_file
         self.tensor_idx = tensor_idx
         self.timepoint_idx = timepoint_idx
+        self.tp_ind = tp_ind
         self.name = name
         self.total_mass_window = total_mass_window
         self.n_concatenated = n_concatenated
@@ -539,7 +1374,7 @@ class DataTensor:
             if "dts" in kws:
                 self.dts = np.array(kwargs["dts"])
             if "seq_out" in kws:
-                self.seq_out = np.array(kwargs["seq_out"])
+                self.seq_out = np.array(kwargs["seq_out"], dtype=object)
             if "int_seq_out" in kws and kwargs["int_seq_out"] is not None:
                 self.int_seq_out = np.array(kwargs["int_seq_out"])
                 self.int_seq_out_float = self.int_seq_out.astype("float64")
@@ -644,10 +1479,11 @@ class DataTensor:
                                                   (rt_sig, dt_sig))
         return gauss_grid
 
-    # TODO: This isn't great style, make this take the tensor as input and return the factors.
+    # TODO: This isn"t great style, make this take the tensor as input and return the factors.
     def factorize(self,
-                  max_num_factors=15,
-                  init_method='nndsvd',
+                  # max_num_factors=15,
+                  num_factors_guess=5,
+                  init_method="nndsvd",
                   factors_0=[],
                   fixed_modes=[],
                   sparsity_coeffs=[],
@@ -669,7 +1505,7 @@ class DataTensor:
 
         t = time.time()
         pmem("Factorize: start_function")
-        # print('Filtering... T+'+str(t-t0))
+        # print("Filtering... T+"+str(t-t0))
         # handle concatenation and intetrpolfilter option
         if self.n_concatenated != 1:
             #code handing n_concatenated != 1 needs  to be re-written from scratch
@@ -692,7 +1528,8 @@ class DataTensor:
         factor_output = gen_factors_with_corr_check(input_grid=self.full_gauss_grids,
                                                     init_method=init_method,
                                                     factors_0=factors_0,
-                                                    max_num_factors=max_num_factors,
+                                                    # max_num_factors=max_num_factors,
+                                                    num_factors_guess=num_factors_guess,
                                                     n_iter_max=niter_max,
                                                     tolerance=tol,
                                                     sparsity_coefficients=sparsity_coeffs,
@@ -704,41 +1541,51 @@ class DataTensor:
 
         # delete the factors attribute from the class to save the metadata
         factor_output_metadata = copy.deepcopy(factor_output)
-        delattr(factor_output_metadata, 'factors')
+        delattr(factor_output_metadata, "factors")
 
         pmem("Factorize: Gen Factor Object List")
 
         factor_list = []
         for num in range(factor_output.factor_rank):
             pmem("Factorize: Gen Factor # %s start" % num)
-            factor_obj = Factor(source_file=self.source_file,
-                                tensor_idx=self.tensor_idx,
-                                timepoint_idx=self.timepoint_idx,
-                                name=self.name,
-                                charge_states=self.charge_states,
-                                rts=factor_output.factors[0].T[num],
-                                dts=factor_output.factors[1].T[num],
-                                mz_data=factor_output.factors[2].T[num],
-                                retention_labels=self.retention_labels,
-                                drift_labels=self.drift_labels,
-                                mz_labels=self.mz_labels,
-                                factor_idx=num,
-                                n_factors=factor_output.factor_rank,
-                                nnfac_output=factor_output_metadata,
-                                bins_per_isotope_peak=self.bins_per_isotope_peak,
-                                n_concatenated=self.n_concatenated,
-                                concat_dt_idxs=concat_dt_idxs,
-                                tensor_auc=self.tensor_auc,
-                                tensor_gauss_auc=self.tensor_gauss_auc,
-                                normalization_factor=self.normalization_factor)
-            pmem("Factorize: Gen Factor # %s end" % num)
-            factor_list.append(factor_obj)
+
+            if (not np.isnan(factor_output.factors[0].T[num]).any()) and \
+                (not np.isnan(factor_output.factors[1].T[num]).any()) and \
+                    (not np.isnan(factor_output.factors[2].T[num]).any()):
+
+                factor_obj = Factor(source_file=self.source_file,
+                                    tensor_idx=self.tensor_idx,
+                                    timepoint_idx=self.timepoint_idx,
+                                    tp_ind=self.tp_ind,
+                                    name=self.name,
+                                    charge_states=self.charge_states,
+                                    rts=factor_output.factors[0].T[num],
+                                    dts=factor_output.factors[1].T[num],
+                                    mz_data=factor_output.factors[2].T[num],
+                                    retention_labels=self.retention_labels,
+                                    drift_labels=self.drift_labels,
+                                    mz_labels=self.mz_labels,
+                                    factor_idx=num,
+                                    n_factors=factor_output.factor_rank,
+                                    nnfac_output=factor_output_metadata,
+                                    bins_per_isotope_peak=self.bins_per_isotope_peak,
+                                    n_concatenated=self.n_concatenated,
+                                    concat_dt_idxs=concat_dt_idxs,
+                                    tensor_auc=self.tensor_auc,
+                                    tensor_gauss_auc=self.tensor_gauss_auc,
+                                    normalization_factor=self.normalization_factor)
+
+                pmem("Factorize: Gen Factor # %s end" % num)
+                factor_list.append(factor_obj)
+
+            else:
+                print("Nan found, factor not saved")
 
         pmem("Factorize: Appended factors to a list")
 
         self.factors = factor_list
 
-        pmem('Factorize: End of function')
+        pmem("Factorize: End of function")
 
 
 
@@ -750,12 +1597,12 @@ class DataTensor:
         #     n_factors -= 1
         #     pmem(str(n_itr) + " " + str(n_factors) + " Factors " + " Start")
         #     t1 = time.time()
-        #     # print('Starting '+str(nf)+' Factors... T+'+str(t1-t))
+        #     # print("Starting "+str(nf)+" Factors... T+"+str(t1-t))
         #     nnf1 = ntf.ntf(grid, n_factors)
         #     pmem(str(n_itr) + " " + str(n_factors) + " Factors " + " End")
         #     n_itr += 1
         #     t2 = time.time()
-        #     # print('Factorization Duration: '+str(t2-t1))
+        #     # print("Factorization Duration: "+str(t2-t1))
         #
         #     if n_factors > 1:
         #         last_corr_check = corr_check(nnf1)
@@ -765,7 +1612,7 @@ class DataTensor:
         # # Create Factor objects
         # factors = []
         # t = time.time()
-        # # print('Saving Factor Objects... T+'+str(t-t0))
+        # # print("Saving Factor Objects... T+"+str(t-t0))
         # for i in range(n_factors):
         #     pmem(str(n_itr) + " Start Factor " + str(i))
         #     n_itr += 1
@@ -797,7 +1644,7 @@ class DataTensor:
         # self.factors = factors
         # pmem(str(n_itr) + " Script End")
         # # t = time.time()
-        # # print('Done: T+'+str(t-t0))
+        # # print("Done: T+"+str(t-t0))
 
 
 class Factor:
@@ -805,14 +1652,14 @@ class Factor:
 
     If the class has public attributes, they may be documented here
     in an ``Attributes`` section and follow the same formatting as a
-    function's ``Args`` section. Alternatively, attributes may be documented
-    inline with the attribute's declaration (see __init__ method below).
+    function"s ``Args`` section. Alternatively, attributes may be documented
+    inline with the attribute"s declaration (see __init__ method below).
 
     Attributes:
-        source_file (str): Path of DataTensor's parent resources/tensors/.cpickle.zlib file.
-        tensor_idx (int): Index of Factor's parent DataTensor in a concatenated DataTensor. Deprecated, this value always 0.
-        timepoint_idx (int): Index of the Factor's HDX timepoint in config["timepoints"].
-        name (str): Name of Factor's rt-group.
+        source_file (str): Path of DataTensor"s parent resources/tensors/.cpickle.zlib file.
+        tensor_idx (int): Index of Factor"s parent DataTensor in a concatenated DataTensor. Deprecated, this value always 0.
+        timepoint_idx (int): Index of the Factor"s HDX timepoint in config["timepoints"].
+        name (str): Name of Factor"s rt-group.
         charge_states (list with one int): Net positive charge on protein represented in parent DataTensor.
         integrated_mz_limits (numpy 2D array): Values for low and high m/Z limits of integration around expected peak centers.
         rts (numpy array): Intensity of Factor summed over each rt bin.
@@ -824,7 +1671,7 @@ class Factor:
         factor_idx (int): Index of instance Factor in DataTensor.factors list.
         bins_per_isotope_peak (int): Number of integrated m/Z bins for a signal to be considered as an IsotopeCluster.
         n_concatenated (int): Number of DataTensors combined to make the instance DataTensor. Deprecated, value always 1.
-        concat_dt_idxs (list of ints): Deprecated - Indices marking the boundaries between different DataTensors' concatenated DT dimensions.
+        concat_dt_idxs (list of ints): Deprecated - Indices marking the boundaries between different DataTensors" concatenated DT dimensions.
         normalization_factor (float): Divisor for the integrated m/Z intensity of any IsotopeCluster from a parent DataTensor instance.
         integrated_mz_data (numpy array): Coarsened version of mz_data. Number of bins to sum per index is determined by bins_per_isotope_peak.
         max_rtdt (float): Product of maximal values from rts and dts.
@@ -835,12 +1682,12 @@ class Factor:
         rt_auc (float): Cumulative distribution function of Gaussian fit to rts evaluated between estimated bounds.
         rt_com (float): Computed center-of-mass of the Gaussian fit to rts. 
         rt_gaussian_rmse (float): Root-mean-square error, the standard deviation of the residuals between fitted values and rts.
-        rt_gauss_fit_r2 (float): R^2 or 'coeffiecient of determination' of linear regression over residuals between fitted values and rts.
+        rt_gauss_fit_r2 (float): R^2 or "coeffiecient of determination" of linear regression over residuals between fitted values and rts.
         dt_gauss_fit_success (bool): Boolean indicating success of Gaussian fit operation on dts. True => success, False => failure.
         dt_auc (float): Cumulative distribution function of Gaussian fit to dts evaluated between estimated bounds.
         dt_com (float): Computed center-of-mass of the Gaussian fit to dts. 
         dt_gaussian_rmse (float): Root-mean-square error, the standard deviation of the residuals between fitted values and dts.
-        dt_gauss_fit_r2 (float): R^2 or 'coeffiecient of determination' of linear regression over residuals between fitted values and dts.
+        dt_gauss_fit_r2 (float): R^2 or "coeffiecient of determination" of linear regression over residuals between fitted values and dts.
         isotope_clusters (list of IsotopeCluster objects): Contains IsotopeCluster objects made from candidate signals in integrated_mz_data
 
     """
@@ -849,6 +1696,7 @@ class Factor:
         source_file,
         tensor_idx,
         timepoint_idx,
+        tp_ind,
         name,
         charge_states,
         rts,
@@ -870,10 +1718,10 @@ class Factor:
         """Creates an instance of the Factor class from one factor of a PARAFAC run.
 
         Args:
-            source_file (str): Path of DataTensor's parent resources/tensors/.cpickle.zlib file.
-            tensor_idx (int): Index of Factor's parent DataTensor in a concatenated DataTensor. Deprecated, this value always 0.
-            timepoint_idx (int): Index of the Factor's HDX timepoint in config["timepoints"].
-            name (str): Name of Factor's rt-group.
+            source_file (str): Path of DataTensor"s parent resources/tensors/.cpickle.zlib file.
+            tensor_idx (int): Index of Factor"s parent DataTensor in a concatenated DataTensor. Deprecated, this value always 0.
+            timepoint_idx (int): Index of the Factor"s HDX timepoint in config["timepoints"].
+            name (str): Name of Factor"s rt-group.
             charge_states (list with one int): Net positive charge on protein represented in parent DataTensor.
             integrated_mz_limits (numpy 2D array): Values for low and high m/Z limits of integration around expected peak centers.
             rts (numpy array): Intensity of Factor summed over each rt bin.
@@ -885,13 +1733,14 @@ class Factor:
             factor_idx (int): Index of instance Factor in DataTensor.factors list.
             bins_per_isotope_peak (int): Number of integrated m/Z bins for a signal to be considered as an IsotopeCluster.
             n_concatenated (int): Number of DataTensors combined to make the instance DataTensor. Deprecated, value always 1.
-            concat_dt_idxs (list of ints): Deprecated - Indices marking the boundaries between different DataTensors' concatenated DT dimensions.
+            concat_dt_idxs (list of ints): Deprecated - Indices marking the boundaries between different DataTensors" concatenated DT dimensions.
             normalization_factor (float): Divisor for the integrated m/Z intensity of any IsotopeCluster from a parent DataTensor instance.
 
         """
         self.source_file = source_file
         self.tensor_idx = tensor_idx
         self.timepoint_idx = timepoint_idx
+        self.tp_ind = tp_ind
         self.name = name
         self.charge_states = charge_states
         self.rts = rts
@@ -910,6 +1759,7 @@ class Factor:
         self.concat_dt_idxs = concat_dt_idxs
         self.normalization_factor = normalization_factor
         self.nnfac_output = nnfac_output
+        self.isotope_clusters = []
 
         ###Compute Instance Values###
 
@@ -925,30 +1775,30 @@ class Factor:
         #                                          self.integrated_mz_baseline)
  
         # fit factor rts and dts to gaussian
-        rt_gauss_fit = fit_gaussian(np.arange(len(self.rts)), self.rts, data_label='rt')
-        dt_gauss_fit = fit_gaussian(np.arange(len(self.dts)), self.dts, data_label='dt')
+        rt_gauss_fit = fit_gaussian(np.arange(len(self.rts)), self.rts, data_label="rt")
+        dt_gauss_fit = fit_gaussian(np.arange(len(self.dts)), self.dts, data_label="dt")
 
-        self.rt_gauss_fit_success = rt_gauss_fit['gauss_fit_success']
-        self.rt_auc = rt_gauss_fit['auc']
-        self.rt_com = rt_gauss_fit['xc']
-        self.rt_gaussian_rmse = rt_gauss_fit['fit_rmse']
-        self.rt_gauss_fit_r2 = rt_gauss_fit['fit_linregress_r2']
+        self.rt_gauss_fit_success = rt_gauss_fit["gauss_fit_success"]
+        self.rt_auc = rt_gauss_fit["auc"]
+        self.rt_com = rt_gauss_fit["xc"]
+        self.rt_gaussian_rmse = rt_gauss_fit["fit_rmse"]
+        self.rt_gauss_fit_r2 = rt_gauss_fit["fit_linregress_r2"]
 
-        self.dt_gauss_fit_success = dt_gauss_fit['gauss_fit_success']
-        self.dt_auc = dt_gauss_fit['auc']
-        self.dt_com = dt_gauss_fit['xc']
-        self.dt_gaussian_rmse = dt_gauss_fit['fit_rmse']
-        self.dt_gauss_fit_r2 = dt_gauss_fit['fit_linregress_r2']
+        self.dt_gauss_fit_success = dt_gauss_fit["gauss_fit_success"]
+        self.dt_auc = dt_gauss_fit["auc"]
+        self.dt_com = dt_gauss_fit["xc"]
+        self.dt_gaussian_rmse = dt_gauss_fit["fit_rmse"]
+        self.dt_gauss_fit_r2 = dt_gauss_fit["fit_linregress_r2"]
 
         # calculate max rtdt and outer rtdt based on gauss fits
-        if rt_gauss_fit['gauss_fit_success']:
-            gauss_params = [rt_gauss_fit['y_baseline'], rt_gauss_fit['y_amp'], rt_gauss_fit['xc'], rt_gauss_fit['width']]
+        if rt_gauss_fit["gauss_fit_success"]:
+            gauss_params = [rt_gauss_fit["y_baseline"], rt_gauss_fit["y_amp"], rt_gauss_fit["xc"], rt_gauss_fit["width"]]
             rt_fac = model_data_with_gauss(np.arange(len(self.rts)), gauss_params)
         else:
             rt_fac = self.rts
 
-        if dt_gauss_fit['gauss_fit_success']:
-            gauss_params = [dt_gauss_fit['y_baseline'], dt_gauss_fit['y_amp'], dt_gauss_fit['xc'], dt_gauss_fit['width']]
+        if dt_gauss_fit["gauss_fit_success"]:
+            gauss_params = [dt_gauss_fit["y_baseline"], dt_gauss_fit["y_amp"], dt_gauss_fit["xc"], dt_gauss_fit["width"]]
             dt_fac = model_data_with_gauss(np.arange(len(self.dts)), gauss_params)
         else:
             dt_fac = self.rts
@@ -1013,10 +1863,10 @@ class Factor:
                               rel_height_threshold=0.10,
                               calculate_idotp=False,
                               sequence=None):
-        """Identifies portions of the integrated mz dimension that look 'isotope-cluster-like', saves in isotope_clusters.
+        """Identifies portions of the integrated mz dimension that look "isotope-cluster-like", saves in isotope_clusters.
 
         Args:
-            prominence (float): Ratio of array's maximum intesity that a peak must surpass to be considered.
+            prominence (float): Ratio of array"s maximum intesity that a peak must surpass to be considered.
             width_val (int): Minimum width to consider a peak to be an isotope cluster.
             rel_height_filter (bool): Switch to apply relative height filtering, True applies filter. 
             baseline_threshold (float): Minimum height of peak to consider it to be an isotope cluster.
@@ -1069,6 +1919,7 @@ class Factor:
                                        source_file=self.source_file,
                                        tensor_idx=self.tensor_idx,
                                        timepoint_idx=self.timepoint_idx,
+                                       tp_ind=self.tp_ind,
                                        n_factors=self.n_factors,
                                        factor_idx=self.factor_idx,
                                        cluster_idx=cluster_idx,
@@ -1119,29 +1970,29 @@ class IsotopeCluster:
         integrated_mz_peak_width (int): Number of isotope peaks estimated to be included in the isotope cluster. 
         charge_states (list with one int): Net positive charge on protein represented in parent DataTensor.
         factor_mz_data (numpy array): The full mz_data of the parent Factor.
-        name (str): Name of IC's rt-group.
-        source_file (str): Path of DataTensor's parent resources/tensors/.cpickle.zlib file.
-        tensor_idx (int): Index of the IC's parent DataTensor in a concatenated DataTensor. Deprecated, this value always 0.
-        timepoint_idx (int): Index of the IC's HDX timepoint in config["timepoints"].
-        n_factors (int): Number of factors used in decomposition of IC's parent DataTensor.
-        factor_idx (int): Index of IC's parent Factor in its parent DataTensor.factors.
-        cluster_idx (int): Index of IC in parent Factor's Factor.isotope_clusters.
+        name (str): Name of IC"s rt-group.
+        source_file (str): Path of DataTensor"s parent resources/tensors/.cpickle.zlib file.
+        tensor_idx (int): Index of the IC"s parent DataTensor in a concatenated DataTensor. Deprecated, this value always 0.
+        timepoint_idx (int): Index of the IC"s HDX timepoint in config["timepoints"].
+        n_factors (int): Number of factors used in decomposition of IC"s parent DataTensor.
+        factor_idx (int): Index of IC"s parent Factor in its parent DataTensor.factors.
+        cluster_idx (int): Index of IC in parent Factor"s Factor.isotope_clusters.
         low_idx (int): Lower bound index of IC in integrated m/Z dimension.
         high_idx (int): Upper bound index of IC in integrated m/Z dimension.
-        rts (numpy array): Intensity of IC's parent Factor summed over each rt bin.
-        dts (numpy array): Intensity of IC's parent Factor summed over each dt bin.
+        rts (numpy array): Intensity of IC"s parent Factor summed over each rt bin.
+        dts (numpy array): Intensity of IC"s parent Factor summed over each dt bin.
         rt_mean (float):
         dt_mean (float):
         rt_gauss_fit_success (bool): Boolean indicating success of Gaussian fit operation on rts. True => success, False => failure.
         rt_auc (float): Cumulative distribution function of Gaussian fit to rts evaluated between estimated bounds.
         rt_com (float): Computed center-of-mass of the Gaussian fit to rts. 
         rt_gaussian_rmse (float): Root-mean-square error, the standard deviation of the residuals between fitted values and rts.
-        rt_gauss_fit_r2 (float): R^2 or 'coeffiecient of determination' of linear regression over residuals between fitted values and rts.
+        rt_gauss_fit_r2 (float): R^2 or "coeffiecient of determination" of linear regression over residuals between fitted values and rts.
         dt_gauss_fit_success (bool): Boolean indicating success of Gaussian fit operation on dts. True => success, False => failure.
         dt_auc (float): Cumulative distribution function of Gaussian fit to dts evaluated between estimated bounds.
         dt_com (float): Computed center-of-mass of the Gaussian fit to dts. 
         dt_gaussian_rmse (float): Root-mean-square error, the standard deviation of the residuals between fitted values and dts.
-        dt_gauss_fit_r2 (float): R^2 or 'coeffiecient of determination' of linear regression over residuals between fitted values and dts.
+        dt_gauss_fit_r2 (float): R^2 or "coeffiecient of determination" of linear regression over residuals between fitted values and dts.
         retention_labels (list of floats): Mapping of RT bins to corresponding absolute retention time in minutes.
         drift_labels (list of floats): Mapping of DT bins to corresponding absolute drift time in miliseconds.
         mz_labels (list of floats): Mapping of m/Z bins to corresponding m/Z.
@@ -1151,7 +2002,7 @@ class IsotopeCluster:
         max_rtdt_old(float):
         outer_rtdt_old (float):
         n_concatenated (int): Number of DataTensors combined to make the instance DataTensor. Deprecated, value always 1.
-        concat_dt_idxs (list of ints): Deprecated - Indices marking the boundaries between different DataTensors' concatenated DT dimensions.
+        concat_dt_idxs (list of ints): Deprecated - Indices marking the boundaries between different DataTensors" concatenated DT dimensions.
         normalization_factor (float): Divisor for the integrated m/Z intensity of any IsotopeCluster from a parent DataTensor instance.
         cluster_mz_data (numpy array): 
         auc (float): 
@@ -1175,6 +2026,7 @@ class IsotopeCluster:
         source_file,
         tensor_idx,
         timepoint_idx,
+        tp_ind,
         n_factors,
         factor_idx,
         cluster_idx,
@@ -1215,29 +2067,29 @@ class IsotopeCluster:
             integrated_mz_peak_width (int): Number of isotope peaks estimated to be included in the isotope cluster. 
             charge_states (list with one int): Net positive charge on protein represented in parent DataTensor.
             factor_mz_data (numpy array): The full mz_data of the parent Factor.
-            name (str): Name of IC's rt-group.
-            source_file (str): Path of DataTensor's parent resources/tensors/.cpickle.zlib file.
-            tensor_idx (int): Index of the IC's parent DataTensor in a concatenated DataTensor. Deprecated, this value always 0.
-            timepoint_idx (int): Index of the IC's HDX timepoint in config["timepoints"].
-            n_factors (int): Number of factors used in decomposition of IC's parent DataTensor.
-            factor_idx (int): Index of IC's parent Factor in its parent DataTensor.factors.
-            cluster_idx (int): Index of IC in parent Factor's Factor.isotope_clusters.
+            name (str): Name of IC"s rt-group.
+            source_file (str): Path of DataTensor"s parent resources/tensors/.cpickle.zlib file.
+            tensor_idx (int): Index of the IC"s parent DataTensor in a concatenated DataTensor. Deprecated, this value always 0.
+            timepoint_idx (int): Index of the IC"s HDX timepoint in config["timepoints"].
+            n_factors (int): Number of factors used in decomposition of IC"s parent DataTensor.
+            factor_idx (int): Index of IC"s parent Factor in its parent DataTensor.factors.
+            cluster_idx (int): Index of IC in parent Factor"s Factor.isotope_clusters.
             low_idx (int): Lower bound index of IC in integrated m/Z dimension.
             high_idx (int): Upper bound index of IC in integrated m/Z dimension.
-            rts (numpy array): Intensity of IC's parent Factor summed over each rt bin.
-            dts (numpy array): Intensity of IC's parent Factor summed over each dt bin.
+            rts (numpy array): Intensity of IC"s parent Factor summed over each rt bin.
+            dts (numpy array): Intensity of IC"s parent Factor summed over each dt bin.
             rt_mean (float):
             dt_mean (float):
             rt_gauss_fit_success (bool): Boolean indicating success of Gaussian fit operation on rts. True => success, False => failure.
             rt_auc (float): Cumulative distribution function of Gaussian fit to rts evaluated between estimated bounds.
             rt_com (float): Computed center-of-mass of the Gaussian fit to rts. 
             rt_gaussian_rmse (float): Root-mean-square error, the standard deviation of the residuals between fitted values and rts.
-            rt_gauss_fit_r2 (float): R^2 or 'coeffiecient of determination' of linear regression over residuals between fitted values and rts.
+            rt_gauss_fit_r2 (float): R^2 or "coeffiecient of determination" of linear regression over residuals between fitted values and rts.
             dt_gauss_fit_success (bool): Boolean indicating success of Gaussian fit operation on dts. True => success, False => failure.
             dt_auc (float): Cumulative distribution function of Gaussian fit to dts evaluated between estimated bounds.
             dt_com (float): Computed center-of-mass of the Gaussian fit to dts. 
             dt_gaussian_rmse (float): Root-mean-square error, the standard deviation of the residuals between fitted values and dts.
-            dt_gauss_fit_r2 (float): R^2 or 'coeffiecient of determination' of linear regression over residuals between fitted values and dts.
+            dt_gauss_fit_r2 (float): R^2 or "coeffiecient of determination" of linear regression over residuals between fitted values and dts.
             retention_labels (list of floats): Mapping of RT bins to corresponding absolute retention time in minutes.
             drift_labels (list of floats): Mapping of DT bins to corresponding absolute drift time in miliseconds.
             mz_labels (list of floats): Mapping of m/Z bins to corresponding m/Z.
@@ -1247,7 +2099,7 @@ class IsotopeCluster:
             max_rtdt_old(float):
             outer_rtdt_old (float):
             n_concatenated (int): Number of DataTensors combined to make the instance DataTensor. Deprecated, value always 1.
-            concat_dt_idxs (list of ints): Deprecated - Indices marking the boundaries between different DataTensors' concatenated DT dimensions.
+            concat_dt_idxs (list of ints): Deprecated - Indices marking the boundaries between different DataTensors" concatenated DT dimensions.
             normalization_factor (float): Divisor for the integrated m/Z intensity of any IsotopeCluster from a parent DataTensor instance.
         """
 
@@ -1320,7 +2172,7 @@ class IsotopeCluster:
                                                bounds=([0, 0, x[0], 0],[np.inf, np.inf, x[-1], np.inf]))
                         errors.append(np.abs(sum(y) * (popt[2] - x[center_idx]) * 1e6 / x[(center_idx)]))
                     except:
-                        print('PEAK ERROR FAILED', x, y, mean, sigma)
+                        print("PEAK ERROR FAILED", x, y, mean, sigma)
                         errors.append(30*sum(y))
             avg_err_ppm = np.sum(errors)/np.sum(isotope_peak_array)
             return avg_err_ppm
@@ -1332,6 +2184,7 @@ class IsotopeCluster:
         self.source_file = source_file
         self.tensor_idx = tensor_idx
         self.timepoint_idx = timepoint_idx
+        self.tp_ind = tp_ind
         self.n_factors = n_factors
         self.factor_idx = factor_idx
         self.cluster_idx = cluster_idx
@@ -1439,7 +2292,7 @@ class IsotopeCluster:
             # self.dt_coms = [center_of_mass(self.dts)[0]]
             self.dt_norms = [self.dts / np.linalg.norm(self.dts)]
 
-        if self.n_concatenated == 1:
+        if (self.n_concatenated == 1) and (np.sum(self.cluster_mz_data) > 0):
             self.abs_mz_com = np.average(self.mz_labels, weights=self.cluster_mz_data)
         else:
             self.abs_mz_com = "Concatenated, N/A, see IC.baseline_integrated_mz_com"

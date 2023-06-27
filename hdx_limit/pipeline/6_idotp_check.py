@@ -1,59 +1,14 @@
-"""Example Google style docstrings.
-
-This module demonstrates documentation as specified by the `Google Python
-Style Guide`_. Docstrings may extend over multiple lines. Sections are created
-with a section header and a colon followed by a block of indented text.
-
-Example:
-    Examples can be given using either the ``Example`` or ``Examples``
-    sections. Sections support any reStructuredText formatting, including
-    literal blocks::
-
-        $ python example_google.py
-
-Section breaks are created by resuming unindented text. Section breaks
-are also implicitly created anytime a new section starts.
-
-Attributes:
-    module_level_variable1 (int): Module level variables may be documented in
-        either the ``Attributes`` section of the module docstring, or in an
-        inline docstring immediately following the variable.
-
-        Either form is acceptable, but the two should not be mixed. Choose
-        one convention to document module level variables and be consistent
-        with it.
-
-Todo:
-    * For module TODOs
-    * You have to also use ``sphinx.ext.todo`` extension
-
-.. _Google Python Style Guide:
-   http://google.github.io/styleguide/pyguide.html
-
-"""
-import os
 import sys
 import glob
 import yaml
-import zlib
-import math
-import copy
-import pickle
-import pymzml
 import molmass
 import argparse
-import importlib.util
 import numpy as np
 import pandas as pd
-import seaborn as sns
-import _pickle as cpickle
-import matplotlib.pyplot as plt
 from scipy.stats import norm
 from scipy.signal import find_peaks
-from collections import defaultdict as ddict
-from scipy.ndimage.filters import gaussian_filter
 from hdx_limit.core.plot_ics_data import plot_ics_from_ic_list
-from hdx_limit.core.processing import TensorGenerator, generate_tensor_factors
+from hdx_limit.core.processing import generate_tensor_factors
 from hdx_limit.core.io import limit_write
 
 
@@ -145,7 +100,7 @@ def gen_ics_list(library_info_df,
                  factor_plot_output_path_list=None,
                  ics_plot_output_path_list=None,
                  timepoint_index=0,
-                 n_factors=15,
+                 num_factors_guess=5,
                  init_method='nndsvd',
                  niter_max=100000,
                  tol=1e-8,
@@ -198,7 +153,7 @@ def gen_ics_list(library_info_df,
                                               library_info_df=library_info_df,
                                               timepoint_index=timepoint_index,
                                               gauss_params=gauss_params,
-                                              n_factors=n_factors,
+                                              num_factors_guess=num_factors_guess,
                                               init_method=init_method,
                                               niter_max=niter_max,
                                               tol=tol,
@@ -242,7 +197,7 @@ def main(library_info_path,
          all_clusters_output=None,
          ics_plot_output_path_list=None,
          return_flag=None,
-         n_factors=15,
+         num_factors_guess=5,
          init_method='nndsvd',
          niter_max=100000,
          tol=1e-8,
@@ -303,7 +258,7 @@ def main(library_info_path,
                                      prot_sequence=prot_seq,
                                      mz_centers=mz_centers,
                                      normalization_factor=normalization_factor,
-                                     n_factors=n_factors,
+                                     num_factors_guess=num_factors_guess,
                                      init_method=init_method,
                                      niter_max=niter_max,
                                      tol=tol,
@@ -379,7 +334,7 @@ if __name__ == "__main__":
         ic_rel_ht_filter = config_dict["ic_rel_height_filter"]
         ic_rel_ht_baseline = config_dict["ic_rel_height_filter_baseline"]
         ic_rel_ht_threshold = config_dict["ic_rel_height_threshold"]
-        max_num_factors = config_dict["max_num_factors"]
+        num_factors_guess = config_dict["num_factors_guess"]
         factor_init_method = config_dict["init_method"]
         factor_niter_max = config_dict["n_iter_max"]
         factor_tol = config_dict["tolerance"]
@@ -387,7 +342,7 @@ if __name__ == "__main__":
 
         main(library_info_path=library_info_path,
              normalization_factor=normalization_factor,
-             n_factors=max_num_factors,
+             num_factors_guess=num_factors_guess,
              init_method=factor_init_method,
              niter_max=factor_niter_max,
              tol=factor_tol,
@@ -458,7 +413,7 @@ if __name__ == "__main__":
         factor_rt_r2_cutoff = config_dict["factor_rt_r2_cutoff"]
         factor_dt_r2_cutoff = config_dict["factor_dt_r2_cutoff"]
 
-        max_num_factors = config_dict["max_num_factors"]
+        num_factors_guess = config_dict["num_factors_guess"]
         factor_init_method = config_dict["init_method"]
         factor_niter_max = config_dict["n_iter_max"]
         factor_tol = config_dict["tolerance"]
@@ -471,12 +426,12 @@ if __name__ == "__main__":
         ic_rel_ht_threshold = config_dict["ic_rel_height_threshold"]
 
         normalization_factors = pd.read_csv(args.normalization_factors)
-        my_mzml = [filename for timepoint in config_dict["timepoints"] for filename in config_dict[timepoint] if filename in undeut_tensor_path_list[0]][0]
+        my_mzml = [filename for timepoint in config_dict["timepoints"] for filename in config_dict[timepoint] if filename in args.undeut_tensor_path_list[0]][0]
         normalization_factor = normalization_factors.loc[normalization_factors["mzml"]==my_mzml]["normalization_factor"].values
 
         main(library_info_path=args.library_info_path,
              normalization_factor=normalization_factor,
-             n_factors=max_num_factors,
+             num_factors_guess=num_factors_guess,
              init_method=factor_init_method,
              niter_max=factor_niter_max,
              tol=factor_tol,

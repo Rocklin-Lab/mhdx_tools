@@ -1,41 +1,6 @@
-"""Example Google style docstrings.
-
-This module demonstrates documentation as specified by the `Google Python
-Style Guide`_. Docstrings may extend over multiple lines. Sections are created
-with a section header and a colon followed by a block of indented text.
-
-Example:
-    Examples can be given using either the ``Example`` or ``Examples``
-    sections. Sections support any reStructuredText formatting, including
-    literal blocks::
-
-        $ python example_google.py
-
-Section breaks are created by resuming unindented text. Section breaks
-are also implicitly created anytime a new section starts.
-
-Attributes:
-    module_level_variable1 (int): Module level variables may be documented in
-        either the ``Attributes`` section of the module docstring, or in an
-        inline docstring immediately following the variable.
-
-        Either form is acceptable, but the two should not be mixed. Choose
-        one convention to document module level variables and be consistent
-        with it.
-
-Todo:
-    * For module TODOs
-    * You have to also use ``sphinx.ext.todo`` extension
-
-.. _Google Python Style Guide:
-   http://google.github.io/styleguide/pyguide.html
-
-"""
 import os
 import sys
 import gzip
-import glob
-import copy
 import zlib
 import time
 import yaml
@@ -46,9 +11,8 @@ import numpy as np
 import pandas as pd
 import _pickle as cpickle
 import pickle as pk
-from collections import Counter
 from collections import OrderedDict
-from pathlib import Path
+
 
 def load_pickle_file(pickle_fpath):    
     """Loads a pickle file.
@@ -79,12 +43,11 @@ def apply_polyfit_cal_mz(polyfit_coeffs, mz):
     corrected_mz = np.polyval(polyfit_coeffs, mz)
     return corrected_mz
 
-def main(library_info_path,
+def main(configfile,
+         library_info_path,
          mzml_gz_path,
          timepoints_dict,
          outputs=None,
-         use_time_warping=False,
-         use_rtdt_recenter=False,
          return_flag=False,
          low_mass_margin=10,
          high_mass_margin=17,
@@ -99,8 +62,8 @@ def main(library_info_path,
     Args:
         library_info_path (str): path/to/library_info.json or checked_library_info.json
         mzml_gz_path (str): path/to/timepoint.mzML.gz
-        timepoints_dict (dict): dictionary with 'timepoints' key containing list of hdx timepoints in integer seconds, which are keys mapping to lists of each timepoint's replicate .mzML filenames 
-        outputs (list of strings): list of filename strings for writing extracted outputs. 
+        timepoints_dict (dict): dictionary with 'timepoints' key containing list of hdx timepoints in integer seconds, which are keys mapping to lists of each timepoint's replicate .mzML filenames
+        outputs (list of strings): list of filename strings for writing extracted outputs.
         return_flag (bool): option to return main output in python, for notebook context
         low_mass_margin (int): number of m/Z bins to extend the lower bound of extraction from base-peak m/Z, helps capture incompletely centered data and makes plots more readable
         high_mass_margin (int): number of m/Z bins to extend the upper bound of extraction from (base-peak + possible mass addition by number residues), helps capture incompletely centered data and makes plots more readable
@@ -116,20 +79,12 @@ def main(library_info_path,
     out_dict = {}
     library_info = pd.read_json(library_info_path)
 
-    if use_rtdt_recenter:
-        names = list(OrderedDict.fromkeys(
-            library_info["name_recentered"].values).keys())  # This is the Python-native version of an ordered set operation.
-        name_charge_idx = {
-            name: {charge: library_info.loc[(library_info["name_recentered"] == name) & (library_info["charge"] == charge)].index
-                   for charge in library_info.loc[library_info["name_recentered"] == name]["charge"].values}
-            for name in names}
-    else:
-        # Makes nested dictionary where rt-group-name is the outermost key and returns a dictionary
-        # mapping charge states of that rt-group to their library_info indices.
-        names = list(OrderedDict.fromkeys(library_info["name"].values).keys()) # This is the Python-native version of an ordered set operation.
-        name_charge_idx = {name: {charge: library_info.loc[(library_info["name"]==name) & (library_info["charge"]==charge)].index
-                                for charge in library_info.loc[library_info["name"]==name]["charge"].values}
-                                for name in names}
+    # Makes nested dictionary where rt-group-name is the outermost key and returns a dictionary
+    # mapping charge states of that rt-group to their library_info indices.
+    names = list(OrderedDict.fromkeys(library_info["name"].values).keys()) # This is the Python-native version of an ordered set operation.
+    name_charge_idx = {name: {charge: library_info.loc[(library_info["name"]==name) & (library_info["charge"]==charge)].index
+                            for charge in library_info.loc[library_info["name"]==name]["charge"].values}
+                            for name in names}
 
     mzml = mzml_gz_path.split("/")[-1][:-3] # Strip '.gz' from input filename to match config timepoint values.
 
@@ -153,24 +108,24 @@ def main(library_info_path,
                                       timepoints_dict['dt_max'])
 
     # Decide which RT / DT use for tensor extraction
-    if use_time_warping:
+    if configfile["use_rtdt_recenter"]:
+        ret_ubounds = (library_info["RT_weighted_avg"].values + rt_radius)
+        ret_lbounds = (library_info["RT_weighted_avg"].values - rt_radius)
+        dt_ubounds = library_info["DT_weighted_avg"].values * (1 + dt_radius_scale)
+        dt_lbounds = library_info["DT_weighted_avg"].values * (1 - dt_radius_scale)
+    elif configfile["use_time_warping"]:
         ret_ubounds = (library_info["rt_group_mean_RT_%d_%d" %
                                     (tp, n_replicate)].values + rt_radius)
         ret_lbounds = (library_info["rt_group_mean_RT_%d_%d" %
                                     (tp, n_replicate)].values - rt_radius)
-    elif use_rtdt_recenter:
-        ret_ubounds = (library_info["RT_weighted_avg"].values + rt_radius)
-        ret_lbounds = (library_info["RT_weighted_avg"].values - rt_radius)
+        dt_ubounds = library_info["Drift Time MS1"].values * (1 + dt_radius_scale)
+        dt_lbounds = library_info["Drift Time MS1"].values * (1 - dt_radius_scale)
     else:
         ret_ubounds = (library_info["RT"].values + rt_radius)
         ret_lbounds = (library_info["RT"].values - rt_radius)
-
-    if use_rtdt_recenter:
-        dt_ubounds = library_info["DT_weighted_avg"].values * (1 + dt_radius_scale)
-        dt_lbounds = library_info["DT_weighted_avg"].values * (1 - dt_radius_scale)
-    else:
         dt_ubounds = library_info["Drift Time MS1"].values * (1 + dt_radius_scale)
         dt_lbounds = library_info["Drift Time MS1"].values * (1 - dt_radius_scale)
+
 
     drift_times = []
 
@@ -207,7 +162,7 @@ def main(library_info_path,
         len(seq) + high_mass_margin for seq in library_info["sequence"].values
     ]
 
-    # Map scans to lines needing those scans, scan numbers needed by each line, and data for each line. 
+    # Map scans to lines needing those scans, scan numbers needed by each line, and data for each line.
     scan_to_lines = [[] for i in scan_times]
     scans_per_line = []
     output_scans = [[] for i in range(len(library_info))]
@@ -257,14 +212,8 @@ def main(library_info_path,
     else:
         lockmass_polyfit_calib_dict = None
 
-    # No need to read msrun again - AF
-    # print(process.memory_info().rss)
-    # msrun = pymzml.run.Reader(mzml_gz_path)
-    # print(process.memory_info().rss)
-    # print(time.time() - starttime, mzml_gz_path)
-
     relevant_scans_set = set(relevant_scans)
-    # Iterate over each scan, check if any line needs it, extract data within bounds for all lines needing data from the scan. 
+    # Iterate over each scan, check if any line needs it, extract data within bounds for all lines needing data from the scan.
     for scan_number, scan in enumerate(
             msrun):
 
@@ -302,7 +251,7 @@ def main(library_info_path,
 
 
             # Iterate over each library_info index that needs to read the scan.
-            for i in scan_to_lines[scan_number]:  
+            for i in scan_to_lines[scan_number]:
                 print("Library Index: " + str(i) + " N Scans: " + str(scans_per_line[i]) + " Len Output: " +
                       str(len(output_scans[i])))
                 obs_mz_values = library_info["obs_mz"].values[i]
@@ -324,10 +273,7 @@ def main(library_info_path,
                 #try:
                 # Is this the last scan the line needed? If so, save to disk.
                 if len(output_scans[i]) == scans_per_line[i]:
-                    if use_rtdt_recenter:
-                        my_name = library_info.iloc[i]["name_recentered"]
-                    else:
-                        my_name = library_info.iloc[i]["name"]
+                    my_name = library_info.iloc[i]["name"]
                     my_charge = library_info.iloc[i]["charge"]
                     my_out_test = "/" + my_name + "/" + my_name + "_" + "charge" + str(my_charge) + "_" + mzml + ".gz.cpickle.zlib"
                     print("library idx = " + str(i), flush=True)
@@ -355,10 +301,10 @@ def main(library_info_path,
                     if return_flag:
                         out_dict[i] = output
 
-                    # Save to file if outputs provided, match name and charge to index. 
+                    # Save to file if outputs provided, match name and charge to index.
                     if outputs is not None:
                         my_out = [
-                            out for out in outputs if "/" + my_name + "/" + my_name 
+                            out for out in outputs if "/" + my_name + "/" + my_name
                             + "_" + "charge" + str(my_charge) + "_" + mzml + ".gz.cpickle.zlib" in out
                         ][0]
                         print("my_out: " + str(my_out), flush=True)
@@ -395,28 +341,29 @@ if __name__ == "__main__":
     # If the snakemake global object is present, save expected arguments from snakemake to be passed to main().
     if "snakemake" in globals():
         configfile = yaml.load(open(snakemake.input[2], "rb").read(), Loader=yaml.Loader)
-        use_time_warping = configfile['use_time_warping']
+
+        configfile["use_rtdt_recenter"] = snakemake.params["use_rtdt_recenter"]
 
         # Handle how calibration files are expected based on configfile lockmass and protein_polyfit params
         # Note calibration files are expected in specific folders: resources/0_calibration
         # and resources/1_imtbx, respectively
         file_name = snakemake.input[1].split('/')[-1].replace('.gz','')
         if configfile['lockmass']:
-            if os.path.exists("resources/0_calibration/" + file_name + "_mz_calib_dict.pk"):
-                lockmass_polyfit_calibration_dict_path = "resources/0_calibration/" + file_name + "_mz_calib_dict.pk"
-                print('Loading lockmass calibration dict %s'%lockmass_polyfit_calibration_dict_path)
+            if os.path.exists(f"resources/0_calibration/{file_name}_mz_calib_dict.pk"):
+                lockmass_polyfit_calibration_dict_path = f"resources/0_calibration/{file_name}_mz_calib_dict.pk"
+                print(f"Loading lockmass calibration dict {lockmass_polyfit_calibration_dict_path}")
             else:
-                print("ERROR: lockmass calibration dict from %s expected but not found. Exiting!" %file_name)
-                exit()
+                print(f"ERROR: lockmass calibration dict from {file_name} expected but not found. Exiting!")
+                sys.exit()
         else:
             lockmass_polyfit_calibration_dict_path = None
         if configfile['protein_polyfit'] and any(file_name in undeut_files for undeut_files in configfile[0]):
-            if os.path.exists("resources/1_imtbx/" + file_name + "_mz_calib_dict.pk"):
+            if os.path.exists(f"resources/1_imtbx/{file_name}_mz_calib_dict.pk"):
                 protein_polyfit_calibration_dict_path = "resources/1_imtbx/" + file_name + "_mz_calib_dict.pk"
-                print('Loading protein polyfit calibration dict %s'%protein_polyfit_calibration_dict_path)
+                print(f"Loading protein polyfit calibration dict {protein_polyfit_calibration_dict_path}")
             else:
-                print("ERROR: protein polyfit calibration dict from %s expected but not found. Exiting! "%file_name)
-                exit()
+                print(f"ERROR: protein polyfit calibration dict from {file_name} expected but not found. Exiting!")
+                sys.exit()
         else:
             protein_polyfit_calibration_dict_path = None
 
@@ -426,15 +373,11 @@ if __name__ == "__main__":
         config_rt_radius = configfile["rt_radius"]
         config_dt_radius_scale = configfile["dt_radius_scale"]
 
-        # Use rt / dt recenter? Expects DT_weighted_avg and RT_wighted_avg columns in checked_library_info.py
-        use_rtdt_recenter = snakemake.params['use_rtdt_recenter']
-
-        main(library_info_path=snakemake.input[0],
+        main(configfile=configfile,
+             library_info_path=snakemake.input[0],
              mzml_gz_path=snakemake.input[1],
              timepoints_dict=configfile,
              outputs=snakemake.output,
-             use_time_warping=use_time_warping,
-             use_rtdt_recenter=use_rtdt_recenter,
              rt_radius=config_rt_radius,
              dt_radius_scale=config_dt_radius_scale,
              protein_polyfit_calibration_dict_path=protein_polyfit_calibration_dict_path,
@@ -507,20 +450,6 @@ if __name__ == "__main__":
             help=
             "path/to/lockmass_calibration_dictionary"
         )
-        parser.add_argument(
-            "-use_time_warping",
-            "--use_time_warping",
-            default=False,
-            help=
-            "use time warping to correct signals rts"
-        )
-        parser.add_argument(
-            "-use_rtdt_recenter",
-            "--use_rtdt_recenter",
-            default=False,
-            help=
-            "use rtdt recenter coming from first tensor extraction"
-        )
         args = parser.parse_args()
         
         # Handle implicit arguments.
@@ -561,12 +490,11 @@ if __name__ == "__main__":
         if args.dt_radius_scale is None:
             args.dt_radius_scale = configfile["dt_radius_scale"]
 
-        main(library_info_path=args.library_info_path,
+        main(configfile=configfile,
+             library_info_path=args.library_info_path,
              mzml_gz_path=args.mzml_gz_path,
              timepoints_dict=configfile,
              outputs=args.outputs,
-             use_time_warping=args.use_time_warping,
-             use_rtdt_recenter=args.use_rtdt_recenter,
              low_mass_margin=args.low_mass_margin,
              high_mass_margin=args.high_mass_margin,
              rt_radius=args.rt_radius,

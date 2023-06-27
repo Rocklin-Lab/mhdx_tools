@@ -8,7 +8,7 @@ with open(os.path.join(here, "README.md"), encoding="utf-8") as f:
 
 setup(
     name="hdx_limit",
-    version="0.2.0",
+    version="0.8.0",
     description="Tools for analysis of LC-IMS-MS data represented as 3D tensors.",
 
     long_description=long_description,
@@ -16,8 +16,8 @@ setup(
 
     url="https://github.com/Rocklin-Lab/hdx_limit",
 
-    author="Robert Wes Ludwig, Sugyan Dixit, Állan Ferrari, Gabriel Rocklin",
-    author_email="robert.wes.ludwig@gmail.com, suggie@northwestern.edu, ajrferrari@northwestern.edu, grocklin@gmail.com",
+    author="Állan Ferrari, Sugyan Dixit, Robert Wes Ludwig, Gabriel Rocklin",
+    author_email="ajrferrari@gmail.com, suggie@northwestern.edu, robert.wes.ludwig@gmail.com,  grocklin@gmail.com",
 
     classifiers=[  # Optional
         # How mature is this project? Common values are
@@ -49,16 +49,17 @@ setup(
 
     python_requires=">=3.6, <4",
 
-    install_requires=["pandas>=1.2<2",
-                      "scikit-learn>=0.24<0.3",
-                      "matplotlib>=3.3<4",
-                      "scipy>=1.6<2",
-                      "peakutils>=1.3<2",
-                      "pyyaml>=5.4<6",
-                      "seaborn>=0.11<0.12",
-                      "nn-fac>=0.1.2<0.2",
-                      "molmass>=2020.1.1",
-                      "ipdb>=0.13<0.14",
+    install_requires=["pandas==1.5.3",
+                      "scikit-learn>=0.24,<0.3",
+                      "matplotlib>=3.3,<4",
+                      "scipy>=1.6,<2",
+                      "peakutils==1.3.4",
+                      "pyyaml==6.0",
+                      "seaborn>=0.11,<0.12",
+                      "nn-fac>=0.2.1",
+                      "molmass==2020.1.1",
+                      "ipdb>=0.13,<0.14",
+                      "snakemake==7.26.0"
                       ],  # external packages as dependencies
 
     project_urls={
@@ -66,6 +67,6 @@ setup(
         "Gabriel Rocklin Lab": "www.rocklinlab.org",
     },
 
-    packages = ["hdx_limit", "hdx_limit.core", "hdx_limit.preprocessing", "hdx_limit.pipeline"]
+    packages = ["hdx_limit", "hdx_limit.core", "hdx_limit.preprocessing", "hdx_limit.pipeline", "hdx_limit.auxiliar"]
 
 )

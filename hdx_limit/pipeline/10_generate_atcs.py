@@ -14,7 +14,6 @@ def optimize_paths_inputs(library_info_path,
     Args:
         library_info_path (str): path/to/checked_library_info.json
         input_directory_path (str): /path/to/dir/ to prepend to each outpath
-        rt_group_name (str): value from 'name' column of library_info
         configfile (dict): dictionary containing list of hdx timepoints in seconds, where each timepoint is also an integer key corresponding to that timepoint's .mzML filenames
 
     Returns:

@@ -1,10 +1,10 @@
 import yaml
 import os
-from hdx_limit.core.ajf_plot import plot_ajf_
 from hdx_limit.core.io import limit_read
+from hdx_limit.core.ajf_plot import plot_ajf_
 import argparse
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     if "snakemake" in globals():
         configfile = yaml.load(open(snakemake.input[0], "rb").read(), Loader=yaml.Loader)
@@ -22,38 +22,38 @@ if __name__ == '__main__':
             atc = limit_read(atc_path)
         else:
             atc = None
-            print('ATC is NONE')
+            print("ATC is NONE")
         if not os.stat(prefiltered_ics_path).st_size == 0:
             prefiltered_ics = limit_read(prefiltered_ics_path)
         else:
             prefiltered_ics = None
-            print('PREFILTERED IS NONE')
+            print("PREFILTERED IS NONE")
         if not os.stat(winner_multi_path).st_size == 0:
             winner_multi = limit_read(winner_multi_path)
-            df_output_multi = winner_multi_path.replace('.cpickle.zlib', '.df.pkl')
+            df_output_multi = winner_multi_path.replace(".cpickle.zlib", ".df.pkl")
         else:
             winner_multi = None
-            print('WINNER MULTI IS NONE')
+            print("WINNER MULTI IS NONE")
         if not os.stat(winner_mono_path).st_size == 0:
             winner_mono = limit_read(winner_mono_path)
-            df_output_mono = winner_mono_path.replace('.cpickle.zlib', '.df.pkl')
+            df_output_mono = winner_mono_path.replace(".cpickle.zlib", ".df.pkl")
         else:
             winner_mono = None
-            print('WINNER MONO IS NONE')
+            print("WINNER MONO IS NONE")
 
         plot_ajf_(configfile=configfile,
                   atc=atc,
                   prefiltered_ics=prefiltered_ics,
                   winner=winner_multi,
-                  output_path=output_multi,
-                  df_output_path=df_output_multi)
+                  output_plot_path=output_multi,
+                  output_df_path=df_output_multi)
 
         plot_ajf_(configfile=configfile,
                   atc=atc,
                   prefiltered_ics=prefiltered_ics,
                   winner=winner_mono,
-                  output_path=output_mono,
-                  df_output_path=df_output_mono)
+                  output_plot_path=output_mono,
+                  output_df_path=df_output_mono)
     else:
         parser = argparse.ArgumentParser()
         parser.add_argument(
@@ -110,35 +110,35 @@ if __name__ == '__main__':
             atc = limit_read(args.atc)
         else:
             atc = None
-            print('ATC is NONE')
+            print("ATC is NONE")
         if not os.stat(args.prefiltered_ics).st_size == 0:
             prefiltered_ics = limit_read(args.prefiltered_ics)
         else:
             prefiltered_ics = None
-            print('PREFILTERED IS NONE')
+            print("PREFILTERED IS NONE")
         if not os.stat(args.winner_mono).st_size == 0:
             winner_mono = limit_read(args.winner_mono)
-            df_output_mono = args.winner_mono.replace('.cpickle.zlib', '.df.pkl')
+            df_output_mono = args.winner_mono.replace(".cpickle.zlib", ".df.pkl")
         else:
             winner_mono = None
-            print('WINNER MONO IS NONE')
+            print("WINNER MONO IS NONE")
         if not os.stat(args.winner_multi).st_size == 0:
             winner_multi = limit_read(args.winner_multi)
-            df_output_multi = args.winner_multi.replace('.cpickle.zlib', '.df.pkl')
+            df_output_multi = args.winner_multi.replace(".cpickle.zlib", ".df.pkl")
         else:
             winner_multi = None
-            print('WINNER MULTI IS NONE')
+            print("WINNER MULTI IS NONE")
 
         plot_ajf_(configfile=configfile,
                   atc=atc,
                   prefiltered_ics=prefiltered_ics,
                   winner=winner_mono,
-                  output_path=args.output_mono,
-                  df_output_path=df_output_mono)
+                  output_plot_path=args.output_mono,
+                  output_df_path=df_output_mono)
 
         plot_ajf_(configfile=configfile,
                   atc=atc,
                   prefiltered_ics=prefiltered_ics,
                   winner=winner_multi,
-                  output_path=args.output_multi,
-                  df_output_path=df_output_multi)
+                  output_plot_path=args.output_multi,
+                  output_df_path=df_output_multi)

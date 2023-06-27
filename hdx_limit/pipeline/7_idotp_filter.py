@@ -1,36 +1,3 @@
-"""Example Google style docstrings.
-
-This module demonstrates documentation as specified by the `Google Python
-Style Guide`_. Docstrings may extend over multiple lines. Sections are created
-with a section header and a colon followed by a block of indented text.
-
-Example:
-    Examples can be given using either the ``Example`` or ``Examples``
-    sections. Sections support any reStructuredText formatting, including
-    literal blocks::
-
-        $ python example_google.py
-
-Section breaks are created by resuming unindented text. Section breaks
-are also implicitly created anytime a new section starts.
-
-Attributes:
-    module_level_variable1 (int): Module level variables may be documented in
-        either the ``Attributes`` section of the module docstring, or in an
-        inline docstring immediately following the variable.
-
-        Either form is acceptable, but the two should not be mixed. Choose
-        one convention to document module level variables and be consistent
-        with it.
-
-Todo:
-    * For module TODOs
-    * You have to also use ``sphinx.ext.todo`` extension
-
-.. _Google Python Style Guide:
-   http://google.github.io/styleguide/pyguide.html
-
-"""
 import sys
 import glob
 import argparse
@@ -39,12 +6,15 @@ import seaborn as sns
 import matplotlib as mpl
 import numpy as np
 import yaml
-import os
 import matplotlib.pyplot as plt
-from hdx_limit.core.io import limit_read
+from hdx_limit.auxiliar.plots import plot_rtdt_recenter, plot_deviations
+from hdx_limit.auxiliar.filters import generate_dataframe_ics, remove_duplicates_from_df
+from hdx_limit.auxiliar.fdr import plot_fdr_stats
+
 mpl.use("Agg")
 
 
+<<<<<<< HEAD
 def check_drift_labels(drift_labels, min_length=3, low_dt_value=0.2):
     """
     check if the drift labels are okay
@@ -399,15 +369,17 @@ def remove_duplicates_from_df(df, rt_threshold=0.2, dt_threshold=0.05):
     return new_df
 
 
+=======
+>>>>>>> 7a6e907d6872f996ee3380c8c6608ebbd5dc4f2f
 def main(configfile,
          library_info_path,
          all_idotp_inputs,
          all_ics_inputs,
          library_info_out_path=None,
-         plot_out_path=None,
-         return_flag=False,
-         idotp_cutoff=0.99,
-         remove_duplicates=False):
+         idotp_plot_out_path=None,
+         UN_deviations_plot_output_path=None,
+         fdr_plot_output_path=None,
+         return_flag=False):
     """Reads all library_info index idotp_check.csv files and returns or saves a list of indices with idotp >= idotp_cutoff.
 
     Args:
@@ -428,51 +400,84 @@ def main(configfile,
     library_info = pd.read_json(library_info_path)
 
     df = generate_dataframe_ics(configfile=configfile,
-                                all_ics_inputs=all_ics_inputs,
-                                idotp_cutoff=idotp_cutoff)
+                                all_ics_inputs=all_ics_inputs)
 
-    # Save full dataframe
-    df.to_json('results/plots/tensor-recenter/full_dataframe.json')
+    # Generate RT/DT recentering plots
+    if configfile["plot_rtdt_recenter"]:
+        plot_rtdt_recenter(df,
+                           output_folder='results/plots/tensor_rtdt_recenter/')
 
+<<<<<<< HEAD
     # Plot
     plot_undeuterated_stats(df)
 
+=======
+    # Create new dataframe with recentered names
+>>>>>>> 7a6e907d6872f996ee3380c8c6608ebbd5dc4f2f
     cols_idotp = ['idotp', 'integrated_mz_width', 'mz_centers', 'theor_mz_dist']
     cols_ics_recenter = ['RT_weighted_avg', 'DT_weighted_avg_bins', 'DT_weighted_avg', 'rt_std', 'dt_std',
-                         'rt_weighted_std', 'dt_weighted_std', 'n_signals', 'n_UN']
+                         'rt_weighted_std', 'dt_weighted_std', 'rt_gaussian_rmse', 'dt_gaussian_rmse',
+                         'n_signals', 'n_UN']
+    cols = list(library_info.columns) + cols_idotp + cols_ics_recenter + ['name_tmp']
 
-    out_df = pd.DataFrame(columns=list(library_info.columns) + cols_idotp + cols_ics_recenter + ['name_recentered'])
-
+    l = []
     for i, (name, charge) in enumerate(set([(i, j) for (i, j) in df[['name', 'charge']].values])):
         open_idotp_f = pd.read_json([i for i in all_idotp_inputs if '%s' % (name + '_charge' + str(charge)) in i][0])
         my_row = library_info.loc[(library_info["name"] == name) & (library_info["charge"] == charge)].copy()
         my_row[cols_idotp] = open_idotp_f[cols_idotp].values
         my_row[cols_ics_recenter] = \
-        df[(df['name'] == name) & (df['charge'] == charge)].sort_values(by='idotp', ascending=False)[
-            cols_ics_recenter].values[0]
-        my_row['name_recentered'] = '_'.join(name.split('_')[:-1]) + '_' + str(
-            round(my_row['RT_weighted_avg'].values[0], 5))
+            df[(df['name'] == name) & (df['charge'] == charge)].sort_values(by=['idotp', 'rt_gaussian_rmse',
+                                                                                'dt_gaussian_rmse'],
+                                                                            ascending=[False, True, True])[
+                cols_ics_recenter].values[0]
+        my_row['name_tmp'] = '_'.join(name.split('_')[:-1]) + '_' + str(
+            round(my_row['RT_weighted_avg'].values[0], 2))
         if not my_row['DT_weighted_avg'].values[0] < 0.1:
-            out_df = pd.concat([out_df, my_row], ignore_index=True)
+            # l.append(my_row.values)
+            l.append(my_row.values.tolist()[0])
+    out_df = pd.DataFrame(l, columns=cols)
 
-    if remove_duplicates:
-        out_df = remove_duplicates_from_df(out_df, rt_threshold=0.2, dt_threshold=0.05)
+    for name in set(out_df['name_tmp']):
+        out_df.loc[out_df['name_tmp'] == name, 'n_charges'] = len(out_df[out_df['name_tmp'] == name])
+    out_df['decoy'] = out_df['name_tmp'].str.contains('decoy')
+    out_df['log2_ab_cluster_total'] = np.log2(out_df['ab_cluster_total'].values.astype('float32'))
+
+    if configfile["use_rtdt_recenter"]:
+        out_df.rename(columns={"name": "name_before_recentering", "name_tmp": "name"}, inplace=True)
+    else:
+        out_df.rename(columns={"name_tmp": "name_after_recentering"}, inplace=True)
+
+    if fdr_plot_output_path is not None:
+        plot_fdr_stats(out_df,
+                       output_path=fdr_plot_output_path)
+
+    # Remove duplicates based on RT and DT proximity
+    if configfile["remove_duplicates"]:
+        out_df = remove_duplicates_from_df(out_df,
+                                           rt_threshold=configfile["rt_threshold"],
+                                           dt_threshold=configfile["dt_threshold"])
 
     if library_info_out_path is not None:
-        out_df.drop_duplicates(subset=['name_recentered', 'charge'], ignore_index=True, inplace=True)
         out_df.to_json(library_info_out_path)
 
-    if plot_out_path is not None:
+    if idotp_plot_out_path is not None:
         idotps = []
         for f in all_idotp_inputs:
             idotps.append(pd.read_json(f)['idotp'].values[0])
         sns.displot(idotps)
-        plt.axvline(idotp_cutoff, 0, 1)
-        plt.savefig(plot_out_path)
+        plt.axvline(configfile["idotp_cutoff"], 0, 1)
+        plt.savefig(idotp_plot_out_path, format='png', dpi=150)
         plt.close('all')
 
     # Plot deviation plots. Add this to a proper output in the snakemake scope later
+<<<<<<< HEAD
     df = pd.read_json(library_info_out_path)
+=======
+    if UN_deviations_plot_output_path is not None:
+        plot_deviations(out_df,
+                        configfile=configfile,
+                        output_path=UN_deviations_plot_output_path)
+>>>>>>> 7a6e907d6872f996ee3380c8c6608ebbd5dc4f2f
 
     if return_flag:
         return out_df
@@ -487,7 +492,9 @@ if __name__ == "__main__":
         all_ics_inputs = [item for item in snakemake.input if item.endswith(".cpickle.zlib")]
 
         library_info_out_path = snakemake.output[0]
-        plot_out_path = snakemake.output[1]
+        idotp_plot_out_path = snakemake.output[1]
+        UN_deviations_plot_output_path = snakemake.output[2]
+        fdr_plot_output_path = snakemake.output[3]
 
         configfile = yaml.load(open(configfile_path, 'rb'), Loader=yaml.Loader)
 
@@ -496,8 +503,9 @@ if __name__ == "__main__":
              all_idotp_inputs=all_idotp_inputs,
              all_ics_inputs=all_ics_inputs,
              library_info_out_path=library_info_out_path,
-             plot_out_path=plot_out_path,
-             remove_duplicates=configfile['remove_duplicates'])
+             idotp_plot_out_path=idotp_plot_out_path,
+             UN_deviations_plot_output_path=UN_deviations_plot_output_path,
+             fdr_plot_output_path=fdr_plot_output_path)
     else:
         # CLI context, set expected arguments with argparse module.
         parser = argparse.ArgumentParser(
@@ -519,8 +527,14 @@ if __name__ == "__main__":
                             "--library_info_out_path",
                             help="path/to/checked_library_info.json")
         parser.add_argument("--p",
-                            "--plot_out_path",
+                            "--idotp_plot_out_path",
                             help="path/to/idotp_distribution.png")
+        parser.add_argument("-u",
+                            "--UN_deviations_plot_output_path",
+                            help="path/to/undeuterated_deviations")
+        parser.add_argument("-f",
+                            "--fdr_plot_output_path",
+                            help="path/to/fdr_plot")
         parser.add_argument(
             "-c",
             "--idotp_cutoff",
@@ -551,7 +565,8 @@ if __name__ == "__main__":
              library_info_path=args.library_info_path,
              all_idotp_inputs=args.all_idotp_inputs,
              all_ics_inputs=args.all_ics_inputs,
-             library_info_out_path = args.library_info_out_path,
-             plot_out_path=args.plot_out_path,
-             idotp_cutoff=args.idotp_cutoff,
-             remove_duplicates=args.remove_duplicates)
+             library_info_out_path=args.library_info_out_path,
+             idotp_plot_out_path=args.idotp_plot_out_path,
+             fdr_plot_output_path=args.fdr_plot_output_path,
+             UN_deviations_plot_output_path=args.UN_deviations_plot_output_path
+             )

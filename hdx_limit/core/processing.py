@@ -1,22 +1,3 @@
-"""This module contains structures that use classes from datatypes.py to perform data processing.
-
-This module is non-executable, and is meant to be imported for use by higher level scripts.
-Structures contained herein should be used in more than one script and be used in tandem to 
-justify their being grouped together. In future development, classes can be separated into 
-individual mdoules, and only functions should be grouped in this module.
-
-
-Examples:
-    import hdx_limit.core.processing as pr
-    from hdx_limit.core import processing as pr
-    from hdx_limit.core.processing import TensorGenerator
-
-Todo:
-    * Consider breaking classes out into their own modules - hdx_limit.core.TensorGenerator etc.
-    * Rework bokeh_tuple, score_dict and score_diff to draw from one definition of score names to stop things from breaking when names change.
-    * Finish all docstrings.
-
-"""
 import os
 import sys
 import psutil
@@ -25,23 +6,10 @@ import math
 import molmass
 import numpy as np
 import pandas as pd
-from scipy.stats import gmean, norm, linregress
+import glob
+import pickle as pk
 from hdx_limit.core import io, datatypes
-from numpy import linspace, cumsum, searchsorted
-from hdx_limit.core.plot_factor_data import plot_factor_data_from_data_dict, plot_factor_data_from_data_tensor
-
-from bokeh.plotting import figure
-from bokeh.palettes import Spectral6
-from bokeh.transform import linear_cmap
-from bokeh.layouts import gridplot, column
-from bokeh.models import HoverTool, ColorBar, Text, Div, Whisker
-from bokeh.models.glyphs import MultiLine, Line
-from bokeh.io import save, output_file
-from bokeh.models.callbacks import CustomJS
-from bokeh.models.sources import ColumnDataSource, CDSView
-from bokeh.models.filters import Filter, GroupFilter, IndexFilter
-
-import scipy as sp
+from hdx_limit.core.plot_factor_data import plot_factor_data_from_data_tensor
 from scipy.optimize import curve_fit
 from sklearn.metrics import mean_squared_error
 
@@ -90,29 +58,29 @@ def create_factor_data_object(data_tensor, gauss_params, timepoint_label=None):
 
     """
     factor_data_dict = {
-    "name": data_tensor.DataTensor.name,
-    "charge_state": data_tensor.DataTensor.charge_states[0],
-    "timepoint_index": data_tensor.DataTensor.timepoint_idx,
-    "timepoint_label": timepoint_label,
-    "retention_labels": data_tensor.DataTensor.retention_labels,
-    "drift_labels": data_tensor.DataTensor.drift_labels,
-    "mz_labels": data_tensor.DataTensor.mz_labels,
-    "bins_per_isotope_peak": data_tensor.DataTensor.bins_per_isotope_peak,
-    "tensor_3d_grid": data_tensor.DataTensor.full_grid_out,
-    "gauss_params": gauss_params,
-    "num_factors": len(data_tensor.DataTensor.factors),
-    "factors": []
+        "name": data_tensor.DataTensor.name,
+        "charge_state": data_tensor.DataTensor.charge_states[0],
+        "timepoint_index": data_tensor.DataTensor.timepoint_idx,
+        "timepoint_label": timepoint_label,
+        "retention_labels": data_tensor.DataTensor.retention_labels,
+        "drift_labels": data_tensor.DataTensor.drift_labels,
+        "mz_labels": data_tensor.DataTensor.mz_labels,
+        "bins_per_isotope_peak": data_tensor.DataTensor.bins_per_isotope_peak,
+        "tensor_3d_grid": data_tensor.DataTensor.full_grid_out,
+        "gauss_params": gauss_params,
+        "num_factors": len(data_tensor.DataTensor.factors),
+        "factors": []
     }
 
     for num, factor in enumerate(data_tensor.DataTensor.factors):
         factor_dict = {
-        "factor_num": factor.factor_idx,
-        "factor_dt": factor.dts,
-        "factor_rt": factor.rts,
-        "factor_mz": factor.mz_data,
-        "factor_integrated_mz": factor.integrated_mz_data
+            "factor_num": factor.factor_idx,
+            "factor_dt": factor.dts,
+            "factor_rt": factor.rts,
+            "factor_mz": factor.mz_data,
+            "factor_integrated_mz": factor.integrated_mz_data
         }
-        factor_data_dict['factors'].append(factor_dict)
+        factor_data_dict["factors"].append(factor_dict)
 
     return factor_data_dict
 
@@ -123,8 +91,9 @@ def generate_tensor_factors(tensor_fpath,
                             gauss_params,
                             mz_centers,
                             normalization_factor,
-                            n_factors=15,
-                            init_method='nndsvd',
+                            tp_ind=None,
+                            num_factors_guess=5,
+                            init_method="nndsvd",
                             niter_max=100000,
                             tol=1e-8,
                             factor_corr_threshold=0.17,
@@ -133,8 +102,7 @@ def generate_tensor_factors(tensor_fpath,
                             timepoint_label=None,
                             filter_factors=False,
                             factor_rt_r2_cutoff=0.90,
-                            factor_dt_r2_cutoff=0.90,
-                            use_rtdt_recenter=False):
+                            factor_dt_r2_cutoff=0.90):
     """Generates a DataTensor from values extracted from a .mzML, along with several analytical parameters.
 
         Args:
@@ -161,21 +129,22 @@ def generate_tensor_factors(tensor_fpath,
     process = psutil.Process(os.getpid())
 
     print("Pre-Tensor-Initialization: " + str(process.memory_info().rss /
-                                       (1024 * 1024 * 1024)))
+                                              (1024 * 1024 * 1024)))
 
     data_tensor = TensorGenerator(filename=tensor_fpath,
                                   library_info=library_info_df,
                                   timepoint_index=timepoint_index,
+                                  tp_ind=tp_ind,
                                   mz_centers=mz_centers,
-                                  normalization_factor=normalization_factor,
-                                  use_rtdt_recenter=use_rtdt_recenter)
+                                  normalization_factor=normalization_factor
+                                  )
 
     print("Post-Tensor-Pre-Factor-Initialization: " + str(process.memory_info().rss /
-                                        (1024 * 1024 * 1024)))
+                                                          (1024 * 1024 * 1024)))
 
-    print('Factorizing ... ')
+    print("Factorizing ... ")
 
-    data_tensor.DataTensor.factorize(max_num_factors=n_factors,
+    data_tensor.DataTensor.factorize(num_factors_guess=num_factors_guess,
                                      init_method=init_method,
                                      niter_max=niter_max,
                                      tol=tol,
@@ -214,7 +183,7 @@ class TensorGenerator:
             c13_mass_diff (float): Mass difference between Carbon-12 and Carbon-13.
         Instance:
             filename (str): path/to/file containing information extracted from .mzML for a specific library protein.
-            timepoint_index (int): Index of this tensor's hdx_timepoint in config.yaml["timepoints"]. 
+            timepoint_index (int): Index of this tensor"s hdx_timepoint in config.yaml["timepoints"]. 
             library_info (Pandas DataFrame): Open DataFrame of library_info.json. 
             mz_centers (list of floats): List of expected isotopic peak centers in m/Z for a given protein.
             normalization_factor (float): Factor to multiply signal by to allow comparison with signals from other MS-runs.
@@ -240,14 +209,13 @@ class TensorGenerator:
     hd_mass_diff = 1.006277
     c13_mass_diff = 1.00335
 
-
-    def __init__(self, filename, timepoint_index, library_info, mz_centers, normalization_factor, use_rtdt_recenter,
+    def __init__(self, filename, timepoint_index, tp_ind, library_info, mz_centers, normalization_factor,
                  **kwargs):
         """Initializes the TensorGenerator object to create a DataTensor.
 
         Args:
             filename (str): path/to/file containing information extracted from .mzML for a specific library protein.
-            timepoint_index (int): Index of this tensor's hdx_timepoint in config.yaml["timepoints"]. 
+            timepoint_index (int): Index of this tensor"s hdx_timepoint in config.yaml["timepoints"]. 
             library_info (Pandas DataFrame): Open DataFrame of library_info.json. 
             mz_centers (list of floats): List of expected isotopic peak centers in m/Z for a given protein.
             normalization_factor (float): Factor to multiply signal by to allow comparison with signals from other MS-runs.
@@ -259,13 +227,14 @@ class TensorGenerator:
         """
         self.filename = filename
         self.timepoint_index = timepoint_index
+        self.tp_ind = tp_ind
         self.library_info = library_info
         self.mz_centers = mz_centers
         self.normalization_factor = normalization_factor
 
         if (
                 kwargs is not None
-        ):  
+        ):
             for key in kwargs.keys():
                 setattr(self, key, kwargs[key])
 
@@ -279,26 +248,22 @@ class TensorGenerator:
             self.bins_per_isotope_peak = 7
 
         self.tensor = io.limit_read(self.filename)
-        self.name = filename.split("/")[-2] # Expects format: path/to/{rt-group-name}/{rt-group-name}_{charge}_{file.mzML.gz}.cpickle.zlib.
-        self.charge = int([item[6:] for item in filename.split("/")[-1].split("_") if "charge" in item][0]) # Finds by keyword and strips text.
-        if use_rtdt_recenter:
-            self.lib_idx = self.library_info.loc[
-                (library_info["name_recentered"] == self.name) & (library_info["charge"] == self.charge)].index
-            self.my_row = self.library_info.loc[
-                (library_info["name_recentered"] == self.name) & (library_info["charge"] == self.charge)]
-            self.max_peak_center = len(
-                self.library_info.loc[self.library_info["name_recentered"] == self.name]["sequence"].values[0])
-        else:
-            self.lib_idx = self.library_info.loc[(library_info["name"]==self.name) & (library_info["charge"]==self.charge)].index
-            self.my_row = self.library_info.loc[(library_info["name"]==self.name) & (library_info["charge"]==self.charge)]
-            self.max_peak_center = len(self.library_info.loc[self.library_info["name"] == self.name]["sequence"].values[0])
+        self.name = filename.split("/")[
+            -2]  # Expects format: path/to/{rt-group-name}/{rt-group-name}_{charge}_{file.mzML.gz}.cpickle.zlib.
+        self.charge = int([item[6:] for item in filename.split("/")[-1].split("_") if "charge" in item][
+                              0])  # Finds by keyword and strips text.
+        self.lib_idx = self.library_info.loc[
+            (library_info["name"] == self.name) & (library_info["charge"] == self.charge)].index
+        self.my_row = self.library_info.loc[
+            (library_info["name"] == self.name) & (library_info["charge"] == self.charge)]
+        self.max_peak_center = len(self.library_info.loc[self.library_info["name"] == self.name]["sequence"].values[0])
         self.total_isotopes = self.max_peak_center + self.high_mass_margin
         self.total_mass_window = self.low_mass_margin + self.total_isotopes
 
         self.mz_lows = self.my_row["expect_mz"].values[0] - (
-            self.low_mass_margin / self.charge)
+                self.low_mass_margin / self.charge)
         self.mz_highs = self.my_row["expect_mz"].values[0] + (
-            self.total_isotopes / self.charge)
+                self.total_isotopes / self.charge)
 
         low_mz_limits = [center * ((1000000.0 - self.ppm_radius) / 1000000.0) for center in self.mz_centers]
         high_mz_limits = [center * ((1000000.0 + self.ppm_radius) / 1000000.0) for center in self.mz_centers]
@@ -310,6 +275,7 @@ class TensorGenerator:
             source_file=self.filename,
             tensor_idx=self.lib_idx,
             timepoint_idx=self.timepoint_index,
+            tp_ind=self.tp_ind,
             name=self.name,
             total_mass_window=self.total_mass_window,
             n_concatenated=1,
@@ -323,11 +289,11 @@ class TensorGenerator:
             normalization_factor=self.normalization_factor
         )
 
-        #self.DataTensor.lows = searchsorted(self.DataTensor.mz_labels,
+        # self.DataTensor.lows = searchsorted(self.DataTensor.mz_labels,
         #                                    self.low_lims)
-        #self.DataTensor.highs = searchsorted(self.DataTensor.mz_labels,
+        # self.DataTensor.highs = searchsorted(self.DataTensor.mz_labels,
         #                                     self.high_lims)
-        
+
         # Consider separating factorize from init
         # self.DataTensor.factorize(gauss_params=(3,1))
 
@@ -361,8 +327,8 @@ class PathOptimizer:
                             and a key for each integer in that list corresponding to lists of hdx-timepoint replicate filepaths.
         n_undeut_runs (int): Number of undeuterated replicates.
         max_peak_center (int): Number of deuteration prone backbone atoms as determined by sequence length.
-        old_data_dir (str): Path to directory containing Gabe's data dictionary pickles. For development use - remove for release.
-        old_files (list of strings): List of Gabe's dict.pickle file paths from old_data_dir. For development use - remove for release.
+        old_data_dir (str): Path to directory containing Gabe"s data dictionary pickles. For development use - remove for release.
+        old_files (list of strings): List of Gabe"s dict.pickle file paths from old_data_dir. For development use - remove for release.
         rt_com_cv (float): The coefficient of variation (std.dev./mean) in center of mass for the rt dimension.
         dt_com_cv (float): The coefficient of variation (std.dev./mean) in the center of mass for the dt dimension.
         rt_error_rmse (float): Root-mean-squared error of rt centers of mass from undeuterated. Deprecated.
@@ -370,6 +336,7 @@ class PathOptimizer:
         prefiltered_ics (list of lists of IsotopeClusters): IsotopeClusters for all timepoints after prefiltering.
     
     """
+
     def __init__(self,
                  name,
                  all_tp_clusters,
@@ -380,13 +347,13 @@ class PathOptimizer:
                  thresholds,
                  pareto_prefilter=True,
                  old_data_dir=None,
-                 use_rtdt_recenter=False,
+                 use_rtdt_recenter=True,
                  **kwargs):
         """Initializes an instance of PathOptimizer, performs preprocessing of inputs so the returned object is ready for optimization.
 
         The __init__ method sets instance attributes before selecting an undeuterated signal for each charge state of the rt-group being
         included in the PathOptimizer object. These "ground truth" undeuterated signals are selected based on their similarity to the 
-        theoretical undeuterated isotope distribution for the protein's sequence. Deuterated signals are scored by their multidimensional 
+        theoretical undeuterated isotope distribution for the protein"s sequence. Deuterated signals are scored by their multidimensional 
         agreement with these undeuterated signals and those scores are saved for use in optimization. A weak pareto dominance filter can
         optionally be applied to IsotopeClusters of the same timepoint before creating a set of bootstrapped mass-addition timeseries based 
         on plausible deuteration curves populated by signals that most closely match the mass uptake at each timepoint. The bootstrapped 
@@ -405,17 +372,17 @@ class PathOptimizer:
             
         """
         # Set score weights
-        self.baseline_peak_error_weight = 10  # 100 before
-        self.delta_mz_rate_backward_weight = 0.165
-        self.delta_mz_rate_forward_weight = 0.162
-        self.dt_ground_rmse_weight = 7.721
-        self.dt_ground_fit_weight = 13.277
-        self.rt_ground_fit_weight = 1.304
-        self.rt_ground_rmse_weight = 3.859
-        self.auc_ground_rmse_weight = 5.045
-        self.rmses_sum_weight = 0.242
-        self.int_mz_FWHM_rmse_weight = 0.072
-        self.nearest_neighbor_penalty_weight = 0.151
+        self.baseline_peak_error_weight = 0.5 #10  # 100 before
+        self.delta_mz_rate_backward_weight = 0.1  #0.165
+        self.delta_mz_rate_forward_weight = 0.1 #0.162
+        self.dt_ground_rmse_weight = 5 #7.721
+        self.dt_ground_fit_weight = 5 #13.277
+        self.rt_ground_fit_weight = 5 #1.304
+        self.rt_ground_rmse_weight = 1 #3.859
+        self.auc_ground_rmse_weight = 1 #5.045
+        self.rmses_sum_weight = 0.25 #0.242
+        self.int_mz_FWHM_rmse_weight = 0.1 #0.072
+        self.nearest_neighbor_penalty_weight = 0.1 #0.151
 
         self.name = name
         self.all_tp_clusters = all_tp_clusters
@@ -423,6 +390,7 @@ class PathOptimizer:
         self.timepoints = timepoints
         self.n_undeut_runs = n_undeut_runs
         self.thresholds = thresholds
+<<<<<<< HEAD
         self.undeuts = [ic for ic in self.all_tp_clusters[0] if round(ic.idotp,2) >= self.thresholds['idotp_cutoff']]
         if len(self.undeuts) == 0:
             print('Error %s: no undeuts with idotp > %.2f was found!'%(self.name, self.thresholds['idotp_cutoff']))
@@ -441,6 +409,8 @@ class PathOptimizer:
                                       self.name]["sequence"].values[0]
             ) - self.library_info.loc[self.library_info["name"] ==
                                       self.name]["sequence"].values[0][2:].count('P') - 2 + self.first_center
+=======
+>>>>>>> 7a6e907d6872f996ee3380c8c6608ebbd5dc4f2f
 
         self.old_data_dir = old_data_dir
         self.old_files = None
@@ -450,18 +420,147 @@ class PathOptimizer:
         self.rt_error_rmse = None
         self.dt_error_rmse = None
 
+        self.use_rtdt_center = use_rtdt_recenter
+
+        self.select_undeuterated()  # selects best undeuterated per charge state
+
+        self.prefiltered_ics = self.prefilter_based_on_charge()  # prefilters ics with charges not present in the undeuterated ics set
+
+        self.precalculate_fit_to_ground()  # compute ics features, dt_err, rt_err, dt_fit and rt_fit
+
+        self.first_center = self.undeuts[0].baseline_integrated_mz_com
+        self.max_peak_center = len(
+            self.library_info.loc[self.library_info["name"] ==
+                                  self.name]["sequence"].values[0]
+        ) - self.library_info.loc[self.library_info["name"] ==
+                                  self.name]["sequence"].values[0][2:].count("P") - 2 + self.first_center
+
         self.gather_old_data()
 
+<<<<<<< HEAD
         self.select_undeuterated(use_rtdt_recenter=use_rtdt_recenter)
         self.precalculate_fit_to_ground(use_rtdt_recenter=use_rtdt_recenter)
         self.prefiltered_ics = self.all_tp_clusters.copy()
+=======
+>>>>>>> 7a6e907d6872f996ee3380c8c6608ebbd5dc4f2f
         if user_prefilter:
             self.filters_from_user()
-            if pareto_prefilter and len(self.prefiltered_ics) >= self.thresholds['min_timepoints']:
+            if pareto_prefilter and len(self.prefiltered_ics) >= self.thresholds["min_timepoints"]:
                 self.prefiltered_ics = self.weak_pareto_dom_filter()
         elif pareto_prefilter:
             self.prefiltered_ics = self.weak_pareto_dom_filter()
         self.generate_sample_paths()
+
+    def select_undeuterated(self):
+        """Description of function.
+
+        Args:
+            arg_name (type): Description of input variable.
+
+        Returns:
+            out_name (type): Description of any returned objects.
+
+        """
+
+        """
+        Selects undeuterated isotope cluster which best matches theoretically calculated isotope distribution for POI sequence, for each observed charge state of the POI
+        all_tp_clusters = TensorGenerator attribute, e.g. T1 = TensorGenerator(...); select_undeuterated(T1.all_tp_clusters)
+        n_undeut_runs = number of undeuterated HDX runs included in the "library_info" master csv
+        """
+
+        self.undeuts = [ic for ic in self.all_tp_clusters[0] if (ic.idotp > 0.96) and
+                        (ic.auc > 10) and (np.sum(ic.rts) > 0) and (np.sum(ic.dts) > 0)]
+
+        l = []
+        for ic in self.undeuts:
+            ic.dt_ground_err = 100 * abs(ic.dt_coms - len(ic.drift_labels) / 2) * (
+                    ic.drift_labels[1] - ic.drift_labels[0]) / ic.drift_labels[
+                                   len(ic.drift_labels) // 2]
+            ic.rt_ground_err = abs(ic.rt_com - len(ic.retention_labels) / 2) * (
+                    ic.retention_labels[1] - ic.retention_labels[0]) * 60
+
+            # Append ic [0], error as a function of deviation of dt and rt center [1], and charge state [2]
+            l.append([ic, ic.rt_ground_err / ic.retention_labels[len(ic.retention_labels) // 2] + ic.dt_ground_err,
+                      ic.charge_states[0]])
+
+        # Convert in numpy array
+        array = np.array(l)
+
+        out, charge_fits = {}, {}
+        for charge in np.unique(array[:, 2]):
+            tmp_array = array[array[:, 2] == charge]
+            best_idx = np.argmin(tmp_array[:, 1])
+            out[charge] = tmp_array[best_idx][0]
+            charge_fits[charge] = tmp_array[best_idx][0].idotp
+
+        self.undeut_grounds = out
+        self.undeut_ground_dot_products = charge_fits
+
+        self.undeuts = [self.undeut_grounds[charge] for charge in self.undeut_grounds]
+
+    def prefilter_based_on_charge(self):
+
+        atc = [self.undeuts]
+        for tp in self.all_tp_clusters[1:]:
+            ics = []
+            for ic in tp:
+                if ic.charge_states[0] in self.undeut_grounds:
+                    ics.append(ic)
+            atc.append(ics)
+
+        return atc
+
+    def precalculate_fit_to_ground(self,
+                                   prefiltered_ics=None,
+                                   undeut_grounds=None,
+                                   ):
+        """Description of function.
+
+        Args:
+            arg_name (type): Description of input variable.
+
+        Returns:
+            out_name (type): Description of any returned objects.
+
+        """
+        if prefiltered_ics is None:
+            prefiltered_ics = self.prefiltered_ics
+        if undeut_grounds is None:
+            undeut_grounds = self.undeut_grounds
+
+        for timepoint in prefiltered_ics:
+            for ic in timepoint:
+
+                undeut = undeut_grounds[ic.charge_states[0]]
+
+                # rt_ground_err: retention time error in seconds
+                # dt_ground_err: drift time error in percentage of deviation * 100
+
+                if self.use_rtdt_center:
+
+                    ic.dt_ground_err = 100 * abs(ic.dt_coms - len(undeut.drift_labels) / 2) * (
+                            undeut.drift_labels[1] - undeut.drift_labels[0]) / undeut.drift_labels[
+                                           len(undeut.drift_labels) // 2]
+                    ic.rt_ground_err = abs(ic.rt_com - len(undeut.retention_labels) / 2) * (
+                            undeut.retention_labels[1] - undeut.retention_labels[0]) * 60
+
+                else:
+                    ic.dt_ground_err = 100 * abs(ic.dt_coms - undeut.dt_coms) * (
+                            undeut.drift_labels[1] - undeut.drift_labels[0]) / undeut.drift_labels[
+                                           len(undeut.drift_labels) // 2]
+                    ic.rt_ground_err = abs(ic.rt_com - undeut.rt_com) * (
+                            undeut.retention_labels[1] - undeut.retention_labels[0]) * 60
+
+                ic.auc_ground_err = ic.log_baseline_auc - undeut.log_baseline_auc
+                ic.dt_ground_fit = max(
+                    np.correlate(undeut.dt_norms[0], ic.dt_norms[0], mode="full"))
+                ic.rt_ground_fit = max(np.correlate(undeut.rt_norm, ic.rt_norm, mode="full"))
+
+                # these are pre calculated in the factor class
+                # ic.dt_gaussian_rmse = self.rmse_from_gaussian_fit(ic.dt_norms[0])
+                # ic.rt_gaussian_rmse = self.rmse_from_gaussian_fit(ic.rt_norm)
+
+                ic.log_baseline_auc_diff = ic.log_baseline_auc - undeut.log_baseline_auc
 
     def filters_from_user(self):
         """Purpose: function will filter out isotopic clusters with low quality attributes as defined in configfile
@@ -471,21 +570,35 @@ class PathOptimizer:
             an updated list of timepoints (self.timepoints) and a list of prefiltered isotopic clusters
             (self.prefiltered)
         """
+<<<<<<< HEAD
         undeut_list = [ic for ic in self.prefiltered_ics[0] if round(ic.idotp,2) >= self.thresholds['idotp_cutoff']]
+=======
+
+>>>>>>> 7a6e907d6872f996ee3380c8c6608ebbd5dc4f2f
         filtered_atc = [
-            [ic for ic in ics if (ic.baseline_peak_error <= self.thresholds['baseline_peak_error'] and
-                                  ic.dt_ground_err <= self.thresholds['dt_ground_err'] and
-                                  ic.dt_ground_fit >= self.thresholds['dt_ground_fit'] and
-                                  ic.rt_ground_err <= self.thresholds['rt_ground_err'] and
-                                  ic.rt_ground_fit >= self.thresholds['rt_ground_fit'] and
+            [ic for ic in ics if (ic.baseline_peak_error <= self.thresholds["baseline_peak_error"] and
+                                  ic.dt_ground_err <= self.thresholds["dt_ground_err"] and
+                                  ic.dt_ground_fit >= self.thresholds["dt_ground_fit"] and
+                                  ic.rt_ground_err <= self.thresholds["rt_ground_err"] and
+                                  ic.rt_ground_fit >= self.thresholds["rt_ground_fit"] and
                                   ic.baseline_integrated_mz_rmse <= self.thresholds[
-                                      'baseline_integrated_rmse'] and
+                                      "baseline_integrated_rmse"] and
                                   ic.baseline_integrated_mz_FWHM >= self.thresholds[
+<<<<<<< HEAD
                                       'baseline_integrated_FWHM'] and
                                   ic.nearest_neighbor_correlation >= self.thresholds['nearest_neighbor_correlation']
                                   and self.max_peak_center >= ic.baseline_integrated_mz_com >= 0.99*self.first_center)
              ] for ics in self.prefiltered_ics[1:] if ics[0].timepoint_idx in self.timepoints]
         filtered_atc = np.array([undeut_list] + filtered_atc)
+=======
+                                      "baseline_integrated_FWHM"] and
+                                  ic.nearest_neighbor_correlation >= self.thresholds["nearest_neighbor_correlation"] and
+                                  ic.charge_states[0] in self.undeut_grounds
+                                  and ic.baseline_integrated_mz_com <= self.max_peak_center)
+             ] for ics in self.prefiltered_ics[1:]
+        ]  # if ics[0].timepoint_idx in self.timepoints] # TODO not sure the impact of removing this statement
+        filtered_atc = np.array([self.undeuts] + filtered_atc, dtype=object)
+>>>>>>> 7a6e907d6872f996ee3380c8c6608ebbd5dc4f2f
         filtered_indexes = np.array([True if len(ics) > 0 else False for ics in filtered_atc])
         self.prefiltered_ics = list(filtered_atc[filtered_indexes])
         self.timepoints = list(np.array(self.timepoints)[filtered_indexes])
@@ -509,14 +622,14 @@ class PathOptimizer:
                 compare_flag = False
                 for ic2 in tp:
                     if (
-                        np.round(ic2.baseline_integrated_mz_com) == ic1_int_mz_com and
-                        ic2.rt_ground_err**2 < ic1.rt_ground_err**2 and
-                        ic2.dt_ground_err**2 < ic1.dt_ground_err**2 and
-                        ic2.baseline_peak_error < ic1.baseline_peak_error and
-                        ic2.rt_ground_fit > ic1.rt_ground_fit and 
-                        ic2.dt_ground_fit > ic1.dt_ground_fit and 
-                        ic2.auc_ground_err**2 < ic1.auc_ground_err**2
-                       ):
+                            np.round(ic2.baseline_integrated_mz_com) == ic1_int_mz_com and
+                            ic2.rt_ground_err ** 2 < ic1.rt_ground_err ** 2 and
+                            ic2.dt_ground_err ** 2 < ic1.dt_ground_err ** 2 and
+                            ic2.baseline_peak_error < ic1.baseline_peak_error and
+                            ic2.rt_ground_fit > ic1.rt_ground_fit and
+                            ic2.dt_ground_fit > ic1.dt_ground_fit and
+                            ic2.auc_ground_err ** 2 < ic1.auc_ground_err ** 2
+                    ):
                         compare_flag = True
                         break
                 if not compare_flag:
@@ -541,7 +654,7 @@ class PathOptimizer:
             ])
             self.old_data = []
             for fn in self.old_files:
-                ts = pickle.load(open(fn, "rb"))
+                ts = pk.load(open(fn, "rb"))
                 ts["charge"] = int(fn.split(".")[-3][-1])
                 ts["delta_mz_rate"] = self.gabe_delta_mz_rate(ts["centroid"])
                 ts["major_species_widths"] = [
@@ -549,104 +662,6 @@ class PathOptimizer:
                     for x in ts["major_species_integrated_intensities"]
                 ]
                 self.old_data.append(ts)
-
-    def select_undeuterated(self,
-                            all_tp_clusters=None,
-                            library_info=None,
-                            name=None,
-                            n_undeut_runs=None,
-                            use_rtdt_recenter=False):
-        """Description of function.
-
-        Args:
-            arg_name (type): Description of input variable.
-
-        Returns:
-            out_name (type): Description of any returned objects.
-
-        """
-
-        """
-        Selects undeuterated isotope cluster which best matches theoretically calculated isotope distribution for POI sequence, for each observed charge state of the POI
-        all_tp_clusters = TensorGenerator attribute, e.g. T1 = TensorGenerator(...); select_undeuterated(T1.all_tp_clusters)
-        n_undeut_runs = number of undeuterated HDX runs included in the 'library_info' master csv
-        """
-
-        if all_tp_clusters is None:
-            all_tp_clusters = self.all_tp_clusters
-
-        if name is None:
-            name = self.name
-
-        if library_info is None:
-            library_info = self.library_info
-
-        if n_undeut_runs is None:
-            n_undeut_runs = self.n_undeut_runs
-
-        if use_rtdt_recenter:
-            my_seq = library_info.loc[library_info["name_recentered"] == name]["sequence"].values[0]
-        else:
-            my_seq = library_info.loc[library_info["name"] == name]["sequence"].values[0]
-
-        if (
-                self.old_data_dir is not None
-        ):  # if comparing to old data, save old-data's fits in-place TODO: CONSIDER OUTPUTTING TO SNAKEMAKE DIR
-            # open first three (undeut) dicts in list, store fit to theoretical dist
-            for charge_dict in self.old_data:
-                undeut_amds = [{
-                    "major_species_integrated_intensities":
-                        charge_dict["major_species_integrated_intensities"][i]
-                } for i in range(3)]  # hardcode for gabe's undeut idxs in list
-                charge_dict["fit_to_theo_dist"] = max(
-                    [self.calculate_isotope_dist_dot_product(sequence=my_seq, undeut_integrated_mz_array=d) for d in undeut_amds]
-                    )
-
-        undeuts = []
-        for ic in all_tp_clusters[
-                0]:  # anticipates all undeuterated replicates being in the 0th index
-            undeuts.append(ic)
-        dot_products = []
-
-        # <ake list of all normed dot products between an undeuterated IC and the theoretical distribution.
-        for ic in undeuts:
-            df = pd.DataFrame(
-                ic.baseline_integrated_mz,
-                columns=["major_species_integrated_intensities"],
-            )
-            # fit = self.calculate_isotope_dist_dot_product(sequence=my_seq, undeut_integrated_mz_array=ic.baseline_integrated_mz)
-            # ic.undeut_ground_dot_product = fit
-            dot_products.append((ic.idotp, ic.charge_states))
-
-        # Append final (0, 0) to be called by charge_idxs which are not in the charge group for a single loop iteration
-        dot_products.append((0, 0))
-        charges = list(set(np.concatenate([ic.charge_states for ic in undeuts
-                                          ])))
-        out = dict.fromkeys(charges)
-        charge_fits = dict.fromkeys(charges)
-        for charge in charges:
-            # print(charge)
-            # Create sublist of undeuts with single charge state and same shape as undeuts, use -1 for non-matches to retain shape of list
-            # [charge] == dot_products[i][1] ensures we only pick undeut_grounds from unconcatenated DataTensors, this saves trouble in undeut comparisons
-            charge_idxs = []
-            for i in range(len(dot_products)):
-                if [charge] == dot_products[i][1]:
-                    charge_idxs.append(i)
-                else:
-                    charge_idxs.append(-1)
-            # print(charge_idxs)
-            # print(np.asarray(dot_products)[charge_idxs])
-
-            # Select best fit of charge state, append to output
-            best = undeuts[charge_idxs[np.argmax(
-                np.asarray(dot_products)[charge_idxs][:, 0])]]
-
-            out[charge] = best
-            charge_fits[charge] = max(
-                np.asarray(dot_products)[charge_idxs][:, 0])
-
-        self.undeut_grounds = out
-        self.undeut_ground_dot_products = charge_fits
 
     def gaussian_function(self, x, H, A, x0, sigma):
         """Description of function.
@@ -696,56 +711,6 @@ class PathOptimizer:
         except:
             return 100
 
-    def precalculate_fit_to_ground(self,
-                                   all_tp_clusters=None,
-                                   undeut_grounds=None,
-                                   use_rtdt_recenter=False):
-        """Description of function.
-
-        Args:
-            arg_name (type): Description of input variable.
-
-        Returns:
-            out_name (type): Description of any returned objects.
-
-        """
-        if all_tp_clusters is None:
-            all_tp_clusters = self.all_tp_clusters
-        if undeut_grounds is None:
-            undeut_grounds = self.undeut_grounds
-
-        for timepoint in all_tp_clusters:
-            for ic in timepoint:
-
-                undeut = undeut_grounds[ic.charge_states[0]]
-
-                # rt_ground_err: retention time error in seconds
-                # dt_ground_err: drift time error in percentage of deviation * 100
-                if use_rtdt_recenter:
-                    # ic.dt_ground_err = abs(ic.dt_coms - undeut.drift_labels[len(undeut.drift_labels) // 2])
-                    # ic.rt_ground_err = abs(ic.rt_com - undeut.retention_labels[len(undeut.retention_labels) // 2])
-                    ic.dt_ground_err = 100 * abs(ic.dt_coms - len(undeut.drift_labels) / 2) * (
-                                undeut.drift_labels[1] - undeut.drift_labels[0]) / undeut.drift_labels[
-                        len(undeut.drift_labels) // 2]
-                    ic.rt_ground_err = abs(ic.rt_com - len(undeut.retention_labels) / 2) * (
-                                undeut.retention_labels[1] - undeut.retention_labels[0]) * 60
-                else:
-                    ic.dt_ground_err = 100* abs(ic.dt_coms - undeut.dt_coms) * (
-                            undeut.drift_labels[1] - undeut.drift_labels[0]) / undeut.drift_labels[
-                        len(undeut.drift_labels) // 2]
-                    ic.rt_ground_err = abs(ic.rt_com - undeut.rt_com) * (
-                            undeut.retention_labels[1] - undeut.retention_labels[0]) * 60
-                ic.auc_ground_err = ic.log_baseline_auc - undeut.log_baseline_auc
-                ic.dt_ground_fit = max(
-                    np.correlate(undeut.dt_norms[0], ic.dt_norms[0], mode='full'))
-                ic.rt_ground_fit = max(np.correlate(undeut.rt_norm, ic.rt_norm, mode='full'))
-
-                # these are pre calculated in the factor class
-                # ic.dt_gaussian_rmse = self.rmse_from_gaussian_fit(ic.dt_norms[0])
-                # ic.rt_gaussian_rmse = self.rmse_from_gaussian_fit(ic.rt_norm)
-
-                ic.log_baseline_auc_diff = ic.log_baseline_auc - undeut.log_baseline_auc
-
     def generate_sample_paths(self):
         """Description of function.
 
@@ -766,12 +731,12 @@ class PathOptimizer:
         self.sample_paths = [list(path) for path in set(sample_paths)]
 
     def clusters_close_to_line(
-        self,
-        start,
-        slope,
-        undeut_grounds=None,
-        prefiltered_ics=None,
-        max_peak_center=None,
+            self,
+            start,
+            slope,
+            undeut_grounds=None,
+            prefiltered_ics=None,
+            max_peak_center=None,
     ):
         """Description of function.
 
@@ -832,7 +797,7 @@ class PathOptimizer:
                                 sorted(
                                     prefiltered_ics[tp],
                                     key=lambda ic: ic.
-                                    baseline_integrated_mz_com,
+                                        baseline_integrated_mz_com,
                                 )[0])
                     else:
                         # No ics in tp, print message and append path[-1]
@@ -854,7 +819,7 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        # Main function of PO, returns the best-scoring HDX IC time-series 'path' of a set of bootstrapped paths.
+        # Main function of PO, returns the best-scoring HDX IC time-series "path" of a set of bootstrapped paths.
 
         if sample_paths is None:
             sample_paths = self.sample_paths
@@ -908,7 +873,7 @@ class PathOptimizer:
                           0.5) / np.mean([ic.rt_com for ic in self.winner if ic.rt_com is not None])
         self.dt_com_cv = (np.var([
             np.mean(ic.dt_coms) for ic in self.winner if ic.dt_coms is not None
-        ])**0.5) / np.mean([np.mean(ic.dt_coms) for ic in self.winner if ic.dt_coms is not None])
+        ]) ** 0.5) / np.mean([np.mean(ic.dt_coms) for ic in self.winner if ic.dt_coms is not None])
 
     def find_runners_multi(self):
         """Description of function.
@@ -920,7 +885,7 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        # sets self.runners atr. sorts 'runner-up' single substitutions for each tp by score, lower is better.
+        # sets self.runners atr. sorts "runner-up" single substitutions for each tp by score, lower is better.
         winner = self.winner
         prefiltered_ics = self.prefiltered_ics
 
@@ -958,7 +923,7 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        # Main function of PO, returns the best-scoring HDX IC time-series 'path' of a set of bootstrapped paths.
+        # Main function of PO, returns the best-scoring HDX IC time-series "path" of a set of bootstrapped paths.
 
         if sample_paths is None:
             sample_paths = self.sample_paths
@@ -1011,7 +976,7 @@ class PathOptimizer:
         self.dt_com_cv = (np.var([
             np.mean(ic.dt_coms) for ic in self.winner if ic.dt_coms is not None
         ]) ** 0.5) / np.mean([np.mean(ic.dt_coms) for ic in self.winner if ic.dt_coms is not None])
-        # Doesn't return, only sets PO attributes
+        # Doesn"t return, only sets PO attributes
 
     def find_runners_mono(self):
         """Description of function.
@@ -1023,7 +988,7 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        # sets self.runners atr. sorts 'runner-up' single substitutions for each tp by score, lower is better.
+        # sets self.runners atr. sorts "runner-up" single substitutions for each tp by score, lower is better.
         winner = self.winner
         prefiltered_ics = self.prefiltered_ics
 
@@ -1061,6 +1026,7 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
+
         # Sets IC.bokeh_tuple to be passed to bokeh for display through the HoverTool
         # Winners store the full values of the winning series scores
         # Runners store the differences between the winning scores and the score if they were to be substituted
@@ -1135,8 +1101,6 @@ class PathOptimizer:
                 winner_scores["nearest_neighbor_penalty"]
                 - substituted_scores["nearest_neighbor_penalty"],
 
-
-
                 sum([winner_scores[key] for key in winner_scores.keys()]) -
                 sum([
                     substituted_scores[key]
@@ -1176,8 +1140,8 @@ class PathOptimizer:
                 substituted_series[tp] = ic
                 substituted_scores = score_dict(substituted_series)
                 ic.bokeh_tuple = (ic.info_tuple +
-                                 (ic.rt_ground_err, ic.dt_ground_err) +
-                                 score_diff(winner_scores, substituted_scores))
+                                  (ic.rt_ground_err, ic.dt_ground_err) +
+                                  score_diff(winner_scores, substituted_scores))
 
     def filter_runners(self, n_runners=5):
         """Description of function.
@@ -1271,7 +1235,6 @@ class PathOptimizer:
     ### Scoring Functions for PathOptimizer ##################################################################################################################################################################################################
     ##########################################################################################################################################################################################################################################
 
-
     def delta_mz_rate(self, ics, timepoints=None):
         """Description of function.
 
@@ -1282,25 +1245,29 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-    # Two penalizations are computed: [0] if the ic is too fast (sd) and [1] if the ic goes backwards (back)
+        # Two penalizations are computed: [0] if the ic is too fast (sd) and [1] if the ic goes backwards (back)
 
         if timepoints is None:
             timepoints = self.timepoints
-        
+
         backward = 0
         forward = 0
-        previous_rate = max([(ics[1].baseline_integrated_mz_com - ics[0].baseline_integrated_mz_com) / (timepoints[1] - timepoints[0]), 0.1])
+
+        # Compute rate based on tp1-tp0
+        previous_rate = max(
+            [(ics[1].baseline_integrated_mz_com - ics[0].baseline_integrated_mz_com) / (timepoints[1] - timepoints[0]),
+             0.1])
 
         for i in range(2, len(ics)):
             # if previous_rate == 0: diagnostic for /0 error
             new_com = ics[i].baseline_integrated_mz_com
             if new_com < ics[
-                    i - 1].baseline_integrated_mz_com:  # if we went backwards
+                i - 1].baseline_integrated_mz_com:  # if we went backwards
                 backward += (100 *
-                       (new_com - ics[i - 1].baseline_integrated_mz_com)**2.0
-                      )  # penalize for going backwards
+                             (new_com - ics[i - 1].baseline_integrated_mz_com) ** 2.0
+                             )  # penalize for going backwards
                 new_com = (
-                    ics[i - 1].baseline_integrated_mz_com + 0.01
+                        ics[i - 1].baseline_integrated_mz_com + 0.01
                 )  # pretend we went forwards for calculating current rate
             if round(timepoints[i] - timepoints[i - 1], 2) <= 0.1:
                 continue
@@ -1308,12 +1275,13 @@ class PathOptimizer:
                 (new_com - ics[i - 1].baseline_integrated_mz_com), 0.1
             ]) / (timepoints[i] - timepoints[i - 1])
             if (current_rate / previous_rate) > 1.2:
-                forward += (current_rate / previous_rate)**2.0
+                forward += (current_rate / previous_rate) ** 2.0
             previous_rate = current_rate
-        return backward / len(ics), forward / len(ics)
+
+        return backward / (len(ics)-2), forward / (len(ics)-2)
 
     def dt_ground_rmse(
-        self, ics
+            self, ics
     ):
         """Description of function.
 
@@ -1324,8 +1292,8 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-      # rmse penalizes strong single outliers, score is minimized - lower is better
-        return math.sqrt(sum([ic.dt_ground_err**2 for ic in ics]) / len(ics))
+        # rmse penalizes strong single outliers, score is minimized - lower is better
+        return np.sqrt(np.mean([ic.dt_ground_err ** 2 for ic in ics]))
 
     def rt_ground_rmse(self, ics):
         """Description of function.
@@ -1337,7 +1305,7 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        return math.sqrt(sum([ic.rt_ground_err**2 for ic in ics]) / len(ics))
+        return np.sqrt(np.mean([ic.rt_ground_err ** 2 for ic in ics]))
 
     def dt_ground_fit(self, ics):
         """Description of function.
@@ -1349,7 +1317,7 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        return sum([(1.0 / ic.dt_ground_fit) for ic in ics])
+        return np.mean([(1.0 / ic.dt_ground_fit)**4 for ic in ics])
 
     def rt_ground_fit(self, ics):
         """Description of function.
@@ -1361,7 +1329,7 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        return sum([(1.0 / ic.rt_ground_fit) for ic in ics])
+        return np.mean([(1.0 / ic.rt_ground_fit)**4 for ic in ics])
 
     def baseline_peak_error(self, ics):  # Use RMSE instead TODO
         """Description of function.
@@ -1374,7 +1342,7 @@ class PathOptimizer:
 
         """
         # returns avg of peak_errors from baseline subtracted int_mz -> minimize score
-        return np.average([ic.baseline_peak_error for ic in ics])
+        return np.mean([ic.baseline_peak_error for ic in ics])
 
     def auc_ground_rmse(self, ics):
         """Description of function.
@@ -1386,9 +1354,9 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        return np.sqrt(np.mean([ic.auc_ground_err**2 for ic in ics]))
+        return np.sqrt(np.mean([ic.auc_ground_err ** 2 for ic in ics]))
 
-    def auc_rmse(self,ics):
+    def auc_rmse(self, ics):
         """Description of function.
 
         Args:
@@ -1398,11 +1366,8 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        sd = 0
-        for ic in ics:
-            sd += ic.log_baseline_auc_diff ** 2
-        return math.sqrt(np.mean(sd))
-    
+        return np.sqrt(np.mean([ic.log_baseline_auc_diff ** 2 for ic in ics]))
+
     def rmses_sum(self, ics):
         """Description of function.
 
@@ -1413,11 +1378,8 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        rmses = 0
-        for ic in ics:
-            rmses += 100*ic.baseline_integrated_mz_rmse
-        return rmses
-  
+        return 100 * np.mean([ic.baseline_integrated_mz_rmse for ic in ics])
+
     def int_mz_FWHM_rmse(self, ics):
         """Description of function.
 
@@ -1428,13 +1390,14 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        sd = 0
-        for i in range(2, len(ics)):
-            sd += (
-                ics[i].baseline_integrated_mz_FWHM - ics[i - 1].baseline_integrated_mz_FWHM
-            ) ** 2.0
- 
-        return math.sqrt(sd)
+        return np.sqrt(
+            np.sum(
+                [
+                    (ics[i].baseline_integrated_mz_FWHM - ics[i - 1].baseline_integrated_mz_FWHM) ** 2 for i in
+                    range(1, len(ics))
+                ]
+            ) / (len(ics) - 1)
+        )
 
     def nearest_neighbor_penalty(self, ics):
         """Description of function.
@@ -1446,27 +1409,32 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        nn_penalty = 0
-        for ic in ics:
-            nn_penalty += 100 * (
-                np.min([abs(1.0 - ic.nearest_neighbor_correlation), 0.5])
-            ) ** 2.0
-        return nn_penalty
+        # nn_penalty = 0
+        # for ic in ics:
+        #     nn_penalty += 100 * (
+        #         np.min([abs(1.0 - ic.nearest_neighbor_correlation), 0.5])
+        #     ) ** 2.0
 
+        return 100 * np.mean([
+            np.min(
+                [abs(1.0 - ic.nearest_neighbor_correlation), 0.2]) for ic in ics
+        ]
+        )
 
     # Eventually put defaults here as else statements
     def set_score_weights(
-        self,
-        baseline_peak_error_weight=None,
-        delta_mz_rate_backward_weight=None,
-        delta_mz_rate_forward_weight=None,
-        dt_ground_fit_weight=None,
-        rt_ground_rmse_weight=None,
-        dt_ground_rmse_weight=None,
-        auc_ground_rmse_weight=None,
-        rmses_sum_weight=None,
-        int_mz_FWHM_rmse_weight=None,
-        nearest_neighbor_penalty_weight=None
+            self,
+            baseline_peak_error_weight=None,
+            delta_mz_rate_backward_weight=None,
+            delta_mz_rate_forward_weight=None,
+            dt_ground_fit_weight=None,
+            rt_ground_rmse_weight=None,
+            dt_ground_rmse_weight=None,
+            auc_ground_rmse_weight=None,
+            rmses_sum_weight=None,
+            int_mz_FWHM_rmse_weight=None,
+            nearest_neighbor_penalty_weight=None,
+            rt_ground_fit_weight=None
     ):
         """Description of function.
 
@@ -1497,7 +1465,7 @@ class PathOptimizer:
         if rmses_sum_weight != None:
             self.rmses_sum_weight = rmses_sum_weight
         if int_mz_FWHM_rmse_weight != None:
-            self.int_mz_FWHM_rmse_weight  = int_mz_FWHM_rmse_weight
+            self.int_mz_FWHM_rmse_weight = int_mz_FWHM_rmse_weight
         if nearest_neighbor_penalty_weight != None:
             self.nearest_neighbor_penalty_weight = nearest_neighbor_penalty_weight
 
@@ -1511,10 +1479,11 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
+
+        delta_mz_rate_backward, delta_mz_rate_forward = self.delta_mz_rate(ics)
+
         return sum([
             self.baseline_peak_error_weight * self.baseline_peak_error(ics),
-            self.delta_mz_rate_backward_weight * self.delta_mz_rate(ics)[0],
-            self.delta_mz_rate_forward_weight * self.delta_mz_rate(ics)[1],
             self.dt_ground_rmse_weight * self.dt_ground_rmse(ics),
             self.dt_ground_fit_weight * self.dt_ground_fit(ics),
             self.rt_ground_fit_weight * self.rt_ground_fit(ics),
@@ -1522,7 +1491,9 @@ class PathOptimizer:
             self.auc_ground_rmse_weight * self.auc_ground_rmse(ics),
             self.rmses_sum_weight * self.rmses_sum(ics),
             self.int_mz_FWHM_rmse_weight * self.int_mz_FWHM_rmse(ics),
-            self.nearest_neighbor_penalty_weight * self.nearest_neighbor_penalty(ics)
+            self.nearest_neighbor_penalty_weight * self.nearest_neighbor_penalty(ics),
+            self.delta_mz_rate_backward_weight * delta_mz_rate_backward,
+            self.delta_mz_rate_forward_weight * delta_mz_rate_forward,
         ])
 
     def combo_score_mono(self, ics):
@@ -1545,8 +1516,7 @@ class PathOptimizer:
             self.rmses_sum_weight * self.rmses_sum(ics),
             self.nearest_neighbor_penalty_weight * self.nearest_neighbor_penalty(ics),
         ])
-           
-                                         
+
     def report_score_multi(self, ics):
         """Description of function.
 
@@ -1557,7 +1527,7 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-    # TODO Add additional scores to this function                                    
+        # TODO Add additional scores to this function
 
         return {
             "baseline_peak_error": (
@@ -1579,7 +1549,7 @@ class PathOptimizer:
             "auc_ground_rmse": (self.auc_ground_rmse_weight,
                                 self.auc_ground_rmse(ics)),
             "rmses_sum": (self.rmses_sum_weight,
-                                self.rmses_sum(ics)),
+                          self.rmses_sum(ics)),
             "int_mz_FWHM_rmse": (self.int_mz_FWHM_rmse_weight,
                                  self.int_mz_FWHM_rmse(ics)),
             "nearest_neighbor_penalty": (self.nearest_neighbor_penalty_weight,
@@ -1616,752 +1586,7 @@ class PathOptimizer:
             "rmses_sum": (self.rmses_sum_weight,
                           self.rmses_sum(ics)),
             "int_mz_FWHM_rmse": (self.int_mz_FWHM_rmse_weight,
-                          self.int_mz_FWHM_rmse(ics)),
+                                 self.int_mz_FWHM_rmse(ics)),
             "nearest_neighbor_penalty": (self.nearest_neighbor_penalty_weight,
-                                 self.nearest_neighbor_penalty(ics)),
+                                         self.nearest_neighbor_penalty(ics)),
         }
-
-    def bokeh_plot(self, outpath):
-        """Description of function.
-
-        Args:
-            arg_name (type): Description of input variable.
-
-        Returns:
-            out_name (type): Description of any returned objects.
-
-        """
-
-        def manual_cmap(value, low, high, palette):
-            """Description of function.
-
-            Args:
-                arg_name (type): Description of input variable.
-
-            Returns:
-                out_name (type): Description of any returned objects.
-
-            """
-            interval = (high - low) / len(palette)
-            n_colors = len(palette)
-            if value <= interval:
-                return palette[0]
-            else:
-                if value > (n_colors - 1) * interval:
-                    return palette[n_colors - 1]
-                else:
-                    for i in range(1, n_colors - 2):
-                        if value > interval * i and value <= interval * i + 1:
-                            return palette[i]
-
-        def winner_added_mass_plotter(source, tooltips, old_source=None):
-            """Description of function.
-
-            Args:
-                arg_name (type): Description of input variable.
-
-            Returns:
-                out_name (type): Description of any returned objects.
-
-            """
-            p = figure(
-                title=
-                "Winning Timeseries Mean Added-Mass, Colored by RTxDT Error in ms",
-                plot_height=400,
-                plot_width=1275,
-                background_fill_color="whitesmoke",
-                x_range=(-1,
-                         max([int(tp) for tp in source.data["timepoint"]]) + 1),
-                tooltips=tooltips)
-            err_mapper = linear_cmap(field_name="rtxdt_err",
-                                     palette=Spectral6,
-                                     low=0,
-                                     high=1)
-            color_bar = ColorBar(color_mapper=err_mapper["transform"],
-                                 width=10,
-                                 location=(0, 0))
-
-            # Get mean value from source and map value to Spectral6
-            mean_rtxdt_err = source.data["rtxdt_err"][0]
-            mean_color = manual_cmap(mean_rtxdt_err, 0, 2, Spectral6)
-            p.multi_line(
-                xs="whisker_x",
-                ys="whisker_y",
-                source=source,
-                line_color="black",
-                line_width=1.5,
-            )
-            p.line(
-                x="timepoint",
-                y="baseline_integrated_mz_com",
-                line_color=mean_color,
-                source=source,
-                line_width=3,
-            )
-            p.circle(
-                x="timepoint",
-                y="baseline_integrated_mz_com",
-                source=source,
-                line_color=err_mapper,
-                color=err_mapper,
-                fill_alpha=1,
-                size=12,
-            )
-
-            if old_source is not None:  # plot added-masses of all charges of protein
-                old_hover = HoverTool(
-                    tooltips=[
-                        ("Charge", "@charge"),
-                        ("Delta MZ Rate Score", "@delta_mz_rate"),
-                        (
-                            "Fit of Undeuterated Added-Mass Distribution to Theoretical Distribution",
-                            "@fit_to_theo_dist",
-                        ),
-                    ],
-                    names=["old"],
-                )
-
-                old_ics = Line(
-                    x="timepoint",
-                    y="added_mass_centroid",
-                    line_color="wheat",
-                    line_width=1.5,
-                )
-                old_renderer = p.add_glyph(old_source, old_ics, name="old")
-                p.add_tools(old_hover)
-
-            p.xaxis.axis_label = "Timepoint Index"
-            p.yaxis.axis_label = "Mean Added-Mass Units"
-            p.min_border_top = 100
-            p.min_border_left = 100
-            p.min_border_right = 100
-            p.add_layout(color_bar, "right")
-
-            return p
-
-        def winner_rtdt_plotter(source, tooltips):
-            """Description of function.
-
-            Args:
-                arg_name (type): Description of input variable.
-
-            Returns:
-                out_name (type): Description of any returned objects.
-
-            """
-            # set top margin
-            p = figure(
-                title=
-                "Winning Timeseries RT and DT Center-of-Mass Error to Undeuterated Isotopic Cluster",
-                plot_height=300,
-                plot_width=1275,
-                x_range=(-20, 20),
-                y_range=(-1, 1),
-                background_fill_color="whitesmoke",
-                tooltips=tooltips)
-            p.x(
-                x="rt_ground_err",
-                y="dt_ground_err",
-                source=source,
-                fill_alpha=1,
-                size=5,
-                color="black",
-            )
-            p.xaxis.axis_label = "RT Error (ms)"
-            p.yaxis.axis_label = "DT Error (ms)"
-            p.min_border_left = 100
-            p.min_border_right = 100
-            glyph = Text(x="rt_ground_err", y="dt_ground_err", text="timepoint")
-            p.add_glyph(source, glyph)
-            return p
-
-        def winner_plotter(source, i, tooltips, old_source=None):
-            """Description of function.
-
-            Args:
-                arg_name (type): Description of input variable.
-
-            Returns:
-                out_name (type): Description of any returned objects.
-
-            """
-            if i == max([int(tp) for tp in source.data["timepoint"]]):
-                p = figure(title="Timepoint " + str(i) +
-                           ": Winning Isotopic-Cluster Added-Mass Distribution",
-                           plot_height=400,
-                           plot_width=450,
-                           y_range=(0, 1),
-                           background_fill_color="whitesmoke")
-                p.min_border_bottom = 100
-            else:
-                p = figure(title="Timepoint " + str(i) +
-                           ": Winning Isotopic Cluster Added-Mass Distribution",
-                           plot_height=300,
-                           plot_width=450,
-                           y_range=(0, 1),
-                           background_fill_color="whitesmoke")
-            p.title.text_font_size = "8pt"
-            index_view = CDSView(source=source,
-                                 filters=[IndexFilter(indices=[i])])
-            p.multi_line(xs="int_mz_x",
-                         ys="int_mz_rescale",
-                         source=source,
-                         view=index_view,
-                         line_color="blue",
-                         line_width=1.5,
-                         hover_color="red")
-            p.add_tools(
-                HoverTool(show_arrow=False,
-                          line_policy="next",
-                          tooltips=tooltips))
-
-            # Have a figure by here, use glyph plotting from here
-            """
-            new_hover = HoverTool(tooltips=tooltips, names=["new"])
-            index_view = CDSView(source=source, filters=[IndexFilter(indices=[i])])
-            new_ics = MultiLine(
-                xs="int_mz_x", ys="int_mz_rescale", line_color="blue", line_width=1.5
-            )
-            new_ics_hover = MultiLine(
-                xs="int_mz_x", ys="int_mz_rescale", line_color="red", line_width=1.5
-            )
-            new_renderer = p.add_glyph(
-                source, new_ics, view=index_view, name="new", hover_glyph=new_ics_hover
-            )
-            p.add_tools(new_hover)
-            """
-
-            if old_source is not None:  # plot ics matching the timepoint from old data
-                old_hover = HoverTool(
-                    tooltips=[
-                        ("Charge", "@charge"),
-                        ("Added-Mass Distribution Centroid", "@"),
-                        ("Width", "@width"),
-                    ],
-                    names=["old"],
-                )
-                old_ics = MultiLine(
-                    xs="int_mz_xs",
-                    ys="int_mz_rescale",
-                    line_color="wheat",
-                    line_width=1.5,
-                )
-                old_ics_hover = MultiLine(
-                    xs="int_mz_xs",
-                    ys="int_mz_rescale",
-                    line_color="red",
-                    line_width=1.5,
-                )
-                old_tp_view = CDSView(
-                    source=old_source,
-                    filters=[
-                        GroupFilter(column_name="type", group="ic"),
-                        GroupFilter(column_name="timepoint", group=str(i)),
-                    ],
-                )
-                old_renderer = p.add_glyph(
-                    old_source,
-                    old_ics,
-                    view=old_tp_view,
-                    hover_glyph=old_ics_hover,
-                    name="old",
-                )
-                p.add_tools(old_hover)
-
-            p.xaxis.axis_label = "Added-Mass Units"
-            p.yaxis.axis_label = "Relative Intensity"
-            p.min_border_left = 100
-            return p
-
-        def runner_plotter(source, i, tooltips):
-            """Description of function.
-
-            Args:
-                arg_name (type): Description of input variable.
-
-            Returns:
-                out_name (type): Description of any returned objects.
-
-            """
-            if i == max([int(tp) for tp in source.data["timepoint"]]):
-                p = figure(
-                    title="Runner-Up Isotopic Cluster Added-Mass Distributions",
-                    plot_height=400,
-                    plot_width=375,
-                    y_range=(0, 1),
-                    background_fill_color="whitesmoke")
-                p.min_border_bottom = 100
-            else:
-                p = figure(
-                    title="Runner-Up Isotopic Cluster Added-Mass Distributions",
-                    plot_height=300,
-                    plot_width=375,
-                    y_range=(0, 1),
-                    background_fill_color="whitesmoke",
-                    tools="pan,wheel_zoom,hover,reset,help",
-                    tooltips=tooltips)
-            p.title.text_font_size = "8pt"
-            runner_timepoint_view = CDSView(
-                source=source,
-                filters=[GroupFilter(column_name="timepoint", group=str(i))],
-            )
-            p.multi_line(
-                xs="int_mz_x",
-                ys="int_mz_rescale",
-                source=source,
-                view=runner_timepoint_view,
-                line_color="blue",
-                alpha=0.5,
-                hover_color="red",
-                hover_alpha=1,
-                line_width=1.5,
-            )
-            p.add_tools(
-                HoverTool(show_arrow=False,
-                          line_policy="next",
-                          tooltips=tooltips))
-            p.xaxis.axis_label = "Added-Mass Units"
-            p.yaxis.axis_label = "Relative Intensity"
-            return p
-
-        def rtdt_plotter(source, i, tooltips):
-            """Description of function.
-
-            Args:
-                arg_name (type): Description of input variable.
-
-            Returns:
-                out_name (type): Description of any returned objects.
-
-            """
-            if i == max([int(tp) for tp in source.data["timepoint"]]):
-                p = figure(title="RT and DT Error from Undeuterated",
-                           plot_height=400,
-                           plot_width=450,
-                           background_fill_color="whitesmoke",
-                           x_range=(-30, 30),
-                           y_range=(-2, 2),
-                           tooltips=tooltips)
-                p.min_border_bottom = 100
-            else:
-                p = figure(
-                    title=
-                    "Retention and Drift Center-of-Mass Error to Undeuterated",
-                    plot_height=300,
-                    plot_width=450,
-                    background_fill_color="whitesmoke",
-                    x_range=(-30, 30),
-                    y_range=(-2, 2),
-                    tooltips=tooltips)
-            p.title.text_font_size = "8pt"
-            timepoint_runner_view = CDSView(
-                source=source,
-                filters=[
-                    GroupFilter(column_name="timepoint", group=str(i)),
-                    GroupFilter(column_name="winner_or_runner", group=str(1)),
-                ],
-            )
-            p.circle(
-                x="rt_ground_err",
-                y="dt_ground_err",
-                source=source,
-                view=timepoint_runner_view,
-                line_color="blue",
-                hover_color="red",
-                alpha=0.25,
-                hover_alpha=1,
-                size=5,
-            )
-            timepoint_winner_view = CDSView(
-                source=source,
-                filters=[
-                    GroupFilter(column_name="timepoint", group=str(i)),
-                    GroupFilter(column_name="winner_or_runner", group=str(0)),
-                ],
-            )
-            p.circle(
-                x="rt_ground_err",
-                y="dt_ground_err",
-                source=source,
-                view=timepoint_winner_view,
-                line_color="black",
-                fill_color="black",
-                hover_color="red",
-                size=5,
-            )
-            p.xaxis.axis_label = "RT COM Error from Ground (ms)"
-            p.yaxis.axis_label = "DT COM Error from Ground (ms)"
-            p.min_border_right = 100
-            return p
-
-        output_file(outpath, mode="inline")
-
-        # Start old_data source creation
-        if self.old_data_dir is not None:
-
-            # create bokeh datasource from gabe's hx_fits
-
-            # divide source by data-types: single-tp ic-level data and charge-state time-series level data
-            # old_charges will be used for plotting added-mass and time-series stats
-
-            # init dicts with columns for plotting
-            old_ics = dict.fromkeys([
-                "timepoint",
-                "added_mass_centroid",
-                "added_mass_width",
-                "int_mz_ys",
-                "int_mz_xs",
-                "type",
-                "int_mz_rescale",
-            ])
-            for key in old_ics.keys():
-                old_ics[key] = []
-
-            old_charges = dict.fromkeys([
-                "major_species_integrated_intensities",
-                "centroid",
-                "major_species_widths",
-                "fit_to_theo_dist",
-                "delta_mz_rate",
-                "added_mass_xs",
-                "lowers",
-                "uppers",
-                "type",
-                "charge",
-            ])
-            for key in old_charges.keys():
-                old_charges[key] = []
-
-            # set switch to pull values that only need to be computed once, append each old_file's values to old_data{}
-            old_switch = None
-            for ts in self.old_data:
-
-                int_mz_xs = list(
-                    range(len(ts["major_species_integrated_intensities"][0])))
-                timepoints = list(range(len(ts["major_species_centroid"])))
-                print("old_data timepoints: " + str(timepoints))
-
-                # Add line to old_charges for each charge file
-                for key in [
-                        "major_species_integrated_intensities",
-                        "centroid",
-                        "fit_to_theo_dist",
-                        "delta_mz_rate",
-                        "charge",
-                ]:
-                    old_charges[key].append(ts[key])
-
-                old_charges["added_mass_xs"].append(timepoints)
-                old_charges["major_species_widths"].append([
-                    len(np.nonzero(ic)[0])
-                    for ic in ts["major_species_integrated_intensities"]
-                ])
-                old_charges["lowers"].append([
-                    ts["major_species_centroid"][tp] -
-                    (ts["major_species_widths"][tp] / 2) for tp in timepoints
-                ])
-                old_charges["uppers"].append([
-                    ts["major_species_centroid"][tp] +
-                    (ts["major_species_widths"][tp] / 2) for tp in timepoints
-                ])
-                old_charges["type"].append("ts")
-
-                # Add line to old_ics for each hdx timepoint in each charge file
-                for tp in timepoints:
-                    if tp < 3:
-                        old_ics["timepoint"].append(str(0))
-                    else:
-                        old_ics["timepoint"].append(str(tp - 2))
-                    old_ics["added_mass_centroid"].append(
-                        ts["major_species_centroid"][tp])
-                    old_ics["added_mass_width"].append(
-                        len(
-                            np.nonzero(
-                                ts["major_species_integrated_intensities"][tp])
-                            [0]))
-                    old_ics["int_mz_ys"].append(
-                        ts["major_species_integrated_intensities"][tp])
-                    old_ics["int_mz_rescale"].append(
-                        ts["major_species_integrated_intensities"][tp] /
-                        max(ts["major_species_integrated_intensities"][tp]))
-                    old_ics["int_mz_xs"].append(int_mz_xs)
-                    old_ics["type"].append("ic")
-
-            ts_df = pd.DataFrame.from_dict(
-                old_charges
-            )  # len = number of identified charge states for given protein name
-            ic_df = pd.DataFrame.from_dict(
-                old_ics)  # len = n_charges * n_hdx_timepoints
-
-            self.old_undeut_ground_dot_products = dict.fromkeys(
-                ts_df["charge"].values)
-            for charge in self.old_undeut_ground_dot_products.keys():
-                self.old_undeut_ground_dot_products[charge] = ts_df.loc[
-                    ts_df["charge"] == charge]["fit_to_theo_dist"].values
-
-            old_df = pd.concat([ts_df, ic_df])
-            self.old_df = old_df
-            # make cds from df
-            gds = ColumnDataSource(old_df)
-
-        else:
-            old_df = pd.DataFrame()
-
-        # End old_data source creation
-
-        # TODO: Eventually all the info tuples should be dicts for ease of use in pandas and bokeh, change this style of source construction to dicts of lists
-        # This has also just become a clusterfuck and needs to be cleaned up
-        winner_data = []
-        runner_data = []
-        all_data = []
-
-        winner_rtxdt_rmse = np.sqrt(
-            np.mean([((ic.bokeh_tuple[18] * 0.07) * ic.bokeh_tuple[19])**2
-                     for ic in self.winner]))
-        for tp in range(len(self.winner)):
-            edit_buffer = copy.copy(self.winner[tp].bokeh_tuple)
-            edit_buffer = (edit_buffer[:18] + (edit_buffer[18] * 0.07,) +
-                           edit_buffer[19:] + (
-                               str(tp),
-                               np.nonzero(edit_buffer[17])[0][-1],
-                               np.nonzero(edit_buffer[17])[0][0],
-                               "0",
-                               ((edit_buffer[18] * 0.07) * edit_buffer[19]),
-                               winner_rtxdt_rmse,
-                               np.asarray([tp, tp]),
-                               np.asarray([
-                                   np.nonzero(edit_buffer[17])[0][0],
-                                   np.nonzero(edit_buffer[17])[0][-1],
-                               ]),
-                               edit_buffer[17] / max(edit_buffer[17]),
-                           ))  # 0.07 is adjustment from bins to ms
-            winner_data.append(edit_buffer)
-            all_data.append(edit_buffer)
-
-        for tp in range(len(self.filtered_runners)):
-            for ic in self.filtered_runners[tp]:
-                edit_buffer = copy.copy(ic.bokeh_tuple)
-                edit_buffer = (edit_buffer[:18] + (edit_buffer[18] * 0.07,) +
-                               edit_buffer[19:] + (
-                                   str(tp),
-                                   np.nonzero(edit_buffer[17])[0][-1],
-                                   np.nonzero(edit_buffer[17])[0][0],
-                                   "1",
-                                   ((edit_buffer[18] * 0.07) * edit_buffer[19]),
-                                   "NA",
-                                   np.asarray([tp, tp]),
-                                   np.asarray([
-                                       np.nonzero(edit_buffer[17])[0][0],
-                                       np.nonzero(edit_buffer[17])[0][-1],
-                                   ]),
-                                   edit_buffer[17] / max(edit_buffer[17]),
-                               ))  # 0.07 is adjustment from bins to ms
-                runner_data.append(edit_buffer)
-                all_data.append(edit_buffer)
-
-        columns = [
-            "source_file",
-            "tensor_idx",
-            "n_factors",
-            "factor_idx",
-            "cluster_idx",
-            "charge_states",
-            "n_concatenated",
-            "mz_bin_low",  # from factor bins
-            "mz_bin_high",  # from factor bins
-            "baseline_subtracted_area_under_curve",
-            "baseline_subtracted_grate_sum",
-            "baseline_subtracted_peak_error",
-            "baseline_integrated_mz_com",
-            "abs_mz_com",
-            "rt",
-            "dt",
-            "int_mz_x",
-            "int_mz_y",
-            "rt_ground_err",
-            "dt_ground_err",
-            "delta_mz_rate",
-            "dt_ground_rmse_score",
-            "rt_ground_rmse_score",
-            "dt_ground_fit",
-            "rt_ground_fit",
-            "baseline_peak_error",
-            "auc_ground_rmse",
-            "net_score_difference",
-            "timepoint",
-            "upper_added_mass",
-            "lower_added_mass",
-            "winner_or_runner",
-            "rtxdt_err",
-            "rtxdt_rmse",
-            "whisker_x",
-            "whisker_y",
-            "int_mz_rescale",
-        ]
-
-        winner_frame = pd.DataFrame(winner_data, columns=columns)
-        runner_frame = pd.DataFrame(runner_data, columns=columns)
-        all_frame = pd.DataFrame(all_data, columns=columns)
-
-        wds = ColumnDataSource(winner_frame)
-        rds = ColumnDataSource(runner_frame)
-        ads = ColumnDataSource(all_frame)
-
-        max_intensity = max(
-            [max(int_mz) for int_mz in all_frame["int_mz_y"].values])
-
-        # HoverToolTips, determines information to be displayed when hovering over a glyph
-        winner_tts = [
-            ("Tensor Index", "@tensor_idx"),
-            ("Charge State(s)", "@charge_states"),
-            ("Timepoint", "@timepoint"),
-            ("Peak Error", "@baseline_subtracted_peak_error"),
-            ("Center of Mass in Added-Mass_Units", "@baseline_integrated_mz_com"),
-            ("Center of Mass in M/Z", "@abs_mz_com"),
-            ("Retention Time COM Error to Ground", "@rt_ground_err"),
-            ("Drift Time COM Error to Ground", "@dt_ground_err"),
-            ("delta_mz_rate", "@delta_mz_rate"),
-            ("dt_ground_rmse", "@dt_ground_rmse_score"),
-            ("rt_ground_rmse", "@rt_ground_rmse_score"),
-            ("dt_ground_fit", "@dt_ground_fit"),
-            ("rt_ground_fit", "@rt_ground_fit"),
-            ("baseline_peak_error", "@baseline_peak_error"),
-            ("auc_ground_rmse", "@auc_ground_rmse"),
-            ("Δ scores", "positive is better"),
-            ("Δ_net_score", "@net_score_difference"),
-        ]
-
-        runner_tts = [
-            ("Tensor Index", "@tensor_idx"),
-            ("Charge State(s)", "@charge_states"),
-            ("Timepoint", "@timepoint"),
-            ("Peak Error", "@baseline_subtracted_peak_error"),
-            ("Center of Mass in Added-Mass_Units", "@baseline_integrated_mz_com"),
-            ("Center of Mass in M/Z", "@abs_mz_com"),
-            ("Retention Time COM Error to Ground", "@rt_ground_err"),
-            ("Drift Time COM Error to Ground", "@dt_ground_err"),
-            ("Δ scores", "positive is better"),
-            ("Δ int_mz_std_err", "@int_mz_std_err"),
-            ("Δ delta_mz_rate", "@delta_mz_rate"),
-            ("Δ dt_ground_rmse", "@dt_ground_rmse_score"),
-            ("Δ rt_ground_rmse", "@rt_ground_rmse_score"),
-            ("Δ dt_ground_fit", "@dt_ground_fit"),
-            ("Δ rt_ground_fit", "@rt_ground_fit"),
-            ("Δ baseline_peak_error", "@baseline_peak_error"),
-            ("Δ auc_ground_rmse", "@auc_ground_rmse"),
-            ("Δ_net_score", "@net_score_difference"),
-        ]
-
-        mass_added_tts = [
-            ("Timepoint", "@timepoint"),
-            ("Charge State(s)", "@charge_states"),
-            ("RT COM Error (ms)", "@rt_ground_err"),
-            ("DT COM Error (ms)", "@dt_ground_err"),
-            ("DTxRT Error", "@rtxdt_err"),
-        ]
-
-        winner_rtdt_tts = [
-            ("Timepoint", "@timepoint"),
-            ("Charge State(s)", "@charge_states"),
-            ("RT COM Error (ms)", "@rt_ground_err"),
-            ("DT COM Error (ms)", "@dt_ground_err"),
-        ]
-
-        n_timepoints = len(self.winner)
-        # print("internal n_timepoints: "+str(n_timepoints))
-        if self.old_data_dir is not None:
-            winner_plots = [
-                winner_plotter(wds, i, winner_tts, old_source=gds)
-                for i in range(n_timepoints)
-            ]
-
-        else:
-            winner_plots = [
-                winner_plotter(wds, i, winner_tts) for i in range(n_timepoints)
-            ]
-
-        runner_plots = [
-            runner_plotter(rds, i, runner_tts) for i in range(n_timepoints)
-        ]
-        rtdt_plots = [
-            rtdt_plotter(ads, i, runner_tts) for i in range(n_timepoints)
-        ]
-
-        rows = []
-        if self.old_data_dir is not None:
-            rows.append(
-                gridplot(
-                    [
-                        winner_added_mass_plotter(
-                            wds, mass_added_tts, old_source=gds)
-                    ],
-                    sizing_mode="fixed",
-                    toolbar_location="left",
-                    ncols=1,
-                ))
-
-        else:
-            rows.append(
-                gridplot(
-                    [winner_added_mass_plotter(wds, mass_added_tts)],
-                    sizing_mode="fixed",
-                    toolbar_location="left",
-                    ncols=1,
-                ))
-
-        rows.append(
-            gridplot(
-                [winner_rtdt_plotter(wds, winner_rtdt_tts)],
-                sizing_mode="fixed",
-                toolbar_location="left",
-                ncols=1,
-            ))
-
-        [
-            rows.append(
-                gridplot(
-                    [winner_plots[i], runner_plots[i], rtdt_plots[i]],
-                    sizing_mode="fixed",
-                    toolbar_location="left",
-                    ncols=3,
-                )) for i in range(n_timepoints)
-        ]
-
-        if self.old_files is not None:
-            final = column(
-                Div(text=
-                    """<h1 style='margin-left: 300px'>HDX Timeseries Plot for """
-                    + self.name + """</h1>"""),
-                Div(text=
-                    "<h3 style='margin-left: 300px'>New Undeuterated-Ground Fits to Theoretical MZ Distribution: </h3>"
-                   ),
-                Div(text="<h3 style='margin-left: 300px'>" +
-                    str(self.undeut_ground_dot_products) + "</h3>"),
-                Div(text=
-                    "<h3 style='margin-left: 300px'>Old Undeuterated-Ground Fits to Theoretical MZ Distribution: </h3>"
-                   ),
-                Div(text="<h3 style='margin-left: 300px'>" +
-                    str(self.old_undeut_ground_dot_products) + "</h3>"),
-                gridplot(rows,
-                         sizing_mode="fixed",
-                         toolbar_location=None,
-                         ncols=1),
-            )
-
-        else:
-            final = column(
-                Div(text=
-                    """<h1 style='margin-left: 300px'>HDX Timeseries Plot for """
-                    + self.name + """</h1>"""),
-                Div(text=
-                    "<h3 style='margin-left: 300px'>Undeuterated-Ground Fits to Theoretical MZ Distribution: </h3>"
-                   ),
-                Div(text="<h3 style='margin-left: 300px'>" +
-                    str(self.undeut_ground_dot_products) + "</h3>"),
-                gridplot(rows,
-                         sizing_mode="fixed",
-                         toolbar_location=None,
-                         ncols=1),
-            )
-
-        save(final)
