@@ -907,17 +907,14 @@ def gen_factors_with_corr_check(input_grid,
 
     pmem('Factorize: %s # Factors (Start)' % num_factors_guess)
 
-<<<<<<< HEAD
     while max_num_factors >= 2 and last_corr_check > corr_threshold:
 
         max_num_factors -= 1
 
         pmem('Factorize: %s # Factors (Start)' % max_num_factors)
 
-        factor_output = factorize_tensor(input_grid=input_grid,
-=======
+#        factor_output = factorize_tensor(input_grid=input_grid,
     factor_output_tmp = factorize_tensor(input_grid=input_grid,
->>>>>>> 7a6e907d6872f996ee3380c8c6608ebbd5dc4f2f
                                          init_method=init_method,
                                          factors_0=factors_0,
                                          factor_rank=num_factors_guess,
