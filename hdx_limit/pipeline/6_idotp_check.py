@@ -241,7 +241,7 @@ def main(library_info_path,
     library_info = pd.read_json(library_info_path)
     prot_name = undeut_tensor_path_list[0].split("/")[-2] # Name from protein directory.
     prot_charge = int([item[6:] for item in undeut_tensor_path_list[0].split("/")[-1].split("_") if "charge" in item][0]) # Finds by keyword and strip text.
-    my_info = library_info.loc[(library_info["name"]==prot_name) & (library_info["charge"]==prot_charge)]
+    my_info = library_info.loc[(library_info["name_rt-group"]==prot_name) & (library_info["charge"]==prot_charge)]
     prot_seq = my_info["sequence"].values[0]
     print("Protein Sequence: "+prot_seq)
     prot_cum_peak_gaps = cum_peak_gaps_from_sequence(prot_seq)
