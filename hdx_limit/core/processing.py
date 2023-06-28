@@ -334,7 +334,7 @@ class PathOptimizer:
         rt_error_rmse (float): Root-mean-squared error of rt centers of mass from undeuterated. Deprecated.
         dt_error_rmse (float): Root-mean-squared error of dt centers of mass from undeuterated. Deprecated.
         prefiltered_ics (list of lists of IsotopeClusters): IsotopeClusters for all timepoints after prefiltering.
-    
+
     """
 
     def __init__(self,
@@ -352,11 +352,11 @@ class PathOptimizer:
         """Initializes an instance of PathOptimizer, performs preprocessing of inputs so the returned object is ready for optimization.
 
         The __init__ method sets instance attributes before selecting an undeuterated signal for each charge state of the rt-group being
-        included in the PathOptimizer object. These "ground truth" undeuterated signals are selected based on their similarity to the 
-        theoretical undeuterated isotope distribution for the protein"s sequence. Deuterated signals are scored by their multidimensional 
+        included in the PathOptimizer object. These "ground truth" undeuterated signals are selected based on their similarity to the
+        theoretical undeuterated isotope distribution for the protein"s sequence. Deuterated signals are scored by their multidimensional
         agreement with these undeuterated signals and those scores are saved for use in optimization. A weak pareto dominance filter can
-        optionally be applied to IsotopeClusters of the same timepoint before creating a set of bootstrapped mass-addition timeseries based 
-        on plausible deuteration curves populated by signals that most closely match the mass uptake at each timepoint. The bootstrapped 
+        optionally be applied to IsotopeClusters of the same timepoint before creating a set of bootstrapped mass-addition timeseries based
+        on plausible deuteration curves populated by signals that most closely match the mass uptake at each timepoint. The bootstrapped
         timeseries are independently optimized with a greedy optimization scheme that makes the single best replacement for the timeseries
         at each iteration based on a set of weighted score terms. The optimization ends when no improvement can be made with any single
         substitution, and the best scoring timeseries overall is kept as the winner.
@@ -369,20 +369,20 @@ class PathOptimizer:
                                 and a key for each integer in that list corresponding to lists of hdx-timepoint replicate filepaths.
             n_undeut_runs (int): Number of undeuterated replicates.
             prefilter (int): Indicates wether or not to filter all_tp_clusters before optimization, 1 will prefilter, 0 will not. Default 1.
-            
+
         """
         # Set score weights
-        self.baseline_peak_error_weight = 0.5 #10  # 100 before
-        self.delta_mz_rate_backward_weight = 0.1  #0.165
-        self.delta_mz_rate_forward_weight = 0.1 #0.162
-        self.dt_ground_rmse_weight = 5 #7.721
-        self.dt_ground_fit_weight = 5 #13.277
-        self.rt_ground_fit_weight = 5 #1.304
-        self.rt_ground_rmse_weight = 1 #3.859
-        self.auc_ground_rmse_weight = 1 #5.045
-        self.rmses_sum_weight = 0.25 #0.242
-        self.int_mz_FWHM_rmse_weight = 0.1 #0.072
-        self.nearest_neighbor_penalty_weight = 0.1 #0.151
+        self.baseline_peak_error_weight = 0.5  # 10  # 100 before
+        self.delta_mz_rate_backward_weight = 0.1  # 0.165
+        self.delta_mz_rate_forward_weight = 0.1  # 0.162
+        self.dt_ground_rmse_weight = 5  # 7.721
+        self.dt_ground_fit_weight = 5  # 13.277
+        self.rt_ground_fit_weight = 5  # 1.304
+        self.rt_ground_rmse_weight = 1  # 3.859
+        self.auc_ground_rmse_weight = 1  # 5.045
+        self.rmses_sum_weight = 0.25  # 0.242
+        self.int_mz_FWHM_rmse_weight = 0.1  # 0.072
+        self.nearest_neighbor_penalty_weight = 0.1  # 0.151
 
         self.name = name
         self.all_tp_clusters = all_tp_clusters
@@ -390,27 +390,6 @@ class PathOptimizer:
         self.timepoints = timepoints
         self.n_undeut_runs = n_undeut_runs
         self.thresholds = thresholds
-<<<<<<< HEAD
-        self.undeuts = [ic for ic in self.all_tp_clusters[0] if round(ic.idotp,2) >= self.thresholds['idotp_cutoff']]
-        if len(self.undeuts) == 0:
-            print('Error %s: no undeuts with idotp > %.2f was found!'%(self.name, self.thresholds['idotp_cutoff']))
-            sys.exit()
-        self.first_center = self.undeuts[0].baseline_integrated_mz_com
-
-        if use_rtdt_recenter:
-            self.max_peak_center = len(
-                self.library_info.loc[self.library_info["name_recentered"] ==
-                                      self.name]["sequence"].values[0]
-            ) - self.library_info.loc[self.library_info["name_recentered"] ==
-                                      self.name]["sequence"].values[0][2:].count('P') - 2 + self.first_center
-        else:
-            self.max_peak_center = len(
-                self.library_info.loc[self.library_info["name"] ==
-                                      self.name]["sequence"].values[0]
-            ) - self.library_info.loc[self.library_info["name"] ==
-                                      self.name]["sequence"].values[0][2:].count('P') - 2 + self.first_center
-=======
->>>>>>> 7a6e907d6872f996ee3380c8c6608ebbd5dc4f2f
 
         self.old_data_dir = old_data_dir
         self.old_files = None
@@ -437,12 +416,6 @@ class PathOptimizer:
 
         self.gather_old_data()
 
-<<<<<<< HEAD
-        self.select_undeuterated(use_rtdt_recenter=use_rtdt_recenter)
-        self.precalculate_fit_to_ground(use_rtdt_recenter=use_rtdt_recenter)
-        self.prefiltered_ics = self.all_tp_clusters.copy()
-=======
->>>>>>> 7a6e907d6872f996ee3380c8c6608ebbd5dc4f2f
         if user_prefilter:
             self.filters_from_user()
             if pareto_prefilter and len(self.prefiltered_ics) >= self.thresholds["min_timepoints"]:
@@ -563,18 +536,16 @@ class PathOptimizer:
                 ic.log_baseline_auc_diff = ic.log_baseline_auc - undeut.log_baseline_auc
 
     def filters_from_user(self):
-        """Purpose: function will filter out isotopic clusters with low quality attributes as defined in configfile
-        Args:
-            No input args required
-        Returns:
-            an updated list of timepoints (self.timepoints) and a list of prefiltered isotopic clusters
-            (self.prefiltered)
-        """
-<<<<<<< HEAD
-        undeut_list = [ic for ic in self.prefiltered_ics[0] if round(ic.idotp,2) >= self.thresholds['idotp_cutoff']]
-=======
+        """Description of function.
 
->>>>>>> 7a6e907d6872f996ee3380c8c6608ebbd5dc4f2f
+        Args:
+        arg_name (type): Description of input variable.
+
+        Returns:
+        out_name (type): Description of any returned objects.
+
+        """
+
         filtered_atc = [
             [ic for ic in ics if (ic.baseline_peak_error <= self.thresholds["baseline_peak_error"] and
                                   ic.dt_ground_err <= self.thresholds["dt_ground_err"] and
@@ -584,13 +555,6 @@ class PathOptimizer:
                                   ic.baseline_integrated_mz_rmse <= self.thresholds[
                                       "baseline_integrated_rmse"] and
                                   ic.baseline_integrated_mz_FWHM >= self.thresholds[
-<<<<<<< HEAD
-                                      'baseline_integrated_FWHM'] and
-                                  ic.nearest_neighbor_correlation >= self.thresholds['nearest_neighbor_correlation']
-                                  and self.max_peak_center >= ic.baseline_integrated_mz_com >= 0.99*self.first_center)
-             ] for ics in self.prefiltered_ics[1:] if ics[0].timepoint_idx in self.timepoints]
-        filtered_atc = np.array([undeut_list] + filtered_atc)
-=======
                                       "baseline_integrated_FWHM"] and
                                   ic.nearest_neighbor_correlation >= self.thresholds["nearest_neighbor_correlation"] and
                                   ic.charge_states[0] in self.undeut_grounds
@@ -598,19 +562,18 @@ class PathOptimizer:
              ] for ics in self.prefiltered_ics[1:]
         ]  # if ics[0].timepoint_idx in self.timepoints] # TODO not sure the impact of removing this statement
         filtered_atc = np.array([self.undeuts] + filtered_atc, dtype=object)
->>>>>>> 7a6e907d6872f996ee3380c8c6608ebbd5dc4f2f
         filtered_indexes = np.array([True if len(ics) > 0 else False for ics in filtered_atc])
         self.prefiltered_ics = list(filtered_atc[filtered_indexes])
         self.timepoints = list(np.array(self.timepoints)[filtered_indexes])
 
     def weak_pareto_dom_filter(self):
-        """Purpose: for each isotopic cluster with same center of mass, function will filter out isotopic clusters
-        which have all attributes worse than any other isotopic clusters in the set.
+        """Description of function.
 
         Args:
-             No input args required
+            arg_name (type): Description of input variable.
+
         Returns:
-             an updated list isotopic clusters passing weak_parato_dom_filter
+            out_name (type): Description of any returned objects.
 
         """
         self.prefiltered_ics[0] = [self.undeut_grounds[charge] for charge in self.undeut_grounds]
@@ -797,7 +760,7 @@ class PathOptimizer:
                                 sorted(
                                     prefiltered_ics[tp],
                                     key=lambda ic: ic.
-                                        baseline_integrated_mz_com,
+                                    baseline_integrated_mz_com,
                                 )[0])
                     else:
                         # No ics in tp, print message and append path[-1]
@@ -1198,13 +1161,13 @@ class PathOptimizer:
     def calculate_empirical_isotope_dist_from_integrated_mz(self, integrated_mz_array,
                                                             n_isotopes=None):
         """Calculate the isotope distribution from the integrated mz intensitities.
-        
-        Args: 
+
+        Args:
             integrated_mz_values (Numpy ndarray): array of integrated mz intensitites
             n_isotopes (int): number of isotopes to include. If none, includes all
-        Returns: 
+        Returns:
             isotope_dist (Numpy ndarray): isotope distribution with magnitude normalized to 1
-        
+
         """
         isotope_dist = integrated_mz_array / max(integrated_mz_array)
         if n_isotopes:
@@ -1213,7 +1176,7 @@ class PathOptimizer:
 
     def calculate_isotope_dist_dot_product(self, sequence, undeut_integrated_mz_array):
         """Calculate dot product between theoretical isotope distribution from the sequence and experimental integrated mz array.
-        
+
         Args:
             sequence (string): single-letter sequence of the library protein-of-interest
             undeut_integrated_mz_array (Numpy ndarray): observed integrated mz array from an undeuterated .mzML
@@ -1278,7 +1241,7 @@ class PathOptimizer:
                 forward += (current_rate / previous_rate) ** 2.0
             previous_rate = current_rate
 
-        return backward / (len(ics)-2), forward / (len(ics)-2)
+        return backward / (len(ics) - 2), forward / (len(ics) - 2)
 
     def dt_ground_rmse(
             self, ics
@@ -1317,7 +1280,7 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        return np.mean([(1.0 / ic.dt_ground_fit)**4 for ic in ics])
+        return np.mean([(1.0 / ic.dt_ground_fit) ** 4 for ic in ics])
 
     def rt_ground_fit(self, ics):
         """Description of function.
@@ -1329,7 +1292,7 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
-        return np.mean([(1.0 / ic.rt_ground_fit)**4 for ic in ics])
+        return np.mean([(1.0 / ic.rt_ground_fit) ** 4 for ic in ics])
 
     def baseline_peak_error(self, ics):  # Use RMSE instead TODO
         """Description of function.
