@@ -81,9 +81,9 @@ def main(configfile,
 
     # Makes nested dictionary where rt-group-name is the outermost key and returns a dictionary
     # mapping charge states of that rt-group to their library_info indices.
-    names = list(OrderedDict.fromkeys(library_info["name"].values).keys()) # This is the Python-native version of an ordered set operation.
-    name_charge_idx = {name: {charge: library_info.loc[(library_info["name"]==name) & (library_info["charge"]==charge)].index
-                            for charge in library_info.loc[library_info["name"]==name]["charge"].values}
+    names = list(OrderedDict.fromkeys(library_info["name_rt-group"].values).keys()) # This is the Python-native version of an ordered set operation.
+    name_charge_idx = {name: {charge: library_info.loc[(library_info["name_rt-group"]==name) & (library_info["charge"]==charge)].index
+                            for charge in library_info.loc[library_info["name_rt-group"]==name]["charge"].values}
                             for name in names}
 
     mzml = mzml_gz_path.split("/")[-1][:-3] # Strip '.gz' from input filename to match config timepoint values.
@@ -273,7 +273,7 @@ def main(configfile,
                 #try:
                 # Is this the last scan the line needed? If so, save to disk.
                 if len(output_scans[i]) == scans_per_line[i]:
-                    my_name = library_info.iloc[i]["name"]
+                    my_name = library_info.iloc[i]["name_rt-group"]
                     my_charge = library_info.iloc[i]["charge"]
                     my_out_test = "/" + my_name + "/" + my_name + "_" + "charge" + str(my_charge) + "_" + mzml + ".gz.cpickle.zlib"
                     print("library idx = " + str(i), flush=True)
