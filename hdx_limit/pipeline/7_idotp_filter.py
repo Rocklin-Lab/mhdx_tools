@@ -13,8 +13,6 @@ from hdx_limit.auxiliar.fdr import plot_fdr_stats
 
 mpl.use("Agg")
 
-
-<<<<<<< HEAD
 def check_drift_labels(drift_labels, min_length=3, low_dt_value=0.2):
     """
     check if the drift labels are okay
@@ -368,9 +366,6 @@ def remove_duplicates_from_df(df, rt_threshold=0.2, dt_threshold=0.05):
 
     return new_df
 
-
-=======
->>>>>>> 7a6e907d6872f996ee3380c8c6608ebbd5dc4f2f
 def main(configfile,
          library_info_path,
          all_idotp_inputs,
@@ -407,13 +402,9 @@ def main(configfile,
         plot_rtdt_recenter(df,
                            output_folder='results/plots/tensor_rtdt_recenter/')
 
-<<<<<<< HEAD
     # Plot
     plot_undeuterated_stats(df)
-
-=======
     # Create new dataframe with recentered names
->>>>>>> 7a6e907d6872f996ee3380c8c6608ebbd5dc4f2f
     cols_idotp = ['idotp', 'integrated_mz_width', 'mz_centers', 'theor_mz_dist']
     cols_ics_recenter = ['RT_weighted_avg', 'DT_weighted_avg_bins', 'DT_weighted_avg', 'rt_std', 'dt_std',
                          'rt_weighted_std', 'dt_weighted_std', 'rt_gaussian_rmse', 'dt_gaussian_rmse',
@@ -470,14 +461,12 @@ def main(configfile,
         plt.close('all')
 
     # Plot deviation plots. Add this to a proper output in the snakemake scope later
-<<<<<<< HEAD
+
     df = pd.read_json(library_info_out_path)
-=======
     if UN_deviations_plot_output_path is not None:
         plot_deviations(out_df,
                         configfile=configfile,
                         output_path=UN_deviations_plot_output_path)
->>>>>>> 7a6e907d6872f996ee3380c8c6608ebbd5dc4f2f
 
     if return_flag:
         return out_df
