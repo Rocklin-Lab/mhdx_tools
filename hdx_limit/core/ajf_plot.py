@@ -69,7 +69,7 @@ def create_df_and_clusterize(configfile, atc, prefiltered_ics, winner, output_pl
     # Remove lines with NAN values. This is pretty rare!
     df.dropna(inplace=True)
 
-<<<<<<< HEAD
+
     # Remove unreasonable ics based on large AUC extrapolations
     df = df[df['auc'] < 1e10]
     #    Remove after asking Suggie why values seems weird and correcting that
@@ -83,8 +83,7 @@ def create_df_and_clusterize(configfile, atc, prefiltered_ics, winner, output_pl
             np.dot(line['ic'].baseline_integrated_mz / max(line['ic'].baseline_integrated_mz),
                    row['ic'].baseline_integrated_mz / max(row['ic'].baseline_integrated_mz))
         ) / np.linalg.norm(line['ic'].baseline_integrated_mz / max(line['ic'].baseline_integrated_mz)) / np.linalg.norm(
-            row['ic'].baseline_integrated_mz / max(row['ic'].baseline_integrated_mz)), 3
-=======
+            row['ic'].baseline_integrated_mz / max(row['ic'].baseline_integrated_mz)), 3)]
     # Replace ics based on large AUC extrapolations by median value
     # And small AUCs # TODO Check why auc are so large or why Rts suffer from deviation: gaussian extrapolation failing?
     df["auc"] = np.where(df["auc"] > 1e10, np.percentile(df["auc"], 95), df["auc"])
@@ -100,7 +99,6 @@ def create_df_and_clusterize(configfile, atc, prefiltered_ics, winner, output_pl
                    row["ic"].baseline_integrated_mz / max(row["ic"].baseline_integrated_mz))
         ) / np.linalg.norm(line["ic"].baseline_integrated_mz / max(line["ic"].baseline_integrated_mz)) / np.linalg.norm(
             row["ic"].baseline_integrated_mz / max(row["ic"].baseline_integrated_mz)), 3
->>>>>>> 7a6e907d6872f996ee3380c8c6608ebbd5dc4f2f
                                                                           )
                                                                     for i, row in
 
