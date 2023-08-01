@@ -1,5 +1,4 @@
 import sys
-import os
 import glob
 import argparse
 import pandas as pd
@@ -8,365 +7,12 @@ import matplotlib as mpl
 import numpy as np
 import yaml
 import matplotlib.pyplot as plt
-from hdx_limit.core.io import limit_read
 from hdx_limit.auxiliar.plots import plot_rtdt_recenter, plot_deviations
 from hdx_limit.auxiliar.filters import generate_dataframe_ics, remove_duplicates_from_df
 from hdx_limit.auxiliar.fdr import plot_fdr_stats
 
 mpl.use("Agg")
 
-def check_drift_labels(drift_labels, min_length=3, low_dt_value=0.2):
-    """
-    check if the drift labels are okay
-    Args:
-        drift_labels: drift labels array
-        min_length: min length of the array
-        low_dt_value: min dt value
-
-    Returns:
-
-    """
-    if len(drift_labels) >= min_length:
-        if drift_labels[0] > low_dt_value:
-            check = True
-        else:
-            check = False
-    else:
-        check = False
-    return check
-
-
-def generate_dataframe_ics(configfile,
-                           all_ics_inputs,
-                           idotp_cutoff=0.99):
-    # Create dictionary containing all ics passing idotp_cutoff
-    protein_ics = {}
-    for f in all_ics_inputs:
-        if f.split('/')[-2:-1][0] not in protein_ics:
-            ics = [ic for ic in limit_read(f) if ic.idotp >= idotp_cutoff]
-            if len(ics) > 0:
-                protein_ics[f.split('/')[-2:-1][0]] = [ics]
-        else:
-            ics = [ic for ic in limit_read(f) if ic.idotp >= idotp_cutoff]
-            if len(ics) > 0:
-                protein_ics[f.split('/')[-2:-1][0]].append(ics)
-
-    # Flat list of lists of ics (all charge states will be one single list
-    for key in protein_ics:
-        protein_ics[key] = [i for sublist in protein_ics[key] for i in sublist]
-
-    # Extract values for dt, rt, auc, charge and file index from each IC and store in a dataframe
-
-    data = []
-    for key in protein_ics:
-        for ic in protein_ics[key]:
-            if check_drift_labels(drift_labels=ic.drift_labels):
-                dt = ic.drift_labels[0] + (ic.drift_labels[1] - ic.drift_labels[0]) * ic.dt_coms
-                rt = ic.retention_labels[0] + (ic.retention_labels[1] - ic.retention_labels[0]) * ic.rt_com
-                if dt < configfile['dt_max']:
-                    if rt < configfile['rt_max']:
-                        auc = ic.ic_auc_with_gauss_extrapol
-                        charge = ic.charge_states[0]
-                        file_index = configfile[0].index([i for i in configfile[0] if '_'.join(
-                            ic.info_tuple[0].split('/')[-1].split('.')[-5:-4][0].split('_')[-4:]) in i][0])
-                        idotp = ic.idotp
-
-                        data.append([key, ic, rt, dt, auc, charge, file_index, idotp])
-
-    df = pd.DataFrame(data, columns=['name', 'ic', 'rt', 'dt', 'auc', 'charge', 'file_index', 'idotp'])
-    df['auc_log'] = 2 * np.log10(df['auc'])
-
-    # Find DT weighted average
-    for name, charge in set([(n, c) for (n, c) in df[['name', 'charge']].values]):
-        # Remove outliers
-        percentile25, percentile75 = df[(df['name'] == name) & (df['charge'] == charge)]['dt'].quantile(0.25), \
-                                     df[(df['name'] == name) & (df['charge'] == charge)]['dt'].quantile(0.75)
-        iqr = percentile75 - percentile25
-        lb, ub = percentile25 - 1.5 * iqr, percentile75 + 1.5 * iqr
-        if len(df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                        df['dt'] <= configfile['dt_max'])]) > 0:
-            df.loc[(df['name'] == name) & (df['charge'] == charge), 'DT_weighted_avg'] = sum(
-                df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                            df['dt'] <= configfile['dt_max'])]['dt'] *
-                df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                            df['dt'] <= configfile['dt_max'])]['auc']) / sum(
-                df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                            df['dt'] <= configfile['dt_max'])]['auc'])
-            # How many signals do we see? How many undeuterated files generated passing ICs?
-            df.loc[df['name'] == name, 'n_signals'] = len(
-                df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                            df['dt'] <= configfile['dt_max'])])
-            df.loc[df['name'] == name, 'n_UN'] = len(
-                set(df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                            df['dt'] <= configfile['dt_max'])]['file_index'].values))
-            if len(df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                    df['dt'] <= configfile['dt_max'])]) > 1:
-                # DT standard deviation
-                df.loc[(df['name'] == name) & (df['charge'] == charge), 'dt_std'] = df[(df['name'] == name) & (
-                        df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (df['dt'] <= configfile['dt_max'])]['dt'].std()
-                # DT weighted standard deviation
-                values = df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                            df['dt'] <= configfile['dt_max'])]['dt']
-                weights = df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                            df['dt'] <= configfile['dt_max'])]['auc']
-                avg_value = df[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                            df['dt'] <= configfile['dt_max'])]['DT_weighted_avg']
-                df.loc[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                            df['dt'] <= configfile['dt_max']), 'dt_weighted_std'] = np.sqrt(
-                    (weights * (values - avg_value) ** 2) / sum(weights) * (len(values) - 1))
-            else:
-                df.loc[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                            df['dt'] <= configfile['dt_max']), 'dt_std'] = 0
-                df.loc[(df['name'] == name) & (df['charge'] == charge) & (df['dt'] >= lb) & (df['dt'] <= ub) & (
-                            df['dt'] <= configfile['dt_max']), 'dt_weighted_std'] = 0
-        else:
-            df.loc[(df['name'] == name) & (df['charge'] == charge), 'DT_weighted_avg'] = -1
-
-    # Find RT weighted average
-    for name in set(df['name'].values):
-        # Remove outliers
-        percentile25, percentile75 = df[(df['name'] == name)]['rt'].quantile(0.25), \
-                                     df[(df['name'] == name)]['rt'].quantile(0.75)
-        iqr = percentile75 - percentile25
-        lb, ub = percentile25 - 1.5 * iqr, percentile75 + 1.5 * iqr
-        df.loc[df['name'] == name, 'RT_weighted_avg'] = sum(
-            df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)]['rt'] * df[(df['name'] == name)
-                                & (df['rt'] >= lb) & (df['rt'] <= ub)]['auc']) / sum(df[(df['name'] == name)
-                                & (df['rt'] >= lb) & (df['rt'] <= ub)]['auc'])
-        if len(df.loc[df['name'] == name, 'RT_weighted_avg']) > 1:
-            # DT standard deviation
-            df.loc[df['name'] == name, 'rt_std'] = df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)]['rt'].std()
-            # DT weighted standard deviation
-            values = df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)]['rt']
-            weights = df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)]['auc']
-            avg_value = df[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub)]['RT_weighted_avg']
-            df.loc[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub),
-                   'rt_weighted_std'] = np.sqrt((weights * (values - avg_value) ** 2) / sum(weights) * (len(values) - 1)
-                                                )
-        else:
-            df.loc[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub), 'rt_std'] = 0
-            df.loc[(df['name'] == name) & (df['rt'] >= lb) & (df['rt'] <= ub),
-                   'rt_weighted_std'] = 0
-
-
-        # Compute DT weighted avg in bin dimension (this value should be used to extract tensors for consistency with
-    # 5_extract_timepoint_tensor code
-    df['DT_weighted_avg_bins'] = df['DT_weighted_avg'] * 200.0 / configfile['dt_max']
-
-    # Scatter plot for each protein
-    # Create folder to save pdf files
-    if not os.path.isdir('results/plots/tensor-recenter/'):
-        os.makedirs('results/plots/tensor-recenter/')
-
-    for name in list(set(df['name'].values)):
-
-        n_charges = len(set(df[df['name'] == name]['charge'].values))
-
-        fig, ax = plt.subplots(1, n_charges + 1, dpi=200, figsize=(3 * (n_charges + 1), 2.5))
-
-        sns.scatterplot(data=df[df['name'] == name], x='dt', y='rt', palette='bright', hue='charge', size='auc_log',
-                        ax=ax[0])
-        ax[0].set_ylim(df[df['name'] == name]['RT_weighted_avg'].mean() - 0.4,
-                       df[df['name'] == name]['RT_weighted_avg'].mean() + 0.4)
-        ax[0].set_xlim(min(df[df['name'] == name]['DT_weighted_avg'].min(),
-                           df[df['name'] == name]['dt'].min()) - 0.5,
-                       max(df[df['name'] == name]['DT_weighted_avg'].max(),
-                           df[df['name'] == name]['dt'].max()) + 0.5)
-        ax[0].axhline(df[df['name'] == name]['RT_weighted_avg'].mean(), color='black', alpha=0.5, lw=0.5)
-        ax[0].text(0, 1.01, '%s' % name, transform=ax[0].transAxes, fontsize=8)
-        ax[0].set_xlabel('DT')
-        ax[0].set_ylabel('RT')
-
-        h, l = ax[0].get_legend_handles_labels()
-        ax[0].legend(h[1:n_charges + 1], l[1:n_charges + 1], fontsize=10, loc=2,
-                     bbox_to_anchor=(0.0, 0.15), bbox_transform=ax[0].transAxes, borderpad=0.02,
-                     columnspacing=0.,
-                     handletextpad=0.0, frameon=False, ncol=n_charges, prop={'size': 6})
-
-        for j, charge in enumerate(sorted(list(set(df[df['name'] == name]['charge'].values)))):
-            sns.scatterplot(data=df[(df['name'] == name) & (df['charge'] == charge)], x='dt', y='rt', palette='bright',
-                            hue='file_index', size='auc_log', ax=ax[j + 1])
-            ax[j + 1].text(0, 1.01, 'charge=%i+' % charge, transform=ax[j + 1].transAxes, fontsize=8)
-            ax[j + 1].set_ylim(df[df['name'] == name]['RT_weighted_avg'].mean() - 0.4,
-                               df[df['name'] == name]['RT_weighted_avg'].mean() + 0.4)
-            ax[j + 1].set_xlim(df[(df['name'] == name) & (df['charge'] == charge)]['DT_weighted_avg'].mean() * 0.94,
-                               df[(df['name'] == name) & (df['charge'] == charge)]['DT_weighted_avg'].mean() * 1.06)
-            ax[j + 1].axhline(df[df['name'] == name]['RT_weighted_avg'].mean(), color='black', alpha=0.5, lw=0.5)
-            ax[j + 1].axvline(df[(df['name'] == name) & (df['charge'] == charge)]['DT_weighted_avg'].mean(),
-                              color='black', alpha=0.5, lw=0.5)
-
-            # Plot horizontal and vertical lines corresponding to initial RT and DT centers used to extract tensors
-            retention_label_center = \
-            df[(df['name'] == name) & (df['charge'] == charge)]['ic'].values[0].retention_labels[
-                len(df[(df['name'] == name) & (df['charge'] == charge)]['ic'].values[0].retention_labels) // 2]
-            ax[j + 1].axhline(retention_label_center, color='red', alpha=0.5, lw=0.5)
-            drift_label_center = df[(df['name'] == name) & (df['charge'] == charge)]['ic'].values[0].drift_labels[
-                len(df[(df['name'] == name) & (df['charge'] == charge)]['ic'].values[0].drift_labels) // 2]
-            ax[j + 1].axvline(drift_label_center, color='red', alpha=0.5, lw=0.5)
-
-            ax[0].scatter(df[(df['name'] == name) & (df['charge'] == charge)]['DT_weighted_avg'].mean(),
-                          (sum(df[(df['name'] == name) & (df['charge'] == charge)]['rt'] *
-                               df[(df['name'] == name) & (df['charge'] == charge)]['auc'])) /
-                          sum(df[(df['name'] == name) & (df['charge'] == charge)]['auc']), marker='x', color='black',
-                          s=20)
-            ax[j + 1].scatter(df[(df['name'] == name) & (df['charge'] == charge)]['DT_weighted_avg'].mean(),
-                              (sum(df[(df['name'] == name) & (df['charge'] == charge)]['rt'] *
-                                   df[(df['name'] == name) & (df['charge'] == charge)]['auc'])) /
-                              sum(df[(df['name'] == name) & (df['charge'] == charge)]['auc']), marker='x',
-                              color='black', s=20)
-
-            n_files = len(set(df[(df['name'] == name) & (df['charge'] == charge)]['file_index'].values))
-            h, l = ax[j + 1].get_legend_handles_labels()
-            ax[j + 1].legend(h[1:n_files + 1], l[1:n_files + 1], fontsize=10, loc=2,
-                             bbox_to_anchor=(0.0, 0.15), bbox_transform=ax[j + 1].transAxes, borderpad=0.02,
-                             columnspacing=0.,
-                             handletextpad=0.0, frameon=False, ncol=n_files, prop={'size': 6})
-            ax[j + 1].set_xlabel('DT')
-            ax[j + 1].set_ylabel('RT')
-
-        name_recentered = '_'.join(name.split('_')[:-1]) + '_' + str(
-            round(df[(df['name'] == name)]['RT_weighted_avg'].values[0], 5))
-
-        plt.tight_layout()
-        plt.savefig('results/plots/tensor-recenter/' + name_recentered + '.pdf', format='pdf', dpi=200)
-        plt.close('all')
-
-    return df
-
-
-def plot_undeuterated_stats(df):
-    '''
-    Args:
-        df: dataframe containing all ICs produced during first round of factorization and used to do tensor-recentering
-    Returns:
-        Saves a pdf, UN_STATS.pdf, containing, dRTs, dDTs, # files with undeuterated signals detects and # of signals
-        passing idotp threshold per tensor
-    '''
-
-
-    # sns.set_context('talk')
-    #
-    # fig, ax = plt.subplots(4, 2, figsize=(10, 12), dpi=200)
-    #
-    # sns.histplot(df['n_UN'].values, ax=ax[0][0])
-    # sns.histplot(df['n_UN'].values, ax=ax[0][0], kde=True)
-    # ax[0][0].set_xlabel('n_UN')
-    #
-    # sns.histplot(df['n_signals'].values, ax=ax[0][1])
-    # sns.histplot(df['n_signals'].values, ax=ax[0][1], kde=True)
-    # ax[0][1].set_xlabel('n_signals')
-    #
-    # sns.histplot(df['im_mono'].values * configfile['dt_max'] / 200 - df['DT_weighted_avg'].values, ax=ax[1][0])
-    # sns.histplot(df['im_mono'].values * configfile['dt_max'] / 200 - df['DT_weighted_avg'].values, ax=ax[1][0], kde=True)
-    # ax[1][0].set_xlabel('DT error')
-    #
-    # sns.histplot(df['RT'].values - df['RT_weighted_avg'].values, ax=ax[1][1])
-    # sns.histplot(df['RT'].values - df['RT_weighted_avg'].values, ax=ax[1][1], kde=True)
-    # ax[1][1].set_xlabel('RT error')
-    #
-    # sns.histplot(df['dt_weighted_std'].values, ax=ax[2][0])
-    # sns.histplot(df['dt_weighted_std'].values, ax=ax[2][0], kde=True)
-    # ax[2][0].set_xlabel('DT_weighted_std')
-    #
-    # sns.histplot(df['dt_std'].values, ax=ax[2][1])
-    # sns.histplot(df['dt_std'].values, ax=ax[2][1], kde=True)
-    # ax[2][1].set_xlabel('DT_std')
-    #
-    # sns.histplot(df['rt_weighted_std'].values, ax=ax[3][0])
-    # sns.histplot(df['rt_weighted_std'].values, ax=ax[3][0], kde=True)
-    # ax[3][0].set_xlabel('RT_weighted_std')
-    #
-    # sns.histplot(df['rt_std'].values, ax=ax[3][1], bins=100)
-    # ax[3][1].set_xlabel('RT_std')
-    #
-    # plt.tight_layout()
-
-    l_dDT = []
-    l_dRT = []
-    for name, charge in df[['name', 'charge']].drop_duplicates().values:
-        avgDT = df[(df['name'] == name) & (df['charge'] == charge)]['dt'].mean()
-        l_dDT.append(
-            [100 * (a - avgDT) / avgDT for a in df[(df['name'] == name) & (df['charge'] == charge)]['dt'].values])
-    for name in df['name'].drop_duplicates().values:
-        avgRT = df[(df['name'] == name)]['rt'].mean()
-        l_dRT.append([a - avgRT for a in df[(df['name'] == name)]['rt'].values])
-    # Compute std only for RT-groups where there are more than 3 samples
-    RT_std = 60 * np.absolute([item for sublist in l_dRT for item in sublist if len(sublist) > 2]).std()
-    DT_std = np.absolute([item for sublist in l_dDT for item in sublist if len(sublist) > 2]).std()
-    # Make lists flat: sublist only contains entries for which at least three samples were found
-    l_dRT_sublist = 60 * np.absolute([item for sublist in l_dRT for item in sublist if len(sublist) > 2])
-    l_dDT_sublist = np.absolute([item for sublist in l_dDT for item in sublist if len(sublist) > 2])
-    l_dRT = [item for sublist in l_dRT for item in sublist]
-    l_dDT = [item for sublist in l_dDT for item in sublist]
-
-    # Compute stats
-    dRT_median, dRT_mean, dRT_std = np.median(l_dRT_sublist), np.mean(l_dRT_sublist), np.std(l_dRT_sublist)
-    dDT_median, dDT_mean, dDT_std = np.median(l_dDT_sublist), np.mean(l_dDT_sublist), np.std(l_dDT_sublist)
-
-    fig, ax = plt.subplots(2, 2, figsize=(10, 6), dpi=200)
-
-    ax_twin_0 = ax[0][0].twinx()
-    ax_twin_1 = ax[0][1].twinx()
-
-    sns.histplot(60 * np.absolute(l_dRT), ax=ax[0][0], kde=True, alpha=0.7, binwidth=1)
-    sns.histplot(np.absolute(l_dDT), ax=ax[0][1], kde=True, alpha=0.7, binwidth=0.25)
-    sns.ecdfplot(60 * np.absolute(l_dRT), color='red', ax=ax_twin_0, ls='--')
-    sns.ecdfplot(np.absolute(l_dDT), color='red', ax=ax_twin_1, ls='--')
-
-    ax[0][0].set_xlim(0, 5 * 60 * np.absolute(l_dRT).std())
-    ax[0][0].set_xlabel('abs($\Delta$RT) / seconds', weight='bold')
-    ax[0][0].set_ylabel('Count', weight='bold')
-    ax_twin_0.set_ylabel('Proportion', color='red', weight='bold')
-    ax_twin_0.set_yticks(np.arange(0, 1.1, 0.1))
-    ax[0][0].grid(visible=True, axis='x', alpha=0.5)
-    ax_twin_0.grid(visible=True, alpha=0.5, axis='both')
-    ax[0][1].set_xlim(0, 5 * np.absolute(l_dDT).std())
-    ax[0][1].set_xlabel('abs(%$\Delta$DT)', weight='bold')
-    ax[0][1].set_ylabel('Count', weight='bold')
-    ax[0][1].grid(visible=True, axis='x', alpha=0.5)
-    ax_twin_1.grid(visible=True, alpha=0.5)
-    ax_twin_1.set_ylabel('Proportion', color='red', weight='bold')
-    ax_twin_1.set_yticks(np.arange(0, 1.1, 0.1), color='red')
-
-    ax_twin_0.tick_params(axis='y', colors='red')
-    ax_twin_1.tick_params(axis='y', colors='red')
-
-    sns.histplot(df[['name', 'charge', 'n_UN', 'n_signals']].drop_duplicates()['n_UN'], binwidth=1, discrete=True,
-                 ax=ax[1][0])
-    sns.histplot(df[['name', 'charge', 'n_UN', 'n_signals']].drop_duplicates()['n_signals'], binwidth=1, discrete=True,
-                 ax=ax[1][1])
-
-    ax[1][0].set_xlabel('# files with undeuterated signals', weight='bold')
-    ax[1][0].set_ylabel('Count', weight='bold')
-    ax[1][1].set_xlabel('# undeuterated signals detected per tensor', weight='bold')
-    ax[1][1].set_ylabel('Count', weight='bold')
-
-    # Legends
-    ax[0][0].text(0.99, 0.9, 'mean=%.3f' % dRT_mean, transform=ax[0][0].transAxes, ha='right')
-    ax[0][0].text(0.99, 0.8, 'median=%.3f' % dRT_median, transform=ax[0][0].transAxes, ha='right')
-    ax[0][0].text(0.99, 0.7, 'std=%.3f' % dRT_std, transform=ax[0][0].transAxes, ha='right')
-    ax[0][1].text(0.99, 0.9, 'mean=%.3f' % dDT_mean, transform=ax[0][1].transAxes, ha='right')
-    ax[0][1].text(0.99, 0.8, 'median=%.3f' % dDT_median, transform=ax[0][1].transAxes, ha='right')
-    ax[0][1].text(0.99, 0.7, 'std=%.3f' % dDT_std, transform=ax[0][1].transAxes, ha='right')
-
-    plt.tight_layout()
-    plt.savefig('results/plots/Stats_undeuterated.pdf', format='pdf', dpi=200, bbox_inches='tight')
-    plt.close('all')
-
-
-def remove_duplicates_from_df(df, rt_threshold=0.2, dt_threshold=0.05):
-    # rt_threshold: delta rt in minutes
-    # dt_threshold: delta dt in as a fraction of weighted average value
-    new_df = pd.DataFrame(columns=df.columns)
-
-    for i, line in df.sort_values(by=['n_UN', 'ab_cluster_total'], ascending=[False, False]).iterrows():
-        if len(new_df[(new_df['sequence'] == line['sequence']) & (new_df['charge'] == line['charge']) & (
-                abs(new_df['RT_weighted_avg'] - line['RT_weighted_avg']) < rt_threshold) & (
-                              abs(new_df['DT_weighted_avg'] - line['DT_weighted_avg']) < dt_threshold * line[
-                          'DT_weighted_avg'])]) == 0:
-            new_df = pd.concat([new_df, pd.DataFrame([line])])
-
-    return new_df
 
 def main(configfile,
          library_info_path,
@@ -404,8 +50,6 @@ def main(configfile,
         plot_rtdt_recenter(df,
                            output_folder='results/plots/tensor_rtdt_recenter/')
 
-    # Plot
-    plot_undeuterated_stats(df)
     # Create new dataframe with recentered names
     cols_idotp = ['idotp', 'integrated_mz_width', 'mz_centers', 'theor_mz_dist']
     cols_ics_recenter = ['RT_weighted_avg', 'DT_weighted_avg_bins', 'DT_weighted_avg', 'rt_std', 'dt_std',
@@ -415,13 +59,9 @@ def main(configfile,
 
     l = []
     for i, (name, charge) in enumerate(set([(i, j) for (i, j) in df[['name', 'charge']].values])):
-        print(f"name {name} charge {charge}")
         open_idotp_f = pd.read_json([i for i in all_idotp_inputs if '%s' % (name + '_charge' + str(charge)) in i][0])
-        print(f"open_idotp_f {open_idotp_f}")
-        my_row = library_info.loc[(library_info['name_rt-group'] == name) & (library_info["charge"] == charge)].copy()
-        print(f"row {my_row}")
+        my_row = library_info.loc[(library_info["name_rt-group"] == name) & (library_info["charge"] == charge)].copy()
         my_row[cols_idotp] = open_idotp_f[cols_idotp].values
-        print(f"row {my_row.keys().tolist()}")
         my_row[cols_ics_recenter] = \
             df[(df['name'] == name) & (df['charge'] == charge)].sort_values(by=['idotp', 'rt_gaussian_rmse',
                                                                                 'dt_gaussian_rmse'],
@@ -467,8 +107,6 @@ def main(configfile,
         plt.close('all')
 
     # Plot deviation plots. Add this to a proper output in the snakemake scope later
-
-    df = pd.read_json(library_info_out_path)
     if UN_deviations_plot_output_path is not None:
         plot_deviations(out_df,
                         configfile=configfile,
