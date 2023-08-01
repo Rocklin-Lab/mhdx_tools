@@ -418,7 +418,7 @@ def main(configfile,
         print(f"name {name} charge {charge}")
         open_idotp_f = pd.read_json([i for i in all_idotp_inputs if '%s' % (name + '_charge' + str(charge)) in i][0])
         print(f"open_idotp_f {open_idotp_f}")
-        my_row = library_info.loc[(library_info['name_rt_group'] == name) & (library_info["charge"] == charge)].copy()
+        my_row = library_info.loc[(library_info['name_rt-group'] == name) & (library_info["charge"] == charge)].copy()
         print(f"row {my_row}")
         my_row[cols_idotp] = open_idotp_f[cols_idotp].values
         print(f"row {my_row}")
