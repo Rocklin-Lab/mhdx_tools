@@ -409,9 +409,9 @@ class PathOptimizer:
 
         self.first_center = self.undeuts[0].baseline_integrated_mz_com
         self.max_peak_center = len(
-            self.library_info.loc[self.library_info["name"] ==
+            self.library_info.loc[self.library_info["name_rt-group"] ==
                                   self.name]["sequence"].values[0]
-        ) - self.library_info.loc[self.library_info["name"] ==
+        ) - self.library_info.loc[self.library_info["name_rt_group"] ==
                                   self.name]["sequence"].values[0][2:].count("P") - 2 + self.first_center
 
         self.gather_old_data()
