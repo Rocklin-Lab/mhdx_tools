@@ -421,7 +421,7 @@ def main(configfile,
         my_row = library_info.loc[(library_info['name_rt-group'] == name) & (library_info["charge"] == charge)].copy()
         print(f"row {my_row}")
         my_row[cols_idotp] = open_idotp_f[cols_idotp].values
-        print(f"row {my_row}")
+        print(f"row {my_row.keys().tolist()}")
         my_row[cols_ics_recenter] = \
             df[(df['name'] == name) & (df['charge'] == charge)].sort_values(by=['idotp', 'rt_gaussian_rmse',
                                                                                 'dt_gaussian_rmse'],
