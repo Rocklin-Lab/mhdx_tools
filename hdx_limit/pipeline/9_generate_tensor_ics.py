@@ -54,7 +54,7 @@ def main(library_info_path,
     my_name = tensor_input_path.split("/")[-2]  # Name from protein directory.
     my_charge = int([item[6:] for item in tensor_input_path.split("/")[-1].split("_") if "charge" in item][
                         0])  # Finds by keyword and strip text.
-    my_row = library_info.loc[(library_info["name"] == my_name) & (library_info["charge"] == my_charge)]
+    my_row = library_info.loc[(library_info["name_rt-group"] == my_name) & (library_info["charge"] == my_charge)]
     my_centers = my_row["mz_centers"].values
     centers = my_centers[0]
 
