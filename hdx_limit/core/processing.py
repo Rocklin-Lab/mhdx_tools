@@ -253,10 +253,10 @@ class TensorGenerator:
         self.charge = int([item[6:] for item in filename.split("/")[-1].split("_") if "charge" in item][
                               0])  # Finds by keyword and strips text.
         self.lib_idx = self.library_info.loc[
-            (library_info["name"] == self.name) & (library_info["charge"] == self.charge)].index
+            (library_info["name_rt-group"] == self.name) & (library_info["charge"] == self.charge)].index
         self.my_row = self.library_info.loc[
-            (library_info["name"] == self.name) & (library_info["charge"] == self.charge)]
-        self.max_peak_center = len(self.library_info.loc[self.library_info["name"] == self.name]["sequence"].values[0])
+            (library_info["name_rt-group"] == self.name) & (library_info["charge"] == self.charge)]
+        self.max_peak_center = len(self.library_info.loc[self.library_info["name_rt-group"] == self.name]["sequence"].values[0])
         self.total_isotopes = self.max_peak_center + self.high_mass_margin
         self.total_mass_window = self.low_mass_margin + self.total_isotopes
 
