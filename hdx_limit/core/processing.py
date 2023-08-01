@@ -411,7 +411,7 @@ class PathOptimizer:
         self.max_peak_center = len(
             self.library_info.loc[self.library_info["name_rt-group"] ==
                                   self.name]["sequence"].values[0]
-        ) - self.library_info.loc[self.library_info["name_rt_group"] ==
+        ) - self.library_info.loc[self.library_info["name_rt-group"] ==
                                   self.name]["sequence"].values[0][2:].count("P") - 2 + self.first_center
 
         self.gather_old_data()
