@@ -415,10 +415,13 @@ def main(configfile,
 
     l = []
     for i, (name, charge) in enumerate(set([(i, j) for (i, j) in df[['name', 'charge']].values])):
+        print(f"name {name} charge {charge}")
         open_idotp_f = pd.read_json([i for i in all_idotp_inputs if '%s' % (name + '_charge' + str(charge)) in i][0])
+        print(f"open_idotp_f {open_idotp_f}")
         my_row = library_info.loc[(library_info['name'] == name) & (library_info["charge"] == charge)].copy()
         print(f"row {my_row}")
         my_row[cols_idotp] = open_idotp_f[cols_idotp].values
+        print(f"row {my_row}")
         my_row[cols_ics_recenter] = \
             df[(df['name'] == name) & (df['charge'] == charge)].sort_values(by=['idotp', 'rt_gaussian_rmse',
                                                                                 'dt_gaussian_rmse'],
