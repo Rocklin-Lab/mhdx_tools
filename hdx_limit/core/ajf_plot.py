@@ -81,9 +81,9 @@ def create_df_and_clusterize(configfile, atc, prefiltered_ics, winner, output_pl
     for i, line in df[(df['winner'] == 1)].iterrows():
         df.loc[df['tp_idx'] == line['tp_idx'], 'ic_winner_corr'] = [round(np.linalg.norm(
             np.dot(line['ic'].baseline_integrated_mz / max(line['ic'].baseline_integrated_mz),
-                   row['ic'].baseline_integrated_mz / max(row['ic'].baseline_integrated_mz))
+                   line['ic'].baseline_integrated_mz / max(line['ic'].baseline_integrated_mz))
         ) / np.linalg.norm(line['ic'].baseline_integrated_mz / max(line['ic'].baseline_integrated_mz)) / np.linalg.norm(
-            row['ic'].baseline_integrated_mz / max(row['ic'].baseline_integrated_mz)), 3)]
+            line['ic'].baseline_integrated_mz / max(line['ic'].baseline_integrated_mz)), 3)]
     # Replace ics based on large AUC extrapolations by median value
     # And small AUCs # TODO Check why auc are so large or why Rts suffer from deviation: gaussian extrapolation failing?
     df["auc"] = np.where(df["auc"] > 1e10, np.percentile(df["auc"], 95), df["auc"])
@@ -96,9 +96,9 @@ def create_df_and_clusterize(configfile, atc, prefiltered_ics, winner, output_pl
     for i, line in df[(df["winner"] == 1)].iterrows():
         df.loc[df["tp_idx"] == line["tp_idx"], "ic_winner_corr"] = [round(np.linalg.norm(
             np.dot(line["ic"].baseline_integrated_mz / max(line["ic"].baseline_integrated_mz),
-                   row["ic"].baseline_integrated_mz / max(row["ic"].baseline_integrated_mz))
+                   line["ic"].baseline_integrated_mz / max(line["ic"].baseline_integrated_mz))
         ) / np.linalg.norm(line["ic"].baseline_integrated_mz / max(line["ic"].baseline_integrated_mz)) / np.linalg.norm(
-            row["ic"].baseline_integrated_mz / max(row["ic"].baseline_integrated_mz)), 3
+            line["ic"].baseline_integrated_mz / max(line["ic"].baseline_integrated_mz)), 3
                                                                           )
                                                                     for i, row in
 
