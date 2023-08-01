@@ -22,7 +22,7 @@ def optimize_paths_inputs(library_info_path,
     """
     name_inputs = []
     library_info = pd.read_json(library_info_path)
-    charges = library_info.loc[library_info["name"]==name]['charge'].values
+    charges = library_info.loc[library_info["name_rt-group"]==name]['charge'].values
     for key in configfile["timepoints"]:
         if len(configfile[key]) > 1:
             for file in configfile[key]:
