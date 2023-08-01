@@ -907,13 +907,6 @@ def gen_factors_with_corr_check(input_grid,
 
     pmem('Factorize: %s # Factors (Start)' % num_factors_guess)
 
-    while max_num_factors >= 2 and last_corr_check > corr_threshold:
-
-        max_num_factors -= 1
-
-        pmem('Factorize: %s # Factors (Start)' % max_num_factors)
-
-#        factor_output = factorize_tensor(input_grid=input_grid,
     factor_output_tmp = factorize_tensor(input_grid=input_grid,
                                          init_method=init_method,
                                          factors_0=factors_0,
@@ -995,7 +988,6 @@ def gen_factors_with_corr_check(input_grid,
                 factorize = False
 
     return factor_output
-
 
 def calculate_theoretical_isotope_dist_from_sequence(sequence, n_isotopes=None):
     """Calculate theoretical isotope distribtuion from the given one-letter sequence of a library protein.
