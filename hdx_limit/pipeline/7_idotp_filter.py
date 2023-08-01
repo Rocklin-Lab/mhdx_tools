@@ -414,12 +414,13 @@ def main(configfile,
     cols = list(library_info.columns) + cols_idotp + cols_ics_recenter + ['name_tmp']
 
     l = []
-    for i, (name, charge) in enumerate(set([(i, j) for (i, j) in df[['name', 'charge']].values])):
+    for i, (name, charge) in enumerate(set([(i, j) for (i, j) in df[['name_rt-group', 'charge']].values])):
         open_idotp_f = pd.read_json([i for i in all_idotp_inputs if '%s' % (name + '_charge' + str(charge)) in i][0])
-        my_row = library_info.loc[(library_info["name"] == name) & (library_info["charge"] == charge)].copy()
+        my_row = library_info.loc[(library_info['name_rt-group'] == name) & (library_info["charge"] == charge)].copy()
+        print(f"row {my_row}")
         my_row[cols_idotp] = open_idotp_f[cols_idotp].values
         my_row[cols_ics_recenter] = \
-            df[(df['name'] == name) & (df['charge'] == charge)].sort_values(by=['idotp', 'rt_gaussian_rmse',
+            df[(df['name_rt-group'] == name) & (df['charge'] == charge)].sort_values(by=['idotp', 'rt_gaussian_rmse',
                                                                                 'dt_gaussian_rmse'],
                                                                             ascending=[False, True, True])[
                 cols_ics_recenter].values[0]
