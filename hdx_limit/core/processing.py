@@ -341,8 +341,8 @@ class PathOptimizer:
                  name,
                  all_tp_clusters,
                  library_info,
-                 timepoints,
-                 n_undeut_runs,
+                 # timepoints,
+                 # n_undeut_runs,
                  user_prefilter,
                  thresholds,
                  pareto_prefilter=True,
@@ -387,8 +387,8 @@ class PathOptimizer:
         self.name = name
         self.all_tp_clusters = all_tp_clusters
         self.library_info = library_info
-        self.timepoints = timepoints
-        self.n_undeut_runs = n_undeut_runs
+        # self.timepoints = timepoints
+        # self.n_undeut_runs = n_undeut_runs
         self.thresholds = thresholds
 
         self.old_data_dir = old_data_dir
@@ -564,7 +564,7 @@ class PathOptimizer:
         filtered_atc = np.array([self.undeuts] + filtered_atc, dtype=object)
         filtered_indexes = np.array([True if len(ics) > 0 else False for ics in filtered_atc])
         self.prefiltered_ics = list(filtered_atc[filtered_indexes])
-        self.timepoints = list(np.array(self.timepoints)[filtered_indexes])
+        # self.timepoints = list(np.array(self.timepoints)[filtered_indexes])
 
     def weak_pareto_dom_filter(self):
         """Description of function.
@@ -1198,7 +1198,7 @@ class PathOptimizer:
     ### Scoring Functions for PathOptimizer ##################################################################################################################################################################################################
     ##########################################################################################################################################################################################################################################
 
-    def delta_mz_rate(self, ics, timepoints=None):
+    def delta_mz_rate(self, ics):
         """Description of function.
 
         Args:
@@ -1210,15 +1210,15 @@ class PathOptimizer:
         """
         # Two penalizations are computed: [0] if the ic is too fast (sd) and [1] if the ic goes backwards (back)
 
-        if timepoints is None:
-            timepoints = self.timepoints
+        # if timepoints is None:
+        #     timepoints = self.timepoints
 
         backward = 0
         forward = 0
 
         # Compute rate based on tp1-tp0
         previous_rate = max(
-            [(ics[1].baseline_integrated_mz_com - ics[0].baseline_integrated_mz_com) / (timepoints[1] - timepoints[0]),
+            [(ics[1].baseline_integrated_mz_com - ics[0].baseline_integrated_mz_com) / (ics[1].timepoint_idx - ics[0].timepoint_idx),
              0.1])
 
         for i in range(2, len(ics)):
@@ -1232,11 +1232,11 @@ class PathOptimizer:
                 new_com = (
                         ics[i - 1].baseline_integrated_mz_com + 0.01
                 )  # pretend we went forwards for calculating current rate
-            if round(timepoints[i] - timepoints[i - 1], 2) <= 0.1:
+            if round(ic[i].timepoint_idx - ic[i - 1].timepoint_idx, 2) <= 0.1:
                 continue
             current_rate = max([
                 (new_com - ics[i - 1].baseline_integrated_mz_com), 0.1
-            ]) / (timepoints[i] - timepoints[i - 1])
+            ]) / (ic[i].timepoint_idx - ic[i -1].timepoint_idx)
             if (current_rate / previous_rate) > 1.2:
                 forward += (current_rate / previous_rate) ** 2.0
             previous_rate = current_rate
