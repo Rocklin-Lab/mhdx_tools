@@ -54,6 +54,45 @@ def write_baseline_integrated_mz_to_csv(path_object_list, output_path, norm_dist
         return out_dict
 
 
+def evaluate_list_score_with_removal(evaluation_function, original_list, threshold=1):
+    """
+    Evaluates the impact of removing one item at a time from the list on the score.
+
+    Parameters:
+    - evaluation_function: The function that evaluates the list and returns a score.
+                          It should take a list of objects as input and return a score.
+    - original_list: The original list of objects to be evaluated.
+
+    Returns:
+    - A dictionary containing the index of the removed item as key and the corresponding
+      score without that item as the value.
+    """
+
+    original_score = evaluation_function(original_list)
+
+    # print(f"[0, {len(original_list)}, {original_score}],")
+
+    for i, item in enumerate(original_list):
+
+        if item.timepoint_idx == 0:
+            continue
+
+        modified_list = original_list[:i] + original_list[i + 1:]
+        score_without_item = evaluation_function(modified_list)
+
+        # print(f"[{i}, {len(original_list)}, {score_without_item}],")
+
+        if original_score - score_without_item > threshold:
+            # n += 1
+            # print(
+            #     f"Previous score: {original_score}, new score {score_without_item}. Improvement of {1 - score_without_item / original_score}. N_change {n} ")
+            return evaluate_list_score_with_removal(evaluation_function, modified_list, threshold=threshold, n=n)
+
+    # print(f"No modification led to significant improvement. score: {original_score}")
+
+    return original_list #, n
+
+
 def load_json(fpath):
     f = open(fpath)
     d = json.load(f)
@@ -210,6 +249,8 @@ def main(library_info_path,
     if (any(arg is not None for arg in monobody_path_arguments)) or (monobody_return_flag is not False):
 
         p1.optimize_paths_mono()
+
+        p1.winner = evaluate_list_score_with_removal(p1.combo_score_mono, p1.winner, threshold=1)
 
         if monobody_return_flag is not False:
             out_dict["monobody_winner"] = p1.winner
