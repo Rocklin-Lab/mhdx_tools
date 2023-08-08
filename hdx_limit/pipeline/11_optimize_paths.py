@@ -184,6 +184,8 @@ def main(library_info_path,
 
     out_dict = {}
     library_info = pd.read_json(library_info_path)
+    if not "name_rt-group" in library_info.columns: library_info["name_rt-group"] = library_info["name"]
+
 
     if rt_group_name is None:
         name = all_timepoints_clusters_input_path[0].split("/")[-2]
