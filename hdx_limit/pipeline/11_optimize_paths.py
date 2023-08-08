@@ -337,40 +337,39 @@ if __name__ == "__main__":
         multi_html_plot_out_path = None
         ajf_plot_out_path = None
 
-        if snakemake.params.tmp:
-            dictionary_thresholds_path = None
-            prefiltered_ics_out_path = None
-            mono_path_plot_out_path = None
-            mono_winner_out_path = None
-            mono_runner_out_path = None
-            mono_undeut_ground_out_path = None
-            mono_winner_scores_out_path = None
-            mono_rtdt_com_cvs_out_path = None
-            mono_winner_csv_out_path = None
-            multi_winner_out_path = snakemake.output[0]
-            multi_path_plot_out_path = None
-            multi_runner_out_path = None
-            multi_undeut_ground_out_path = None
-            multi_winner_scores_out_path = snakemake.output[1]
-            multi_rtdt_com_cvs_out_path = None
-            multi_winner_csv_out_path = None
-        else:
-            dictionary_thresholds_path = snakemake.input[3]
-            prefiltered_ics_out_path = snakemake.output[0]
-            mono_path_plot_out_path = snakemake.output[1]
-            mono_winner_out_path = snakemake.output[2]
-            mono_runner_out_path = snakemake.output[3]
-            mono_undeut_ground_out_path = snakemake.output[4]
-            mono_winner_scores_out_path = snakemake.output[5]
-            mono_rtdt_com_cvs_out_path = snakemake.output[6]
-            mono_winner_csv_out_path = snakemake.output[7]
-            multi_path_plot_out_path = snakemake.output[8]
-            multi_winner_out_path = snakemake.output[9]
-            multi_runner_out_path = snakemake.output[10]
-            multi_undeut_ground_out_path = snakemake.output[11]
-            multi_winner_scores_out_path = snakemake.output[12]
-            multi_rtdt_com_cvs_out_path = snakemake.output[13]
-            multi_winner_csv_out_path = snakemake.output[14]
+        # if snakemake.params.tmp:
+        #     dictionary_thresholds_path = None
+        #     prefiltered_ics_out_path = None
+        #     mono_path_plot_out_path = None
+        #     mono_winner_out_path = None
+        #     mono_runner_out_path = None
+        #     mono_undeut_ground_out_path = None
+        #     mono_winner_scores_out_path = None
+        #     mono_rtdt_com_cvs_out_path = None
+        #     mono_winner_csv_out_path = None
+        #     multi_winner_out_path = snakemake.output[0]
+        #     multi_path_plot_out_path = None
+        #     multi_runner_out_path = None
+        #     multi_undeut_ground_out_path = None
+        #     multi_winner_scores_out_path = snakemake.output[1]
+        #     multi_rtdt_com_cvs_out_path = None
+        #     multi_winner_csv_out_path = None
+        # else:
+        prefiltered_ics_out_path = snakemake.output[0]
+        mono_path_plot_out_path = snakemake.output[1]
+        mono_winner_out_path = snakemake.output[2]
+        mono_runner_out_path = snakemake.output[3]
+        mono_undeut_ground_out_path = snakemake.output[4]
+        mono_winner_scores_out_path = snakemake.output[5]
+        mono_rtdt_com_cvs_out_path = snakemake.output[6]
+        mono_winner_csv_out_path = snakemake.output[7]
+        multi_path_plot_out_path = snakemake.output[8]
+        multi_winner_out_path = snakemake.output[9]
+        multi_runner_out_path = snakemake.output[10]
+        multi_undeut_ground_out_path = snakemake.output[11]
+        multi_winner_scores_out_path = snakemake.output[12]
+        multi_rtdt_com_cvs_out_path = snakemake.output[13]
+        multi_winner_csv_out_path = snakemake.output[14]
 
 
 
