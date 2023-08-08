@@ -86,7 +86,7 @@ def evaluate_list_score_with_removal(evaluation_function, original_list, thresho
             # n += 1
             # print(
             #     f"Previous score: {original_score}, new score {score_without_item}. Improvement of {1 - score_without_item / original_score}. N_change {n} ")
-            return evaluate_list_score_with_removal(evaluation_function, modified_list, threshold=threshold, n=n)
+            return evaluate_list_score_with_removal(evaluation_function, modified_list, threshold=threshold)
 
     # print(f"No modification led to significant improvement. score: {original_score}")
 
@@ -284,6 +284,10 @@ def main(library_info_path,
 
         p1.optimize_paths_multi()
 
+        # Remove low quality ICs from winner list.
+        p1.winner = [ic for ic in p1.winner if ic.baseline_integrated_mz_rmse < 0.1]
+        p1.winner = evaluate_list_score_with_removal(p1.combo_score_multi, p1.winner, threshold=1)
+        p1.winner_scores = p1.report_score_multi(p1.winner)
 
         if multibody_return_flag is not False:
             out_dict["multibody_winner"] = p1.winner
@@ -303,7 +307,7 @@ def main(library_info_path,
                       atc=atc,
                       prefiltered_ics=p1.prefiltered_ics,
                       winner=p1.winner,
-                      output_path=ajf_plot_out_path)
+                      output_plot_path=ajf_plot_out_path)
         if multi_winner_out_path is not None:
             limit_write(p1.winner, multi_winner_out_path)
         if multi_runner_out_path is not None:

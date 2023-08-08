@@ -1341,6 +1341,7 @@ class PathOptimizer:
             out_name (type): Description of any returned objects.
 
         """
+        # return 100 * np.mean([ic.baseline_integrated_mz_rmse for ic in ics])
         return 100 * np.mean([ic.baseline_integrated_mz_rmse for ic in ics])
 
     def int_mz_FWHM_rmse(self, ics):
