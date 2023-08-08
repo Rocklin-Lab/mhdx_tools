@@ -194,9 +194,9 @@ def main(library_info_path,
     # if dictionary_thresholds_path is not None:
     #     dictionary_thresholds = load_json(dictionary_thresholds_path)
 
-        # for key in dictionary_thresholds:
-        for key in ["dt_ground_err", "rt_ground_err", "baseline_peak_error", "baseline_integrated_mz_rmse"]:
-            configfile["thresholds"][key] = dictionary_thresholds[key]
+        # # for key in dictionary_thresholds:
+        # for key in ["dt_ground_err", "rt_ground_err", "baseline_peak_error", "baseline_integrated_mz_rmse"]:
+        #     configfile["thresholds"][key] = dictionary_thresholds[key]
 
     atc = limit_read(all_timepoints_clusters_input_path)
 
