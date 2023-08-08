@@ -191,8 +191,8 @@ def main(library_info_path,
         name = rt_group_name
 
     # Load dictionary of thresholds if any. Update values on configfile["thresholds"]
-    if dictionary_thresholds_path is not None:
-        dictionary_thresholds = load_json(dictionary_thresholds_path)
+    # if dictionary_thresholds_path is not None:
+    #     dictionary_thresholds = load_json(dictionary_thresholds_path)
 
         # for key in dictionary_thresholds:
         for key in ["dt_ground_err", "rt_ground_err", "baseline_peak_error", "baseline_integrated_mz_rmse"]:
@@ -396,7 +396,7 @@ if __name__ == "__main__":
              multi_rtdt_com_cvs_out_path=multi_rtdt_com_cvs_out_path,
              multi_winner_csv_out_path=multi_winner_csv_out_path,
              ajf_plot_out_path=None,
-             dictionary_thresholds_path=dictionary_thresholds_path,
+             # dictionary_thresholds_path=dictionary_thresholds_path,
              )
 
     else:
