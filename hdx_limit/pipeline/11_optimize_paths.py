@@ -54,7 +54,7 @@ def write_baseline_integrated_mz_to_csv(path_object_list, output_path, norm_dist
         return out_dict
 
 
-def evaluate_list_score_with_removal(evaluation_function, original_list, threshold=1):
+def evaluate_list_score_with_removal(evaluation_function, original_list, threshold=1, min_timepoints=5):
     """
     Evaluates the impact of removing one item at a time from the list on the score.
 
@@ -67,6 +67,9 @@ def evaluate_list_score_with_removal(evaluation_function, original_list, thresho
     - A dictionary containing the index of the removed item as key and the corresponding
       score without that item as the value.
     """
+
+    if len(original_list) < min_timepoints:
+        return []
 
     original_score = evaluation_function(original_list)
 
@@ -92,6 +95,16 @@ def evaluate_list_score_with_removal(evaluation_function, original_list, thresho
 
     return original_list #, n
 
+def evaluate_and_terminate(ics, configfile, name, monobody_path_arguments, multibody_path_arguments):
+    if len(ics) < configfile["thresholds"]["min_timepoints"]:
+        print("Not enough timepoints with ics to evaluate path. Creating empty files...")
+        check_for_create_files(monobody_path_arguments)
+        check_for_create_files(multibody_path_arguments)
+
+        with open("joberr.out", "a") as f:
+            f.write(f"{name}\tNot enough timepoints with ics to evaluate path. Creating empty files...\n")
+
+        sys.exit()
 
 def load_json(fpath):
     f = open(fpath)
@@ -237,15 +250,18 @@ def main(library_info_path,
     if prefiltered_ics_out_path is not None:
         limit_write(p1.prefiltered_ics, prefiltered_ics_out_path)
 
-    if len(p1.prefiltered_ics) < configfile["thresholds"]["min_timepoints"]:
-        print("Not enough timepoints with ics to evaluate path. Creating empty files...")
-        check_for_create_files(monobody_path_arguments)
-        check_for_create_files(multibody_path_arguments)
+    # Check if number of timepoints in prefiltered set is greater than threshold
+    evaluate_and_terminate(p1.prefiltered_ics, configfile, name, monobody_path_arguments, multibody_path_arguments)
 
-        with open("joberr.out", "a") as f:
-            f.write(f"{name}\tNot enough timepoints with ics to evaluate path. Creating empty files...\n")
-
-        sys.exit()
+    # if len(p1.prefiltered_ics) < configfile["thresholds"]["min_timepoints"]:
+    #     print("Not enough timepoints with ics to evaluate path. Creating empty files...")
+    #     check_for_create_files(monobody_path_arguments)
+    #     check_for_create_files(multibody_path_arguments)
+    #
+    #     with open("joberr.out", "a") as f:
+    #         f.write(f"{name}\tNot enough timepoints with ics to evaluate path. Creating empty files...\n")
+    #
+    #     sys.exit()
 
     # Checks if arguments require monobody scoring run.
     if (any(arg is not None for arg in monobody_path_arguments)) or (monobody_return_flag is not False):
@@ -253,6 +269,8 @@ def main(library_info_path,
         p1.optimize_paths_mono()
 
         p1.winner = evaluate_list_score_with_removal(p1.combo_score_mono, p1.winner, threshold=1)
+        # Check if number of timepoints in prefiltered set is greater than threshold
+        evaluate_and_terminate(p1.winner, configfile, name, monobody_path_arguments, multibody_path_arguments)
 
         if monobody_return_flag is not False:
             out_dict["monobody_winner"] = p1.winner
@@ -288,7 +306,13 @@ def main(library_info_path,
 
         # Remove low quality ICs from winner list.
         p1.winner = [ic for ic in p1.winner if ic.baseline_integrated_mz_rmse < 0.1]
-        p1.winner = evaluate_list_score_with_removal(p1.combo_score_multi, p1.winner, threshold=1)
+        # Check if number of timepoints in prefiltered set is greater than threshold
+        evaluate_and_terminate(p1.winner, configfile, name, monobody_path_arguments, multibody_path_arguments)
+        # Remove outliers from winner list.
+        p1.winner = evaluate_list_score_with_removal(p1.combo_score_multi, p1.winner, threshold=1, min_timepoints=5)
+        # Check if number of timepoints in prefiltered set is greater than threshold
+        evaluate_and_terminate(p1.winner, configfile, name, monobody_path_arguments, multibody_path_arguments)
+        # Re-score winner list.
         p1.winner_scores = p1.report_score_multi(p1.winner)
 
         if multibody_return_flag is not False:
