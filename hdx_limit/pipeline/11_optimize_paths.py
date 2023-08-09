@@ -68,6 +68,8 @@ def evaluate_list_score_with_removal(evaluation_function, original_list, thresho
       score without that item as the value.
     """
 
+    print(f"Len original list: {len(original_list)}")
+
     if len(original_list) < min_timepoints:
         return []
 
@@ -89,7 +91,7 @@ def evaluate_list_score_with_removal(evaluation_function, original_list, thresho
             # n += 1
             # print(
             #     f"Previous score: {original_score}, new score {score_without_item}. Improvement of {1 - score_without_item / original_score}. N_change {n} ")
-            return evaluate_list_score_with_removal(evaluation_function, modified_list, threshold=threshold)
+            return evaluate_list_score_with_removal(evaluation_function, modified_list, threshold=threshold, min_timepoints=min_timepoints)
 
     # print(f"No modification led to significant improvement. score: {original_score}")
 
@@ -266,6 +268,8 @@ def main(library_info_path,
     # Checks if arguments require monobody scoring run.
     if (any(arg is not None for arg in monobody_path_arguments)) or (monobody_return_flag is not False):
 
+        print("Running monobody scoring...")
+
         p1.optimize_paths_mono()
 
         p1.winner = evaluate_list_score_with_removal(p1.combo_score_mono, p1.winner, threshold=1)
@@ -301,6 +305,8 @@ def main(library_info_path,
 
     # Checks if arguments require multibody scoring run.
     if (any(arg is not None for arg in multibody_path_arguments)) or (multibody_return_flag is not False):
+
+        print("Running multibody scoring...")
 
         p1.optimize_paths_multi()
 
