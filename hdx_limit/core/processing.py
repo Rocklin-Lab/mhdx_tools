@@ -545,7 +545,6 @@ class PathOptimizer:
         out_name (type): Description of any returned objects.
 
         """
-
         filtered_atc = [
             [ic for ic in ics if (ic.baseline_peak_error <= self.thresholds["baseline_peak_error"] and
                                   ic.dt_ground_err <= self.thresholds["dt_ground_err"] and
@@ -558,7 +557,8 @@ class PathOptimizer:
                                       "baseline_integrated_FWHM"] and
                                   ic.nearest_neighbor_correlation >= self.thresholds["nearest_neighbor_correlation"] and
                                   ic.charge_states[0] in self.undeut_grounds
-                                  and ic.baseline_integrated_mz_com <= self.max_peak_center)
+                                  and ic.baseline_integrated_mz_com <= self.max_peak_center and
+                                  ic.baseline_integrated_mz_com >= self.first_center)
              ] for ics in self.prefiltered_ics[1:]
         ]  # if ics[0].timepoint_idx in self.timepoints] # TODO not sure the impact of removing this statement
         filtered_atc = np.array([self.undeuts] + filtered_atc, dtype=object)
