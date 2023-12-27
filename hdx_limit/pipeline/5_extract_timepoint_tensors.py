@@ -79,6 +79,10 @@ def main(configfile,
     out_dict = {}
     library_info = pd.read_json(library_info_path)
 
+    # REDO
+    # Temporaraly force library to be only decoys
+    library_info = library_info[library_info.name.str.contains("decoy")].reset_index(drop=True)
+
     # Makes nested dictionary where rt-group-name is the outermost key and returns a dictionary
     # mapping charge states of that rt-group to their library_info indices.
     names = list(OrderedDict.fromkeys(library_info["name_rt-group"].values).keys()) # This is the Python-native version of an ordered set operation.
