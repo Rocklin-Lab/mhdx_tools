@@ -47,10 +47,13 @@ setup(
 
     #packages=find_packages(),
 
-    python_requires=">=3.6, <4",
+    python_requires=">=3.6, <3.12",
 
     install_requires=["pandas==1.5.3",
-                      #"scikit-learn>=0.24,<0.3",
+                      "numpy==1.23.5",
+                      "scikit-learn==1.3.2",
+                      "biopython==1.78",
+                      "pymzml==2.5.2",
                       "matplotlib>=3.3,<4",
                       "scipy>=1.6,<2",
                       "peakutils==1.3.4",
