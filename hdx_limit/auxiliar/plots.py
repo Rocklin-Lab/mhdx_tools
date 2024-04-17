@@ -42,6 +42,9 @@ def rt_correlation_plot(intermediates,
     fig, ax = plt.subplots(len(combinations), 2, figsize=(10, 3.5 * len(combinations)), dpi=dpi,
                            constrained_layout=True)
 
+    if len(ax.shape) == 1:
+      ax = [ax]
+                          
     for i in range(len(combinations)):
         ax[i][0].scatter(df_rt[combinations[i][0]], df_rt[combinations[i][1]],
                          alpha=0.5, s=50, color="blue", edgecolors="black", lw=0.7)
