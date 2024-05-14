@@ -235,12 +235,12 @@ if __name__ == "__main__":
     if "snakemake" in globals():
         config = yaml.load(open(snakemake.input[0], "rb").read(), Loader=yaml.Loader)
 
-        fs = [glob.glob(i + '/*') for i in snakemake.input[1:]]
-        fs = [file for sublist in fs for file in sublist]
+        fs = [glob.glob(i + '/*.zlib') + glob.glob(i + '/*.pkl') for i in snakemake.input[1:]]
+        flat_fs = [file for sublist in fs for file in sublist]
 
-        winner_scores_fs = [i for i in fs if (os.stat(i).st_size > 0) and ("winner_scores_multibody.cpickle.zlib" in i)]
-        tensor_df_fs = [i for i in fs if (os.stat(i).st_size > 0) and ("_winner_multibody.df.pkl" in i)]
-        winner_ics_fs = [i for i in fs if (os.stat(i).st_size > 0) and ("_winner_multibody.cpickle.zlib" in i)]
+        winner_scores_fs = [i for i in flat_fs if (os.stat(i).st_size > 0) and ("winner_scores_multibody.cpickle.zlib" in i)]
+        tensor_df_fs = [i for i in flat_fs if (os.stat(i).st_size > 0) and ("_winner_multibody.df.pkl" in i)]
+        winner_ics_fs = [i for i in flat_fs if (os.stat(i).st_size > 0) and ("_winner_multibody.cpickle.zlib" in i)]
         output_df_path = snakemake.output[0]
 
     else:
