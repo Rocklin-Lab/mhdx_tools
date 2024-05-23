@@ -1,5 +1,5 @@
+import os
 import os.path
-
 import yaml
 import argparse
 import pandas as pd
@@ -125,6 +125,10 @@ def main(library_info_path,
         limit_write(all_ics, isotope_clusters_out_path)
 
     if factor_plot_output_path is not None:
+
+        # Check if the output file exists and remove it
+        if os.path.exists(factor_plot_output_path):
+            os.remove(factor_plot_output_path)
 
         if calc_idotp:
 
