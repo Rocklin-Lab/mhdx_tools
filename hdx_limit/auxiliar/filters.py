@@ -168,6 +168,6 @@ def remove_duplicates_from_df(df,
                           "DT_weighted_avg"])]) == 0:
             new_df = pd.concat([new_df, pd.DataFrame([line])])
 
-    new_df.drop_duplicates(subset=["name", "charge"], ignore_index=True, inplace=True)
+    new_df.drop_duplicates(subset=["name_rt-group", "charge"], ignore_index=True, inplace=True)
 
     return new_df
