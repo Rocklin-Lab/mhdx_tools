@@ -79,10 +79,12 @@ def main(configfile,
     out_df['decoy'] = out_df['name_tmp'].str.contains('decoy')
     out_df['log2_ab_cluster_total'] = np.log2(out_df['ab_cluster_total'].values.astype('float32'))
 
+    # This step is critical for the next step to work properly. name will be preserved without rt-group information
+    # name-rt-group will be redefined if use_rtdt_recenter is True
     if configfile["use_rtdt_recenter"]:
-        out_df.rename(columns={"name": "name_before_recentering", "name_tmp": "name"}, inplace=True)
+        out_df.rename(columns={"name_rt-group": "name_rt-group_before_recentering", "name_tmp": "name_rt-group"}, inplace=True)
     else:
-        out_df.rename(columns={"name_tmp": "name_after_recentering"}, inplace=True)
+        out_df.rename(columns={"name_tmp": "name_rt-group_after_recentering"}, inplace=True)
 
     if fdr_plot_output_path is not None:
         plot_fdr_stats(out_df,
