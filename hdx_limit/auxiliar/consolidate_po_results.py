@@ -196,8 +196,8 @@ def consolidate_results(config,
     print(f"Using library: {library} and pH: {ph}")
     print("If these are not the intended values, please check the run_name in the config file")
 
-    n_timepoints_filter = 20 #config["consolidate"]["n_timepoints_min"]
-    po_total_score_filter = 50 #config["consolidate"]["po_total_score_max"]
+    n_timepoints_filter = config["consolidate"]["n_timepoints_min"]
+    po_total_score_filter = config["consolidate"]["po_total_score_max"]
 
     po_df_extensive = generate_extensive_dataframe_po_scores(winner_scores_fs, library, ph)
     tensor_df_extensive = extract_tensor_stats_info(tensor_df_fs, library, ph)
