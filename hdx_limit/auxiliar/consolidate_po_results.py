@@ -235,7 +235,7 @@ if __name__ == "__main__":
     if "snakemake" in globals():
         config = yaml.load(open(snakemake.input[0], "rb").read(), Loader=yaml.Loader)
 
-        fs = glob.glob('resources/10_ic_time_series/*/multibody/*winner_scores_multibody.cpickle.zlib') + glob.glob(i + 'resources/10_ic_time_series/*/multibody/*_winner_multibody.df.pkl') + glob.glob('resources/10_ic_time_series/*/multibody/*_winner_multibody.cpickle.zlib')
+        fs = glob.glob('resources/10_ic_time_series/*/multibody/*winner_scores_multibody.cpickle.zlib') + glob.glob('resources/10_ic_time_series/*/multibody/*_winner_multibody.df.pkl') + glob.glob('resources/10_ic_time_series/*/multibody/*_winner_multibody.cpickle.zlib')
         # flat_fs = [file for sublist in fs for file in sublist]
 
         winner_scores_fs = [i for i in fs if (os.stat(i).st_size > 0) and ("winner_scores_multibody.cpickle.zlib" in i)]
