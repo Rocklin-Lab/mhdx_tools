@@ -4,6 +4,10 @@ import numpy as np
 import pandas as pd
 import argparse
 
+from Bio.SeqUtils import molecular_weight
+
+def calculate_monoisotopic_mass(sequence):
+    return molecular_weight(sequence, seq_type='protein', monoisotopic=True)
 
 def generate_random_seq(length):
     """
@@ -65,9 +69,16 @@ def main(name_mass_seq,
          mass_max=None,
          length_min=None,
          length_max=None,
-         ppm_tol=50):
+         ppm_tol=50): 
+
+    print("HERE")
 
     df = pd.read_csv(name_mass_seq, names=["name", "sequence", "MW"], skiprows=[0])
+
+    # Check if the "MW" column is defined
+    if df["MW"].isnull().all():
+        # Compute the monoisotopic mass for each sequence
+        df["MW"] = df["sequence"].apply(calculate_monoisotopic_mass)
 
     if mass_min is None:
         mass_min = min(df['MW'].values) - 50

@@ -95,7 +95,7 @@ def generate_tensor(mzml_gz_path, lockmass_compound, ppm_threshold=100):
 
     reference_array = get_mzs_thr(lockmass_compound=lockmass_compound)
 
-    msrun = pymzml.run.Reader(mzml_gz_path)
+    msrun = pymzml.run.Reader(mzml_gz_path, gzip=True)
 
     scan_times = []
     raw_scans = []

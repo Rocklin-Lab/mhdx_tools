@@ -8,7 +8,7 @@ with open(os.path.join(here, "README.md"), encoding="utf-8") as f:
 
 setup(
     name="hdx_limit",
-    version="0.8.0",
+    version="0.9.0",
     description="Tools for analysis of LC-IMS-MS data represented as 3D tensors.",
 
     long_description=long_description,
