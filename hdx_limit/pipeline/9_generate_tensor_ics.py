@@ -214,13 +214,13 @@ if __name__ == "__main__":
 
             if configfile["save_factor_data"]:
                 if not os.path.isdir(os.path.dirname(factor_data_output_path)):
-                    os.makedirs(os.path.dirname(factor_data_output_path))
+                    os.makedirs(os.path.dirname(factor_data_output_path), exist_ok=True)
             if configfile["save_factor_plot"]:
                 if not os.path.isdir(os.path.dirname(factor_plot_output_path)):
-                    os.makedirs(os.path.dirname(factor_plot_output_path))
+                    os.makedirs(os.path.dirname(factor_plot_output_path), exist_ok=True)
             if configfile["save_ic_plot"]:
                 if not os.path.isdir(os.path.dirname(ic_plot_output_path)):
-                    os.makedirs(os.path.dirname(ic_plot_output_path))
+                    os.makedirs(os.path.dirname(ic_plot_output_path), exist_ok=True)
 
             print(f"Processing {tensor_input_path}...")
 
