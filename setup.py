@@ -45,7 +45,7 @@ setup(
 
     keywords="scientific-computing, mass spectrometry, liquid chromatography, ion mobility separation, hydrogen exchange, deuterium, HDX",
 
-    #packages=find_packages(),
+#    packages=find_packages(),
 
     python_requires=">=3.6, <3.12",
 
