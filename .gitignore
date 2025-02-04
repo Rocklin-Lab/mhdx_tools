@@ -1,8 +1,8 @@
 *
 !.gitignore
-!hdx_limit/**
-hdx_limit.egg-info/
-hdx_limit.egg-info/**
+!mhdx_tools/**
+mhdx_tools.egg-info/
+mhdx_tools.egg-info/**
 **/__pycache__/
 **/__pycache__/*
 **/__pycache__/**
