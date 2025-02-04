@@ -1,4 +1,4 @@
-name: mhdxms
+name: mhdx
 channels:
   - bioconda
   - conda-forge
