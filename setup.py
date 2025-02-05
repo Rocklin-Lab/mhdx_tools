@@ -8,7 +8,7 @@ with open(os.path.join(here, "README.md"), encoding="utf-8") as f:
 
 setup(
     name="mhdx_tools",
-    version="0.9.0",
+    version="1.0.0",
     description="Tools for analysis of LC-IMS-MS data represented as 3D tensors.",
 
     long_description=long_description,
