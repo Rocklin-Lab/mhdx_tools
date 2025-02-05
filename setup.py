@@ -7,14 +7,14 @@ with open(os.path.join(here, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 setup(
-    name="hdx_limit",
+    name="mhdx_tools",
     version="0.9.0",
     description="Tools for analysis of LC-IMS-MS data represented as 3D tensors.",
 
     long_description=long_description,
     long_description_content_type="text/markdown",
 
-    url="https://github.com/Rocklin-Lab/hdx_limit",
+    url="https://github.com/Rocklin-Lab/mhdx_tools",
 
     author="Állan Ferrari, Sugyan Dixit, Robert Wes Ludwig, Gabriel Rocklin",
     author_email="ajrferrari@gmail.com, suggie@northwestern.edu, robert.wes.ludwig@gmail.com,  grocklin@gmail.com",
@@ -66,10 +66,10 @@ setup(
                       ],  # external packages as dependencies
 
     project_urls={
-        "Source": "https://github.com/Rocklin-Lab/hdx_limit",
+        "Source": "https://github.com/Rocklin-Lab/mhdx_tools",
         "Gabriel Rocklin Lab": "www.rocklinlab.org",
     },
 
-    packages = ["hdx_limit", "hdx_limit.core", "hdx_limit.preprocessing", "hdx_limit.pipeline", "hdx_limit.auxiliar"]
+    packages = ["mhdx_tools", "mhdx_tools.core", "mhdx_tools.preprocessing", "mhdx_tools.pipeline", "mhdx_tools.auxiliar"]
 
 )
