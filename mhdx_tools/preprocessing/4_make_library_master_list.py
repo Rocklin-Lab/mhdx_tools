@@ -534,7 +534,7 @@ def main(names_and_seqs_path,
         normalization_factors["normalization_factor"].append(my_sum / ref_sum)
 
     # Drop name starting with decoy
-    catdf = catdf[~catdf["name"].str.startswith("decoy")].reset_index(drop=True)
+    #catdf = catdf[~catdf["name"].str.startswith("decoy")].reset_index(drop=True)
 
     # Handles output options:
     if out_path is not None:
