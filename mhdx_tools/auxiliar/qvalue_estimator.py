@@ -437,4 +437,5 @@ if __name__ == "__main__":
     elif args.mode == "predict":
         apply_model_to_new_data(df,
                                 args.model_dir,
-                                prob_threshold_value=args.prob_threshold_value)
+                                prob_threshold_value=args.prob_threshold_value,
+                                output_df_path=args.output_file_path)
