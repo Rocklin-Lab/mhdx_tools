@@ -128,8 +128,13 @@ def preprocess_dataframe(df):
     df["fxn_zscore_idotp_ppm"] = zscore(df["idotp"]) * df["abs_ppm"]
     df["fxn_zscore_ppm_idotp"] = zscore(df["abs_ppm"]) * df["idotp"]
 
-    # One-hot encode charge
+    # Define the full range of charges you want to include
+    charge_range = list(range(3, 13))
+    # Ensure the 'charge' column is treated as a categorical variable with the full range
+    df['charge'] = pd.Categorical(df['charge'], categories=charge_range)
+    # One-hot encode the charge column, ensuring all specified categories are included
     one_hot = pd.get_dummies(df['charge'], prefix='charge')
+
     df = pd.concat([df, one_hot], axis=1)
 
     # Aggregate statistics
