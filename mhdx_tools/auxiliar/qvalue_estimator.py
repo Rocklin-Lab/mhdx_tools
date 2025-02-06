@@ -303,8 +303,8 @@ def train_pipeline(df,
         # Output scaler and model for future usage
         save_model_and_scaler(scaler, log_reg, model_dir)
 
-        unfiltered_output = os.path.join(model_dir, "qvalue estimator_unfiltered.json")
-        filtered_output = os.path.join(model_dir, "qvalue estimator_filtered.json")
+        unfiltered_output = os.path.join(model_dir, "qvalue_estimator_unfiltered.json")
+        filtered_output = os.path.join(model_dir, "qvalue_estimator_filtered.json")
         # Output unfiltered qvalue estimator dataframe
         processed_df.to_json(unfiltered_output)
         # Output filtered qvalue estimator dataframe
