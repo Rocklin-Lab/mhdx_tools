@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from mhdx_tools.auxiliar.plots import plot_rtdt_recenter, plot_deviations
 from mhdx_tools.auxiliar.filters import generate_dataframe_ics, remove_duplicates_from_df
 from mhdx_tools.auxiliar.fdr import plot_fdr_stats
+from mhdx_tools.auxiliar import qvalue_estimator
 
 mpl.use("Agg")
 
@@ -96,8 +97,20 @@ def main(configfile,
                                            rt_threshold=configfile["rt_threshold"],
                                            dt_threshold=configfile["dt_threshold"])
 
+
+    # Implement qvalue_estimator filter here
+    model_dir = configfile['hdx_tools_dir'] + "/models/qvalue_estimator/"
+    prob_threshold_value = configfile['prob_threshold_value']
+    out_df_updated = qvalue_estimator.apply_model_to_new_data(out_df,
+                                                              model_dir=model_dir,
+                                                              prob_threshold_value=prob_threshold_value)
+
+    # Filter based on prob_threshold_value
+    out_df_updated = out_df_updated.query(f"logreg_prob > {prob_threshold_value}").reset_index(drop=True)
+
+
     if library_info_out_path is not None:
-        out_df.to_json(library_info_out_path)
+        out_df_updated.to_json(library_info_out_path)
 
     if idotp_plot_out_path is not None:
         idotps = []
@@ -110,12 +123,12 @@ def main(configfile,
 
     # Plot deviation plots. Add this to a proper output in the snakemake scope later
     if UN_deviations_plot_output_path is not None:
-        plot_deviations(out_df,
+        plot_deviations(out_df_updated,
                         configfile=configfile,
                         output_path=UN_deviations_plot_output_path)
 
     if return_flag:
-        return out_df
+        return out_df_updated
 
 
 if __name__ == "__main__":

@@ -365,7 +365,7 @@ def load_model_and_scaler(model_dir):
 def apply_model_to_new_data(df,
                             model_dir,
                             output_df_path=None,
-                            prob_threshold_value=0.803):
+                            prob_threshold_value=0.781):
     """
     Apply the trained model and scaler to new data and classify based on the probability threshold.
 
@@ -410,7 +410,7 @@ def apply_model_to_new_data(df,
     processed_df["logreg_prob"] = predictions
 
     # Classify based on the threshold
-    processed_df["classification"] = processed_df["logreg_prob"] >= prob_threshold_value
+    processed_df["qvalue_classification"] = processed_df["logreg_prob"] >= prob_threshold_value
 
     if output_df_path is not None:
         processed_df.to_json(output_df_path)
