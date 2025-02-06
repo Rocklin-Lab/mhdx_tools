@@ -421,7 +421,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--mode", type=str, default="train", help="Output directory for qvalue estimator files")
     parser.add_argument("--prob_threshold_value", type=float, default=0.803, help="Probability threshold value for classification.")
-    parser.add_argument("--output_file_path", type='str', default="checked_library_info.json", help="Output for updated library info file.")
+    parser.add_argument("--output_file_path", type=str, default="checked_library_info.json", help="Output for updated library info file.")
 
     args = parser.parse_args()
 
