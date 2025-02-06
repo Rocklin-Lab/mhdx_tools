@@ -1,6 +1,7 @@
 *
 !.gitignore
 !mhdx_tools/**
+!models
 !models/**
 mhdx_tools.egg-info/
 mhdx_tools.egg-info/**

@@ -417,7 +417,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Pipeline for RT model and q-value calculation.")
     parser.add_argument("--input", type=str, help="Input JSON file.")
     parser.add_argument("--fdr", type=float, default=0.025, help="FDR threshold")
-    parser.add_argument("--model_dir", type=str, default=".", help="Output directory for qvalue estimator files")
+    parser.add_argument("--model_dir", type=str, default='.', help="Output directory for qvalue estimator files")
 
     parser.add_argument("--mode", type=str, default="train", help="Output directory for qvalue estimator files")
     parser.add_argument("--prob_threshold_value", type=float, default=0.803, help="Probability threshold value for classification.")
