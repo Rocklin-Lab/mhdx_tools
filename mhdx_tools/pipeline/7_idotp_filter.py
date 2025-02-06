@@ -101,9 +101,11 @@ def main(configfile,
     # Implement qvalue_estimator filter here
     model_dir = configfile['mhdx_tools_dir'] + "/models/qvalue_estimator/"
     prob_threshold_value = configfile['prob_threshold_value']
-    out_df_updated = qvalue_estimator.apply_model_to_new_data(out_df,
+    qvalue_estimator_output = qvalue_estimator.apply_model_to_new_data(out_df,
                                                               model_dir=model_dir,
                                                               prob_threshold_value=prob_threshold_value)
+
+    out_df_updated = out_df.merge(qvalue_estimator_output[['name', 'logreg_prob']], on='name', how='inner')
 
     # Filter based on prob_threshold_value
     out_df_updated = out_df_updated.query(f"logreg_prob > {prob_threshold_value}").reset_index(drop=True)
