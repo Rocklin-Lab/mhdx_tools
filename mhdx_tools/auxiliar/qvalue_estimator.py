@@ -129,7 +129,7 @@ def preprocess_dataframe(df):
     df["fxn_zscore_ppm_idotp"] = zscore(df["abs_ppm"]) * df["idotp"]
 
     # Define the full range of charges you want to include
-    charge_range = list(range(3, 13))
+    charge_range = list(range(3, 15))
     # Ensure the 'charge' column is treated as a categorical variable with the full range
     df['charge'] = pd.Categorical(df['charge'], categories=charge_range)
     # One-hot encode the charge column, ensuring all specified categories are included
